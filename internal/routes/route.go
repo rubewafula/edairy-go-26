@@ -58,6 +58,18 @@ func SetupRouter() *gin.Engine {
 	exchangeVisitAttendeeController := controllers.NewExchangeVisitAttendeeController()
 	paymentModeController := controllers.NewPaymentModeController()
 	routeCenterController := controllers.NewRouteCenterController()
+	shareTypeController := controllers.NewShareTypeController()
+	shareAccountController := controllers.NewShareAccountController()
+	shareDividendController := controllers.NewShareDividendController()
+	dividendDeclarationController := controllers.NewDividendDeclarationController()
+	sharePaymentController := controllers.NewSharePaymentController()
+	shareTransferController := controllers.NewShareTransferController()
+	shareTransactionController := controllers.NewShareTransactionController()
+	assetCategoryController := controllers.NewAssetCategoryController()
+	assetController := controllers.NewAssetController()
+	assetAssignmentController := controllers.NewAssetAssignmentController()
+	assetDepreciationController := controllers.NewAssetDepreciationController()
+	permissionController := controllers.NewPermissionController()
 
 	adminDashboardController := controllers.NewAdminDashboardController()
 
@@ -279,6 +291,88 @@ func SetupRouter() *gin.Engine {
 		api.GET("/route-centers/:id", routeCenterController.GetCenter)
 		api.PUT("/route-centers/:id", routeCenterController.UpdateCenter)
 		api.DELETE("/route-centers/:id", routeCenterController.DeleteCenter)
+
+		// Share Type Routes
+		api.POST("/share-types", shareTypeController.CreateShareType)
+		api.GET("/share-types", shareTypeController.GetShareTypes)
+		api.GET("/share-types/:id", shareTypeController.GetShareType)
+		api.PUT("/share-types/:id", shareTypeController.UpdateShareType)
+		api.DELETE("/share-types/:id", shareTypeController.DeleteShareType)
+
+		// Share Account Routes
+		api.POST("/share-accounts", shareAccountController.CreateAccount)
+		api.GET("/share-accounts", shareAccountController.GetAccounts)
+		api.GET("/share-accounts/:id", shareAccountController.GetAccount)
+		api.PUT("/share-accounts/:id", shareAccountController.UpdateAccount)
+		api.DELETE("/share-accounts/:id", shareAccountController.DeleteAccount)
+
+		// Share Dividend Routes
+		api.POST("/share-dividends", shareDividendController.CreateDividend)
+		api.GET("/share-dividends", shareDividendController.GetDividends)
+		api.GET("/share-dividends/:id", shareDividendController.GetDividend)
+		api.PUT("/share-dividends/:id", shareDividendController.UpdateDividend)
+		api.DELETE("/share-dividends/:id", shareDividendController.DeleteDividend)
+
+		// Dividend Declaration Routes
+		api.POST("/dividend-declarations", dividendDeclarationController.CreateDeclaration)
+		api.GET("/dividend-declarations", dividendDeclarationController.GetDeclarations)
+		api.GET("/dividend-declarations/:id", dividendDeclarationController.GetDeclaration)
+		api.PUT("/dividend-declarations/:id", dividendDeclarationController.UpdateDeclaration)
+		api.DELETE("/dividend-declarations/:id", dividendDeclarationController.DeleteDeclaration)
+
+		// Share Payment Routes
+		api.POST("/share-payments", sharePaymentController.CreateSharePayment)
+		api.GET("/share-payments", sharePaymentController.GetSharePayments)
+		api.GET("/share-payments/:id", sharePaymentController.GetSharePayment)
+		api.PUT("/share-payments/:id", sharePaymentController.UpdateSharePayment)
+		api.DELETE("/share-payments/:id", sharePaymentController.DeleteSharePayment)
+
+		// Share Transaction Routes
+		api.POST("/share-transactions", shareTransactionController.CreateShareTransaction)
+		api.GET("/share-transactions", shareTransactionController.GetShareTransactions)
+		api.GET("/share-transactions/:id", shareTransactionController.GetShareTransaction)
+		api.PUT("/share-transactions/:id", shareTransactionController.UpdateShareTransaction)
+		api.DELETE("/share-transactions/:id", shareTransactionController.DeleteShareTransaction)
+
+		// Share Transfer Routes
+		api.POST("/share-transfers", shareTransferController.CreateShareTransfer)
+		api.GET("/share-transfers", shareTransferController.GetShareTransfers)
+		api.GET("/share-transfers/:id", shareTransferController.GetShareTransfer)
+		api.PUT("/share-transfers/:id", shareTransferController.UpdateShareTransfer)
+		api.DELETE("/share-transfers/:id", shareTransferController.DeleteShareTransfer)
+
+		api.POST("/asset-categories", assetCategoryController.CreateCategory)
+		api.GET("/asset-categories", assetCategoryController.GetCategories)
+		api.GET("/asset-categories/:id", assetCategoryController.GetCategory)
+		api.PUT("/asset-categories/:id", assetCategoryController.UpdateCategory)
+		api.DELETE("/asset-categories/:id", assetCategoryController.DeleteCategory)
+
+		// Asset Routes
+		api.POST("/fixed-assets", assetController.CreateAsset)
+		api.GET("/fixed-assets", assetController.GetAssets)
+		api.GET("/fixed-assets/:id", assetController.GetAsset)
+		api.PUT("/fixed-assets/:id", assetController.UpdateAsset)
+		api.DELETE("/fixed-assets/:id", assetController.DeleteAsset)
+
+		// Asset Assignment Routes
+		api.POST("/asset-assignments", assetAssignmentController.CreateAssignment)
+		api.GET("/asset-assignments", assetAssignmentController.GetAssignments)
+		api.GET("/asset-assignments/:id", assetAssignmentController.GetAssignment)
+		api.PUT("/asset-assignments/:id", assetAssignmentController.UpdateAssignment)
+		api.DELETE("/asset-assignments/:id", assetAssignmentController.DeleteAssignment)
+
+		// Asset Depreciation Routes
+		api.POST("/asset-depreciation-entries", assetDepreciationController.CreateEntry)
+		api.GET("/asset-depreciation-entries", assetDepreciationController.GetEntries)
+		api.GET("/asset-depreciation-entries/:id", assetDepreciationController.GetEntry)
+		api.DELETE("/asset-depreciation-entries/:id", assetDepreciationController.DeleteEntry)
+
+		// Permission Routes
+		api.POST("/permissions", permissionController.CreatePermission)
+		api.GET("/permissions", permissionController.GetPermissions)
+		api.GET("/permissions/:id", permissionController.GetPermission)
+		api.PUT("/permissions/:id", permissionController.UpdatePermission)
+		api.DELETE("/permissions/:id", permissionController.DeletePermission)
 	}
 
 	return r
