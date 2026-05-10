@@ -21,7 +21,7 @@ func (s *AdminDashboardService) getMilkSummary() (float64, float64) {
 		SELECT
 			COALESCE(SUM(IF(DATE(created_at) = CURDATE(), IFNULL(quantity, 0), 0)), 0) AS today,
 			COALESCE(SUM(IFNULL(quantity, 0)), 0) AS month
-		FROM milk_journal_entry
+		FROM milk_journal_entries
 		WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
 	`).Scan(&result)
 
@@ -137,7 +137,7 @@ func (s *AdminDashboardService) getTopRoutes() []dtos.AdminDashboardRouteStat {
 
 	db.DB.Raw(`
 		SELECT r.route_name AS route,  COALESCE(SUM(ifnull(m.quantity, 0)), 0) AS total
-		FROM milk_journal_entry m
+		FROM milk_journal_entries m
 		INNER JOIN routes r ON r.id = m.route_id
 		WHERE DATE(m.created_at) = CURDATE()
 		GROUP BY r.id
@@ -154,7 +154,7 @@ func (s *AdminDashboardService) getMilkTrend() []dtos.AdminDashboardDailyMilkSta
 	db.DB.Raw(`
 		SELECT DATE(created_at) as date,
 		        COALESCE(SUM(ifnull(quantity, 0)), 0) as total
-		FROM milk_journal_entry
+		FROM milk_journal_entries
 		WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
 		GROUP BY DATE(created_at)
 		ORDER BY date ASC

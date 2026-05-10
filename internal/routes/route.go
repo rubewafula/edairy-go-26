@@ -48,6 +48,7 @@ func SetupRouter() *gin.Engine {
 	transporterBenefitController := controllers.NewTransporterBenefitController()
 	subRouteController := controllers.NewSubRouteController()
 	milkJournalController := controllers.NewMilkJournalController()
+	milkJournalEntryController := controllers.NewMilkJournalEntryController()
 	milkCanController := controllers.NewMilkCanController()
 	storeController := controllers.NewStoreController()
 	memberTypeController := controllers.NewMemberTypeController()
@@ -213,6 +214,14 @@ func SetupRouter() *gin.Engine {
 		api.GET("/milk-journals/:id", milkJournalController.GetMilkJournal)
 		api.PUT("/milk-journals/:id", milkJournalController.UpdateMilkJournal)
 		api.DELETE("/milk-journals/:id", milkJournalController.DeleteMilkJournal)
+
+		// Milk Journal Entry Routes
+		api.POST("/milk-journal-entries", milkJournalEntryController.CreateEntry)
+		api.GET("/milk-journal-entries", milkJournalEntryController.GetEntries)
+		api.GET("/milk-journal-entries/:id", milkJournalEntryController.GetEntry)
+		api.PUT("/milk-journal-entries/:id", milkJournalEntryController.UpdateEntry)
+		api.DELETE("/milk-journal-entries/:id", milkJournalEntryController.DeleteEntry)
+		api.POST("/milk-journal-entries/upload", milkJournalEntryController.UploadEntries)
 
 		// Milk Can Routes
 		api.POST("/milk-cans", milkCanController.CreateMilkCan)

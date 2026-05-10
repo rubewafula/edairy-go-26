@@ -195,7 +195,28 @@ type MilkJournal struct {
 	JournalDate         time.Time `gorm:"index;column:journal_date"`
 	MilkDeliveryShiftID uint64    `gorm:"index;column:milk_delivery_shift_id"`
 	RouteID             uint64    `gorm:"index;column:route_id"`
+	UserID              uint64    `gorm:"column:user_id"`
+	TransporterID       uint64    `gorm:"column:transporter_id"`
 	Confirmed           bool      `gorm:"column:confirmed"`
+}
+
+type MilkJournalEntry struct {
+	BaseModel
+	MemberID            uint64    `gorm:"index;column:member_id"`
+	MilkJournalID       uint64    `gorm:"index;column:milk_journal_id"`
+	MilkJournalBatchID  uint64    `gorm:"index;column:milk_journal_batch_id"`
+	RouteID             uint64    `gorm:"index;column:route_id"`
+	MilkDeliveryShiftID uint64    `gorm:"index;column:milk_delivery_shift_id"`
+	Status              string    `gorm:"column:status"`
+	JournalDate         time.Time `gorm:"index;column:journal_date"`
+	Quantity            float64   `gorm:"type:decimal(18,2);column:quantity"`
+	TransporterID       uint64    `gorm:"index;column:transporter_id"`
+	RouteCenterID       uint64    `gorm:"index;column:route_center_id"`
+	CanID               uint64    `gorm:"index;column:can_id"`
+}
+
+func (MilkJournalEntry) TableName() string {
+	return "milk_journal_entries"
 }
 
 type DefaultMilkRate struct {
