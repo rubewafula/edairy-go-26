@@ -1281,6 +1281,137 @@ func (ItemCategory) TableName() string {
 	return "item_categories"
 }
 
+type StoreInventory struct {
+	BaseModel
+	InventoryName string `gorm:"column:inventory_name"`
+	CategoryID    uint64 `gorm:"column:category_id"`
+	IsActive      bool   `gorm:"column:is_active;default:1"`
+	Description   string `gorm:"column:description"`
+}
+
+func (StoreInventory) TableName() string {
+	return "store_inventories"
+}
+
+type StoreItem struct {
+	BaseModel
+	Description               string  `gorm:"column:description"`
+	ReorderPoint              int     `gorm:"column:reorder_point"`
+	DefaultBuyingPrice        float64 `gorm:"column:default_buying_price"`
+	DefaultSellingPrice       float64 `gorm:"column:default_selling_price"`
+	Status                    string  `gorm:"column:status;default:0"`
+	Thumbnail                 string  `gorm:"column:thumbnail"`
+	ItemName                  string  `gorm:"column:item_name"`
+	SKU                       string  `gorm:"column:sku"`
+	Barcode                   string  `gorm:"column:barcode"`
+	UnitID                    int64   `gorm:"column:unit_id"`
+	DefaultSellingPriceCredit float64 `gorm:"column:default_selling_price_credit"`
+	StoreInventoryID          uint64  `gorm:"column:store_inventory_id"`
+}
+
+func (StoreItem) TableName() string {
+	return "store_items"
+}
+
+type StoreStock struct {
+	BaseModel
+	ItemID             uint64  `gorm:"column:item_id"`
+	StoreID            uint64  `gorm:"column:store_id"`
+	Quantity           float64 `gorm:"column:quantity"`
+	Unit               string  `gorm:"column:unit;default:KG"`
+	BuyingPrice        float64 `gorm:"column:buying_price"`
+	SellingPrice       float64 `gorm:"column:selling_price"`
+	CreditSellingPrice float64 `gorm:"column:credit_selling_price"`
+}
+
+func (StoreStock) TableName() string {
+	return "store_stocks"
+}
+
+type StoreStockTaking struct {
+	ID               uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	StockTakeNo      string    `gorm:"column:stock_take_no"`
+	StoreID          uint64    `gorm:"column:store_id"`
+	ItemID           uint64    `gorm:"column:item_id"`
+	SystemQuantity   float64   `gorm:"column:system_quantity"`
+	PhysicalQuantity float64   `gorm:"column:physical_quantity"`
+	VarianceQuantity float64   `gorm:"column:variance_quantity"`
+	Remarks          string    `gorm:"column:remarks"`
+	StockTakeDate    time.Time `gorm:"column:stock_take_date"`
+	CreatedBy        uint64    `gorm:"column:created_by"`
+	CreatedAt        time.Time `gorm:"column:created_at"`
+}
+
+func (StoreStockTaking) TableName() string {
+	return "store_stock_takings"
+}
+
+type StoreStockMovement struct {
+	ID              uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	TransactionDate time.Time `gorm:"column:transaction_date"`
+	StoreID         uint64    `gorm:"column:store_id"`
+	ItemID          uint64    `gorm:"column:item_id"`
+	MovementType    string    `gorm:"column:movement_type"`
+	ReferenceTable  string    `gorm:"column:reference_table"`
+	ReferenceID     uint64    `gorm:"column:reference_id"`
+	QtyIn           float64   `gorm:"column:qty_in"`
+	QtyOut          float64   `gorm:"column:qty_out"`
+	BalanceAfter    float64   `gorm:"column:balance_after"`
+	UnitCost        float64   `gorm:"column:unit_cost"`
+	SellingPrice    float64   `gorm:"column:selling_price"`
+	Remarks         string    `gorm:"column:remarks"`
+	CreatedBy       uint64    `gorm:"column:created_by"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+}
+
+func (StoreStockMovement) TableName() string {
+	return "store_stock_movements"
+}
+
+type StoreStockMovementType struct {
+	BaseModel
+	MovementCode string `gorm:"uniqueIndex;column:movement_code"`
+	MovementName string `gorm:"column:movement_name"`
+	Direction    string `gorm:"column:direction"` // enum('IN','OUT')
+	AffectsStock bool   `gorm:"column:affects_stock;default:1"`
+	Description  string `gorm:"column:description"`
+	IsSystem     bool   `gorm:"column:is_system;default:1"`
+}
+
+func (StoreStockMovementType) TableName() string {
+	return "store_stock_movement_types"
+}
+
+type StoreSale struct {
+	BaseModel
+	TotalAmount   float64 `gorm:"column:total_amount"`
+	AmountPaid    float64 `gorm:"column:amount_paid;default:0.00"`
+	AmountDue     float64 `gorm:"column:amount_due;default:0.00"`
+	Reference     string  `gorm:"column:reference"`
+	StoreID       uint64  `gorm:"column:store_id"`
+	SaleType      string  `gorm:"column:sale_type;default:cash"`
+	CustomerID    uint64  `gorm:"column:customer_id"`
+	CustomerType  string  `gorm:"column:customer_type"`
+	TransactionID int64   `gorm:"column:transaction_id"`
+}
+
+func (StoreSale) TableName() string {
+	return "store_sales"
+}
+
+type StoreSaleItem struct {
+	BaseModel
+	ItemID      uint64 `gorm:"column:item_id"`
+	Quantity    int    `gorm:"column:quantity"`
+	UnitPrice   string `gorm:"column:unit_price"`
+	Total       string `gorm:"column:total"`
+	StoreSaleID uint64 `gorm:"column:store_sale_id"`
+}
+
+func (StoreSaleItem) TableName() string {
+	return "store_sale_items"
+}
+
 type Inventory struct {
 	BaseModel
 	InventoryName      string    `gorm:"column:inventory_name"`
