@@ -1412,6 +1412,17 @@ func (StoreSaleItem) TableName() string {
 	return "store_sale_items"
 }
 
+type StoreItemUnit struct {
+	BaseModel
+	Name        string `gorm:"uniqueIndex;column:name"`
+	Symbol      string `gorm:"uniqueIndex;column:symbol"`
+	Description string `gorm:"column:description"`
+}
+
+func (StoreItemUnit) TableName() string {
+	return "store_item_units"
+}
+
 type Inventory struct {
 	BaseModel
 	InventoryName      string    `gorm:"column:inventory_name"`
@@ -1531,13 +1542,23 @@ type InterStoreTransfer struct {
 	ToStoreID    uint64    `gorm:"index;column:to_store_id"`
 	Reference    string    `gorm:"uniqueIndex;column:reference"`
 	TransferDate time.Time `gorm:"index;column:transfer_date"`
+	Status       string    `gorm:"column:status"`
+}
+
+func (InterStoreTransfer) TableName() string {
+	return "inter_store_transfers"
 }
 
 type InterStoreTransferItem struct {
 	BaseModel
-	TransferID uint64  `gorm:"index;column:inter_store_transfer_id"`
-	ItemID     uint64  `gorm:"index;column:item_id"`
-	Quantity   float64 `gorm:"column:quantity"`
+	TransferID uint64 `gorm:"index;column:inter_store_transfer_id"`
+	ItemID     uint64 `gorm:"index;column:item_id"`
+	Quantity   string `gorm:"column:quantity"`
+	StockID    uint64 `gorm:"column:stock_id"`
+}
+
+func (InterStoreTransferItem) TableName() string {
+	return "inter_store_transfer_items"
 }
 
 type StockAdjustment struct {

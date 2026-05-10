@@ -14,7 +14,7 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 
 		tokenStr := c.GetHeader("Authorization")
 		if tokenStr == "" {
-			c.AbortWithStatusJSON(401, gin.H{"error": "missing token"})
+			c.AbortWithStatusJSON(401, gin.H{"Error": "missing token"})
 			return
 		}
 
@@ -25,7 +25,7 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(401, gin.H{"error": "unauthorized"})
+			c.AbortWithStatusJSON(401, gin.H{"Error": "unauthorized"})
 			return
 		}
 
@@ -34,7 +34,7 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 		// user_id
 		userID, ok := claims["user_id"].(float64)
 		if !ok {
-			c.AbortWithStatusJSON(401, gin.H{"error": "invalid user id"})
+			c.AbortWithStatusJSON(401, gin.H{"Error": "invalid user id"})
 			return
 		}
 		c.Set("user_id", uint64(userID))
@@ -114,7 +114,7 @@ func RequireAutoPermission() gin.HandlerFunc {
 		case "DELETE":
 			action = "delete"
 		default:
-			c.AbortWithStatusJSON(405, gin.H{"error": "method not allowed"})
+			c.AbortWithStatusJSON(405, gin.H{"Error": "method not allowed"})
 			return
 		}
 
@@ -125,7 +125,7 @@ func RequireAutoPermission() gin.HandlerFunc {
 		if !exists {
 			log.Printf("[RBAC] No permissions found in context")
 
-			c.AbortWithStatusJSON(403, gin.H{"error": "no permissions"})
+			c.AbortWithStatusJSON(403, gin.H{"Error": "no permissions"})
 			return
 		}
 
@@ -140,7 +140,7 @@ func RequireAutoPermission() gin.HandlerFunc {
 		}
 
 		c.AbortWithStatusJSON(403, gin.H{
-			"error": "forbidden: " + required,
+			"Error": "forbidden: " + required,
 		})
 	}
 }

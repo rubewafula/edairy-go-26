@@ -43,7 +43,7 @@ func (s *StoreSaleService) GetSales(page, limit int) ([]dtos.StoreSaleResponse, 
 
 	query := `
 		SELECT 
-			ss.*, s.name AS store_name
+			ss.*, s.store AS store_name
 		FROM store_sales ss
 		LEFT JOIN stores s ON ss.store_id = s.id
 		WHERE ss.deleted_at IS NULL
@@ -58,7 +58,7 @@ func (s *StoreSaleService) GetSale(id string) (*dtos.StoreSaleResponse, error) {
 	var result dtos.StoreSaleResponse
 	query := `
 		SELECT 
-			ss.*, s.name AS store_name
+			ss.*, s.store AS store_name
 		FROM store_sales ss
 		LEFT JOIN stores s ON ss.store_id = s.id
 		WHERE ss.id = ? AND ss.deleted_at IS NULL

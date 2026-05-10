@@ -66,8 +66,11 @@ func SetupRouter() *gin.Engine {
 	storeInventoryController := controllers.NewStoreInventoryController()
 	storeStockController := controllers.NewStoreStockController()
 	storeStockTakingController := controllers.NewStoreStockTakingController()
+	interStoreTransferController := controllers.NewInterStoreTransferController()
+	interStoreTransferItemController := controllers.NewInterStoreTransferItemController()
 	storeStockMovementController := controllers.NewStoreStockMovementController()
 	storeStockMovementTypeController := controllers.NewStoreStockMovementTypeController()
+	storeItemUnitController := controllers.NewStoreItemUnitController()
 	memberTypeController := controllers.NewMemberTypeController()
 	routeController := controllers.NewRouteController()
 	customerController := controllers.NewCustomerController()
@@ -365,6 +368,20 @@ func SetupRouter() *gin.Engine {
 		api.PUT("/store-stock-takings/:id", storeStockTakingController.UpdateStockTaking)
 		api.DELETE("/store-stock-takings/:id", storeStockTakingController.DeleteStockTaking)
 
+		// Inter Store Transfer Routes
+		api.POST("/inter-store-transfers", interStoreTransferController.CreateTransfer)
+		api.GET("/inter-store-transfers", interStoreTransferController.GetTransfers)
+		api.GET("/inter-store-transfers/:id", interStoreTransferController.GetTransfer)
+		api.PUT("/inter-store-transfers/:id", interStoreTransferController.UpdateTransfer)
+		api.DELETE("/inter-store-transfers/:id", interStoreTransferController.DeleteTransfer)
+
+		// Inter Store Transfer Item Routes
+		api.POST("/inter-store-transfer-items", interStoreTransferItemController.CreateTransferItem)
+		api.GET("/inter-store-transfer-items", interStoreTransferItemController.GetTransferItems)
+		api.GET("/inter-store-transfer-items/:id", interStoreTransferItemController.GetTransferItem)
+		api.PUT("/inter-store-transfer-items/:id", interStoreTransferItemController.UpdateTransferItem)
+		api.DELETE("/inter-store-transfer-items/:id", interStoreTransferItemController.DeleteTransferItem)
+
 		// Store Stock Movement Routes
 		api.POST("/store-stock-movements", storeStockMovementController.CreateMovement)
 		api.GET("/store-stock-movements", storeStockMovementController.GetMovements)
@@ -378,6 +395,13 @@ func SetupRouter() *gin.Engine {
 		api.GET("/store-stock-movement-types/:id", storeStockMovementTypeController.GetMovementType)
 		api.PUT("/store-stock-movement-types/:id", storeStockMovementTypeController.UpdateMovementType)
 		api.DELETE("/store-stock-movement-types/:id", storeStockMovementTypeController.DeleteMovementType)
+
+		// Store Item Unit Routes
+		api.POST("/store-item-units", storeItemUnitController.CreateUnit)
+		api.GET("/store-item-units", storeItemUnitController.GetUnits)
+		api.GET("/store-item-units/:id", storeItemUnitController.GetUnit)
+		api.PUT("/store-item-units/:id", storeItemUnitController.UpdateUnit)
+		api.DELETE("/store-item-units/:id", storeItemUnitController.DeleteUnit)
 
 		// Member Type Routes
 		api.POST("/member-types", memberTypeController.CreateMemberType)

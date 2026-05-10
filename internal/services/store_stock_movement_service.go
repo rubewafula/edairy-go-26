@@ -45,7 +45,7 @@ func (s *StoreStockMovementService) GetMovements(page, limit int) ([]dtos.StoreS
 
 	query := `
 		SELECT 
-			ssm.*, s.name AS store_name, si.item_name
+			ssm.*, s.store AS store_name, si.item_name
 		FROM store_stock_movements ssm
 		LEFT JOIN stores s ON ssm.store_id = s.id
 		LEFT JOIN store_items si ON ssm.item_id = si.id
@@ -60,7 +60,7 @@ func (s *StoreStockMovementService) GetMovement(id string) (*dtos.StoreStockMove
 	var result dtos.StoreStockMovementResponse
 	query := `
 		SELECT 
-			ssm.*, s.name AS store_name, si.item_name
+			ssm.*, s.store AS store_name, si.item_name
 		FROM store_stock_movements ssm
 		LEFT JOIN stores s ON ssm.store_id = s.id
 		LEFT JOIN store_items si ON ssm.item_id = si.id
