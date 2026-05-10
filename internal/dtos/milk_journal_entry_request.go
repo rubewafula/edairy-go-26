@@ -50,3 +50,18 @@ type UpdateMilkJournalEntryRequest struct {
 	RouteCenterID       uint64  `json:"RouteCenterID"`
 	CanID               uint64  `json:"CanID"`
 }
+
+type StrayMilkCollectionResponse struct {
+	ID                uint64    `json:"ID"`
+	MemberID          uint64    `json:"MemberID"`
+	MemberNo          string    `json:"MemberNo"`
+	MemberName        string    `json:"MemberName"`
+	MemberRouteID     uint64    `json:"MemberRouteID"`
+	MemberRoute       string    `json:"MemberRoute"`
+	JournalRouteID    uint64    `json:"JournalRouteID"`
+	StrayRoute        string    `json:"StrayRoute"`
+	Quantity          float64   `json:"Quantity"`
+	JournalDate       time.Time `json:"JournalDate"`
+	MilkDeliveryShift string    `json:"MilkDeliveryShift"`
+	CreatedAt         time.Time `json:"CreatedAt"`
+}

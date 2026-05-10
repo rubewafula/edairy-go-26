@@ -11,18 +11,18 @@ import (
 	validator "github.com/rubewafula/edairy-go-26/internal/validators"
 )
 
-type MilkCanController struct {
-	service *services.MilkCanService
+type DeductionTypeController struct {
+	service *services.DeductionTypeService
 }
 
-func NewMilkCanController() *MilkCanController {
-	return &MilkCanController{
-		service: services.NewMilkCanService(),
+func NewDeductionTypeController() *DeductionTypeController {
+	return &DeductionTypeController{
+		service: services.NewDeductionTypeService(),
 	}
 }
 
-func (c *MilkCanController) CreateMilkCan(ctx *gin.Context) {
-	var req dtos.CreateMilkCanRequest
+func (c *DeductionTypeController) CreateDeductionType(ctx *gin.Context) {
+	var req dtos.CreateDeductionTypeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -33,39 +33,37 @@ func (c *MilkCanController) CreateMilkCan(ctx *gin.Context) {
 		return
 	}
 
-	milkCan, err := c.service.CreateMilkCan(req)
+	deductionType, err := c.service.CreateDeductionType(req)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-
-	response, _ := c.service.GetMilkCan(utils.Uint64ToString(milkCan.ID))
-	ctx.JSON(http.StatusCreated, response)
+	ctx.JSON(http.StatusCreated, deductionType)
 }
 
-func (c *MilkCanController) GetMilkCans(ctx *gin.Context) {
+func (c *DeductionTypeController) GetDeductionTypes(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 
-	milkCans, total, err := c.service.GetMilkCans(page, limit)
+	results, total, err := c.service.GetDeductionTypes(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": milkCans, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"Data": results, "Total": total})
 }
 
-func (c *MilkCanController) GetMilkCan(ctx *gin.Context) {
-	milkCan, err := c.service.GetMilkCan(ctx.Param("id"))
+func (c *DeductionTypeController) GetDeductionType(ctx *gin.Context) {
+	deductionType, err := c.service.GetDeductionType(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Milk Can not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Deduction type not found"})
 		return
 	}
-	ctx.JSON(http.StatusOK, milkCan)
+	ctx.JSON(http.StatusOK, deductionType)
 }
 
-func (c *MilkCanController) UpdateMilkCan(ctx *gin.Context) {
-	var req dtos.UpdateMilkCanRequest
+func (c *DeductionTypeController) UpdateDeductionType(ctx *gin.Context) {
+	var req dtos.UpdateDeductionTypeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -76,17 +74,17 @@ func (c *MilkCanController) UpdateMilkCan(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.service.UpdateMilkCan(ctx.Param("id"), req); err != nil {
+	if err := c.service.UpdateDeductionType(ctx.Param("id"), req); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Can updated successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"Message": "Deduction type updated successfully"})
 }
 
-func (c *MilkCanController) DeleteMilkCan(ctx *gin.Context) {
-	if err := c.service.DeleteMilkCan(ctx.Param("id")); err != nil {
+func (c *DeductionTypeController) DeleteDeductionType(ctx *gin.Context) {
+	if err := c.service.DeleteDeductionType(ctx.Param("id")); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Can deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"Message": "Deduction type deleted successfully"})
 }

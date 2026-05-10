@@ -37,6 +37,8 @@ func SetupRouter() *gin.Engine {
 	bankBranchController := controllers.NewBankBranchController()
 	memberBankAccountController := controllers.NewMemberBankAccountController()
 	milkDeliveryShiftController := controllers.NewMilkDeliveryShiftController()
+	coolerMilkCollectionController := controllers.NewCoolerMilkCollectionController()
+	milkRejectController := controllers.NewMilkRejectController()
 	transporterController := controllers.NewTransporterController()
 	individualTransporterController := controllers.NewIndividualTransporterController()
 	companyTransporterController := controllers.NewCompanyTransporterController()
@@ -49,7 +51,14 @@ func SetupRouter() *gin.Engine {
 	subRouteController := controllers.NewSubRouteController()
 	milkJournalController := controllers.NewMilkJournalController()
 	milkJournalEntryController := controllers.NewMilkJournalEntryController()
+	milkDeliveryController := controllers.NewMilkDeliveryController()
+	milkLocalSaleController := controllers.NewMilkLocalSaleController()
 	milkCanController := controllers.NewMilkCanController()
+	canMovementController := controllers.NewCanMovementController()
+	productGradeController := controllers.NewProductGradeController()
+	deductionTypeController := controllers.NewDeductionTypeController()
+	itemCategoryController := controllers.NewItemCategoryController()
+	deductionPricingRuleController := controllers.NewDeductionPricingRuleController()
 	storeController := controllers.NewStoreController()
 	memberTypeController := controllers.NewMemberTypeController()
 	routeController := controllers.NewRouteController()
@@ -58,6 +67,7 @@ func SetupRouter() *gin.Engine {
 	customerMilkRateController := controllers.NewCustomerMilkRateController()
 	customerPayDateRangeController := controllers.NewCustomerPayDateRangeController()
 	memberDependantController := controllers.NewMemberDependantController()
+	dailyMilkVarianceController := controllers.NewDailyMilkVarianceController()
 	loanController := controllers.NewLoanController()
 	transportRateController := controllers.NewTransportRateController()
 	trainingController := controllers.NewTrainingController()
@@ -223,12 +233,80 @@ func SetupRouter() *gin.Engine {
 		api.DELETE("/milk-journal-entries/:id", milkJournalEntryController.DeleteEntry)
 		api.POST("/milk-journal-entries/upload", milkJournalEntryController.UploadEntries)
 
+		// Stray Milk Collection Routes
+		api.GET("/stray-milk-collections", milkJournalEntryController.GetStrayEntries)
+
+		// Milk Reject Routes
+		api.POST("/milk-rejects", milkRejectController.CreateReject)
+		api.GET("/milk-rejects", milkRejectController.GetRejects)
+		api.GET("/milk-rejects/:id", milkRejectController.GetReject)
+		api.DELETE("/milk-rejects/:id", milkRejectController.DeleteReject)
+
+		// Cooler Milk Collection Routes
+		api.POST("/cooler-milk-collections", coolerMilkCollectionController.CreateCollection)
+		api.GET("/cooler-milk-collections", coolerMilkCollectionController.GetCollections)
+		api.GET("/cooler-milk-collections/:id", coolerMilkCollectionController.GetCollection)
+		api.PUT("/cooler-milk-collections/:id", coolerMilkCollectionController.UpdateCollection)
+		api.DELETE("/cooler-milk-collections/:id", coolerMilkCollectionController.DeleteCollection)
+
+		// Milk Delivery Routes
+		api.POST("/milk-deliveries", milkDeliveryController.CreateDelivery)
+		api.GET("/milk-deliveries", milkDeliveryController.GetDeliveries)
+		api.GET("/milk-deliveries/:id", milkDeliveryController.GetDelivery)
+		api.PUT("/milk-deliveries/:id", milkDeliveryController.UpdateDelivery)
+		api.DELETE("/milk-deliveries/:id", milkDeliveryController.DeleteDelivery)
+
+		// Milk Local Sale Routes
+		api.POST("/milk-local-sales", milkLocalSaleController.CreateMilkLocalSale)
+		api.GET("/milk-local-sales", milkLocalSaleController.GetMilkLocalSales)
+		api.GET("/milk-local-sales/:id", milkLocalSaleController.GetMilkLocalSale)
+		api.PUT("/milk-local-sales/:id", milkLocalSaleController.UpdateMilkLocalSale)
+		api.DELETE("/milk-local-sales/:id", milkLocalSaleController.DeleteMilkLocalSale)
+
+		// Daily Milk Variance Routes
+		api.GET("/daily-milk-variances", dailyMilkVarianceController.GetDailyVariances)
+
 		// Milk Can Routes
 		api.POST("/milk-cans", milkCanController.CreateMilkCan)
 		api.GET("/milk-cans", milkCanController.GetMilkCans)
 		api.GET("/milk-cans/:id", milkCanController.GetMilkCan)
 		api.PUT("/milk-cans/:id", milkCanController.UpdateMilkCan)
 		api.DELETE("/milk-cans/:id", milkCanController.DeleteMilkCan)
+
+		// Can Movement Routes
+		api.POST("/can-movements", canMovementController.CreateMovement)
+		api.GET("/can-movements", canMovementController.GetMovements)
+		api.GET("/can-movements/:id", canMovementController.GetMovement)
+		api.PUT("/can-movements/:id", canMovementController.UpdateMovement)
+		api.DELETE("/can-movements/:id", canMovementController.DeleteMovement)
+
+		// Product Grade Routes
+		api.POST("/product-grades", productGradeController.CreateGrade)
+		api.GET("/product-grades", productGradeController.GetGrades)
+		api.GET("/product-grades/:id", productGradeController.GetGrade)
+		api.PUT("/product-grades/:id", productGradeController.UpdateGrade)
+		api.DELETE("/product-grades/:id", productGradeController.DeleteGrade)
+
+		// Deduction Type Routes
+		api.POST("/deduction-types", deductionTypeController.CreateDeductionType)
+		api.GET("/deduction-types", deductionTypeController.GetDeductionTypes)
+		api.GET("/deduction-types/:id", deductionTypeController.GetDeductionType)
+		api.PUT("/deduction-types/:id", deductionTypeController.UpdateDeductionType)
+		api.DELETE("/deduction-types/:id", deductionTypeController.DeleteDeductionType)
+
+		// Item Category Routes
+		api.POST("/item-categories", itemCategoryController.CreateCategory)
+		api.GET("/item-categories", itemCategoryController.GetCategories)
+		api.GET("/item-categories/:id", itemCategoryController.GetCategory)
+		api.PUT("/item-categories/:id", itemCategoryController.UpdateCategory)
+		api.DELETE("/item-categories/:id", itemCategoryController.DeleteCategory)
+
+		// Deduction Pricing Rule Routes
+		api.POST("/deduction-pricing-rules", deductionPricingRuleController.CreateRule)
+		api.GET("/deduction-pricing-rules", deductionPricingRuleController.GetRules)
+		api.GET("/deduction-pricing-rules/:id", deductionPricingRuleController.GetRule)
+		api.PUT("/deduction-pricing-rules/:id", deductionPricingRuleController.UpdateRule)
+		api.DELETE("/deduction-pricing-rules/:id", deductionPricingRuleController.DeleteRule)
 
 		// Store Routes
 		api.POST("/stores", storeController.CreateStore)

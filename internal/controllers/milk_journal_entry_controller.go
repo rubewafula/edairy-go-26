@@ -89,6 +89,18 @@ func (c *MilkJournalEntryController) DeleteEntry(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Entry deleted successfully"})
 }
 
+func (c *MilkJournalEntryController) GetStrayEntries(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
+
+	entries, total, err := c.service.GetStrayEntries(page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"Data": entries, "Total": total})
+}
+
 func (c *MilkJournalEntryController) UploadEntries(ctx *gin.Context) {
 	// Implementation for Excel upload would go here
 	ctx.JSON(http.StatusNotImplemented, gin.H{"Message": "Bulk upload via XLS not yet implemented"})

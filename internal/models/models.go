@@ -219,12 +219,6 @@ func (MilkJournalEntry) TableName() string {
 	return "milk_journal_entries"
 }
 
-type DefaultMilkRate struct {
-	BaseModel
-	Rate    float64 `gorm:"column:rate"`
-	RouteID uint64  `gorm:"index;column:route_id"`
-}
-
 type Route struct {
 	BaseModel
 	Name        string `gorm:"column:name"`
@@ -242,6 +236,10 @@ type MilkDeliveryShift struct {
 	BaseModel
 	Name        string `gorm:"column:name"`
 	Description string `gorm:"column:description"`
+}
+
+func (MilkDeliveryShift) TableName() string {
+	return "milk_delivery_shifts"
 }
 
 type MilkCollection struct {
@@ -264,21 +262,30 @@ type MilkCan struct {
 	CanID      string  `gorm:"uniqueIndex;column:can_id"`
 	CanType    string  `gorm:"column:can_type"`
 	CanSize    float64 `gorm:"column:can_size"`
+	Units      string  `gorm:"column:units"`
 	TareWeight float64 `gorm:"column:tare_weight"`
 	RouteID    uint64  `gorm:"index;column:route_id"`
 }
 
+func (MilkCan) TableName() string {
+	return "milk_cans"
+}
+
 type CanMovement struct {
 	BaseModel
-	CanID         uint64    `gorm:"index;column:can_id"`
-	CreatedBy     uint64    `gorm:"column:created_by"`
-	MovementType  string    `gorm:"column:movement_type"` // in/out
-	Quantity      float64   `gorm:"column:quantity"`
-	Remarks       string    `gorm:"column:remarks"`
-	ShiftID       uint64    `gorm:"index;column:shift_id"`
-	TransporterID uint64    `gorm:"index;column:transporter_id"`
-	RouteID       uint64    `gorm:"index;column:route_id"`
-	MovementDate  time.Time `gorm:"index;column:movement_date"`
+	CanID             uint64    `gorm:"column:can_id"`
+	MovementType      string    `gorm:"column:movement_type"`
+	Quantity          float64   `gorm:"column:quantity"`
+	Remarks           string    `gorm:"column:remarks"`
+	ShiftID           uint64    `gorm:"column:shift_id"`
+	TransporterID     uint64    `gorm:"column:transporter_id"`
+	RouteID           uint64    `gorm:"column:route_id"`
+	MovementDate      time.Time `gorm:"column:movement_date"`
+	ConditionOnReturn string    `gorm:"column:condition_on_return"`
+}
+
+func (CanMovement) TableName() string {
+	return "can_movements"
 }
 
 type CoolerMilkCollection struct {
@@ -301,17 +308,16 @@ type Store struct {
 
 type MilkReject struct {
 	BaseModel
-	RouteID             uint64         `gorm:"column:route_id"`
-	Quantity            float64        `gorm:"column:quantity"`
-	TransactionDate     time.Time      `gorm:"index;column:transaction_date"`
-	Reason              string         `gorm:"column:reason"`
-	Description         string         `gorm:"column:description"`
-	Confirmed           int            `gorm:"column:confirmed"`
-	MemberID            uint64         `gorm:"index;column:member_id"`
-	TransporterID       uint64         `gorm:"index;column:transporter_id"`
-	CanID               uint64         `gorm:"index;column:can_id"`
-	MilkDeliveryShiftID uint64         `gorm:"index;column:milk_delivery_shift_id"`
-	DeletedAt           gorm.DeletedAt `gorm:"index;column:deleted_at"` // Correct GORM type for soft deletes
+	RouteID             uint64    `gorm:"column:route_id"`
+	Quantity            float64   `gorm:"column:quantity"`
+	TransactionDate     time.Time `gorm:"index;column:transaction_date"`
+	Reason              string    `gorm:"column:reason"`
+	Description         string    `gorm:"column:description"`
+	Confirmed           int       `gorm:"column:confirmed"`
+	MemberID            uint64    `gorm:"index;column:member_id"`
+	TransporterID       uint64    `gorm:"index;column:transporter_id"`
+	CanID               uint64    `gorm:"index;column:can_id"`
+	MilkDeliveryShiftID uint64    `gorm:"index;column:milk_delivery_shift_id"`
 }
 
 type MilkSpecialRate struct {
@@ -334,6 +340,26 @@ type MilkCooler struct {
 	UserID             uint64    `gorm:"index;column:user_id"`
 	MilkBar            float64   `gorm:"column:milk_bar"`
 	SiteID             uint64    `gorm:"index;column:site_id"`
+}
+
+type MilkDelivery struct {
+	BaseModel
+	DeliveryNoteNumber string    `gorm:"index;column:delivery_note_number"`
+	CustomerID         uint64    `gorm:"index;column:customer_id"`
+	QuantityAccepted   float64   `gorm:"column:quantity_accepted"`
+	Cooler             string    `gorm:"column:cooler"`
+	Invoiced           int       `gorm:"column:invoiced"`
+	TransactionDate    time.Time `gorm:"index;column:transaction_date"`
+	Amount             float64   `gorm:"column:amount"`
+	AmountPaid         float64   `gorm:"column:amount_paid"`
+	RouteID            uint64    `gorm:"index;column:route_id"`
+	Confirmed          int       `gorm:"column:confirmed"`
+	Processed          string    `gorm:"column:processed"`
+	TransporterID      uint64    `gorm:"index;column:transporter_id"`
+}
+
+func (MilkDelivery) TableName() string {
+	return "milk_deliveries"
 }
 
 type MilkDeliveryAcceptance struct {
@@ -372,6 +398,10 @@ type MilkLocalSale struct {
 	Amount          float64   `gorm:"column:amount"`
 }
 
+func (MilkLocalSale) TableName() string {
+	return "milk_local_sales"
+}
+
 type MilkSale struct {
 	BaseModel
 	Quantity float64   `gorm:"column:quantity"`
@@ -392,6 +422,23 @@ type MilkTransporterCost struct {
 	PayrollID          uint64  `gorm:"index;column:payroll_id"`
 	Quantity           float64 `gorm:"column:quantity"`
 	Rejects            float64 `gorm:"column:rejects"`
+}
+
+type DailyMilkVariance struct {
+	ID               uint64    `gorm:"column:id"`
+	Transporter      string    `gorm:"column:transporter"`
+	Day              time.Time `gorm:"column:day"`
+	Month            string    `gorm:"column:month"`
+	FieldCollections float64   `gorm:"column:field_collections"`
+	MCC              float64   `gorm:"column:mcc"`
+	CashSales        float64   `gorm:"column:cash_sales"`
+	CreditSales      float64   `gorm:"column:credit_sales"`
+	Rejects          float64   `gorm:"column:rejects"`
+	Balance          float64   `gorm:"column:balance"`
+}
+
+func (DailyMilkVariance) TableName() string {
+	return "daily_milk_variance"
 }
 
 // Member+ Lending
@@ -1058,10 +1105,31 @@ type Benefit struct {
 
 type DeductionType struct {
 	BaseModel
-	Code        string `gorm:"uniqueIndex;column:code"`
+	Code        string `gorm:"column:code"`
 	Description string `gorm:"column:description"`
 	Status      string `gorm:"column:status"`
-	IsStatutory bool   `gorm:"column:is_statutory"`
+	IsStatutory string `gorm:"column:is_statutory"`
+}
+
+func (DeductionType) TableName() string {
+	return "deduction_types"
+}
+
+type DeductionPricingRule struct {
+	BaseModel
+	DeductionTypeID uint64  `gorm:"column:deduction_type_id"`
+	MinCreditLimit  float64 `gorm:"column:min_credit_limit"`
+	MaxLimit        float64 `gorm:"column:max_limit"`
+	BoardingFee     float64 `gorm:"column:boarding_fee"`
+	ProcessingFee   float64 `gorm:"column:processing_fee"`
+	InsuranceFee    float64 `gorm:"column:insurance_fee"`
+	LegalFee        float64 `gorm:"column:legal_fee"`
+	InterestRate    float64 `gorm:"column:interest_rate"`
+	Status          string  `gorm:"column:status;default:ACTIVE"`
+}
+
+func (DeductionPricingRule) TableName() string {
+	return "deduction_pricing_rules"
 }
 
 type Deduction struct {
@@ -1204,8 +1272,13 @@ type EmployeePayrollRelief struct {
 // Inventory
 type ItemCategory struct {
 	BaseModel
-	Name        string `gorm:"column:name"`
-	Description string `gorm:"column:description"`
+	Name             string `gorm:"column:name"`
+	Description      string `gorm:"column:description"`
+	ParentCategoryID uint64 `gorm:"column:parent_category_id"`
+}
+
+func (ItemCategory) TableName() string {
+	return "item_categories"
 }
 
 type Inventory struct {
@@ -1262,9 +1335,22 @@ type Product struct {
 
 type ProductGrade struct {
 	BaseModel
-	Code        string `gorm:"uniqueIndex;column:code"`
-	Name        string `gorm:"column:name"`
+	Name        string `gorm:"column:name"` // Changed from uniqueIndex to match schema
 	Description string `gorm:"column:description"`
+}
+
+func (ProductGrade) TableName() string {
+	return "product_grades"
+}
+
+type DefaultMilkRate struct {
+	BaseModel
+	Rate    float64 `gorm:"column:rate"`
+	RouteID uint64  `gorm:"index;column:route_id"`
+}
+
+func (DefaultMilkRate) TableName() string {
+	return "default_milk_rates"
 }
 
 type ProductPrice struct {

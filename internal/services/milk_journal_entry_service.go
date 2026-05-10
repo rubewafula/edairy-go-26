@@ -109,3 +109,42 @@ func (s *MilkJournalEntryService) UpdateEntry(id string, req dtos.UpdateMilkJour
 func (s *MilkJournalEntryService) DeleteEntry(id string) error {
 	return db.DB.Delete(&models.MilkJournalEntry{}, id).Error
 }
+
+func (s *MilkJournalEntryService) GetStrayEntries(page, limit int) ([]dtos.StrayMilkCollectionResponse, int64, error) {
+	var entries []dtos.StrayMilkCollectionResponse
+	var total int64
+	offset := (page - 1) * limit
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM milk_journal_entries mje
+		INNER JOIN member_registrations m ON mje.member_id = m.id
+		WHERE mje.deleted_at IS NULL AND mje.route_id != m.route_id
+	`
+	db.DB.Raw(countQuery).Scan(&total)
+
+	query := `
+		SELECT 
+			mje.id, 
+			mje.member_id, 
+			m.member_no, 
+			CONCAT(m.first_name, ' ', m.last_name) AS member_name,
+			m.route_id AS member_route_id,
+			mr.route_name AS member_route,
+			mje.route_id AS journal_route_id,
+			jr.route_name AS stray_route,
+			mje.quantity,
+			mje.journal_date,
+			mds.name AS milk_delivery_shift,
+			mje.created_at
+		FROM milk_journal_entries mje
+		INNER JOIN member_registrations m ON mje.member_id = m.id
+		LEFT JOIN routes mr ON m.route_id = mr.id
+		LEFT JOIN routes jr ON mje.route_id = jr.id
+		LEFT JOIN milk_delivery_shifts mds ON mje.milk_delivery_shift_id = mds.id
+		WHERE mje.deleted_at IS NULL AND mje.route_id != m.route_id
+		LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, limit, offset).Scan(&entries).Error
+	return entries, total, err
+}

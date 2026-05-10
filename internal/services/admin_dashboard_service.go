@@ -35,7 +35,7 @@ func (s *AdminDashboardService) getMilkDeliverySummary() dtos.AdminDashboardMilk
 		SELECT
 			COALESCE(SUM(IF(DATE(created_at) = CURDATE(), IFNULL(quantity_accepted, 0), 0)), 0) AS today,
 			COALESCE(SUM(IFNULL(quantity_accepted, 0)), 0) AS month
-		FROM milk_delivery_acceptance
+		FROM milk_deliveries
 		WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
 	`).Scan(&result)
 

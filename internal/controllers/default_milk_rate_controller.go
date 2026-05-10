@@ -11,18 +11,18 @@ import (
 	validator "github.com/rubewafula/edairy-go-26/internal/validators"
 )
 
-type MilkCanController struct {
-	service *services.MilkCanService
+type DefaultMilkRateController struct {
+	service *services.DefaultMilkRateService
 }
 
-func NewMilkCanController() *MilkCanController {
-	return &MilkCanController{
-		service: services.NewMilkCanService(),
+func NewDefaultMilkRateController() *DefaultMilkRateController {
+	return &DefaultMilkRateController{
+		service: services.NewDefaultMilkRateService(),
 	}
 }
 
-func (c *MilkCanController) CreateMilkCan(ctx *gin.Context) {
-	var req dtos.CreateMilkCanRequest
+func (c *DefaultMilkRateController) CreateRate(ctx *gin.Context) {
+	var req dtos.CreateDefaultMilkRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -33,39 +33,39 @@ func (c *MilkCanController) CreateMilkCan(ctx *gin.Context) {
 		return
 	}
 
-	milkCan, err := c.service.CreateMilkCan(req)
+	rate, err := c.service.CreateDefaultMilkRate(req)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
 
-	response, _ := c.service.GetMilkCan(utils.Uint64ToString(milkCan.ID))
+	response, _ := c.service.GetDefaultMilkRate(utils.Uint64ToString(rate.ID))
 	ctx.JSON(http.StatusCreated, response)
 }
 
-func (c *MilkCanController) GetMilkCans(ctx *gin.Context) {
+func (c *DefaultMilkRateController) GetRates(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 
-	milkCans, total, err := c.service.GetMilkCans(page, limit)
+	rates, total, err := c.service.GetDefaultMilkRates(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": milkCans, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"Data": rates, "Total": total})
 }
 
-func (c *MilkCanController) GetMilkCan(ctx *gin.Context) {
-	milkCan, err := c.service.GetMilkCan(ctx.Param("id"))
+func (c *DefaultMilkRateController) GetRate(ctx *gin.Context) {
+	rate, err := c.service.GetDefaultMilkRate(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Milk Can not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Default milk rate not found"})
 		return
 	}
-	ctx.JSON(http.StatusOK, milkCan)
+	ctx.JSON(http.StatusOK, rate)
 }
 
-func (c *MilkCanController) UpdateMilkCan(ctx *gin.Context) {
-	var req dtos.UpdateMilkCanRequest
+func (c *DefaultMilkRateController) UpdateRate(ctx *gin.Context) {
+	var req dtos.UpdateDefaultMilkRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -76,17 +76,17 @@ func (c *MilkCanController) UpdateMilkCan(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.service.UpdateMilkCan(ctx.Param("id"), req); err != nil {
+	if err := c.service.UpdateDefaultMilkRate(ctx.Param("id"), req); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Can updated successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"Message": "Default milk rate updated successfully"})
 }
 
-func (c *MilkCanController) DeleteMilkCan(ctx *gin.Context) {
-	if err := c.service.DeleteMilkCan(ctx.Param("id")); err != nil {
+func (c *DefaultMilkRateController) DeleteRate(ctx *gin.Context) {
+	if err := c.service.DeleteDefaultMilkRate(ctx.Param("id")); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Can deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"Message": "Default milk rate deleted successfully"})
 }
