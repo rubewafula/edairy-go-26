@@ -4,6 +4,8 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"gorm.io/gorm"
 )
 
 type TransporterService struct{}
@@ -19,33 +21,110 @@ func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest
 	}
 
 	transporter := &models.Transporter{
-		Name:         req.Name,
-		Phone:        req.Phone,
-		IDNumber:     req.IDNumber,
-		VehicleRegNo: req.VehicleRegNo,
-		Status:       status,
+		TransporterNo:     req.TransporterNo,
+		Category:          req.Category,
+		TransporterTypeID: req.TransporterTypeID,
+		PrimaryPhone:      req.PrimaryPhone,
+		EmailAddress:      req.EmailAddress,
+		RouteID:           req.RouteID,
+		Status:            status,
+		Restricted:        req.Restricted,
 	}
 
-	if err := db.DB.Create(transporter).Error; err != nil {
-		return nil, err
-	}
-	return transporter, nil
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(transporter).Error; err != nil {
+			return err
+		}
+
+		if req.Category == "INDIVIDUAL" {
+			individual := &models.IndividualTransporter{
+				TransporterID:     transporter.ID,
+				FirstName:         req.FirstName,
+				LastName:          req.LastName,
+				OtherNames:        req.OtherNames,
+				Gender:            req.Gender,
+				DateOfBirth:       utils.ParseDate(req.DateOfBirth),
+				NationalIDNo:      req.NationalIDNo,
+				KraPin:            req.KraPin,
+				MaritalStatus:     req.MaritalStatus,
+				NextOfKinFullName: req.NextOfKinFullName,
+				NextOfKinPhone:    req.NextOfKinPhone,
+				PassportPhoto:     req.PassportPhoto,
+				IDFrontPhoto:      req.IDFrontPhoto,
+				IDBackPhoto:       req.IDBackPhoto,
+			}
+			return tx.Create(individual).Error
+		} else {
+			company := &models.CompanyTransporter{
+				TransporterID:              transporter.ID,
+				CompanyName:                req.CompanyName,
+				RegistrationNo:             req.RegistrationNo,
+				KraPin:                     req.KraPin,
+				ContactPersonName:          req.ContactPersonName,
+				ContactPersonPhone:         req.ContactPersonPhone,
+				PostalAddress:              req.PostalAddress,
+				PostalCode:                 req.PostalCode,
+				Town:                       req.Town,
+				CertificateOfIncorporation: req.CertificateOfIncorporation,
+			}
+			return tx.Create(company).Error
+		}
+	})
+
+	return transporter, err
 }
 
-func (s *TransporterService) GetTransporters() ([]models.Transporter, int64, error) {
+func (s *TransporterService) GetTransporters() ([]dtos.TransporterResponse, int64, error) {
 	var transporters []models.Transporter
 	var total int64
 	db.DB.Model(&models.Transporter{}).Count(&total)
-	err := db.DB.Find(&transporters).Error
-	return transporters, total, err
+	err := db.DB.Preload("Individual").Preload("Company").Find(&transporters).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dtos.TransporterResponse
+	for _, t := range transporters {
+		responses = append(responses, s.toTransporterResponse(t))
+	}
+	return responses, total, nil
 }
 
-func (s *TransporterService) GetTransporter(id string) (*models.Transporter, error) {
+func (s *TransporterService) GetTransporter(id string) (*dtos.TransporterResponse, error) {
 	var transporter models.Transporter
-	if err := db.DB.First(&transporter, id).Error; err != nil {
+	if err := db.DB.Preload("Individual").Preload("Company").First(&transporter, id).Error; err != nil {
 		return nil, err
 	}
-	return &transporter, nil
+	response := s.toTransporterResponse(transporter)
+	return &response, nil
+}
+
+func (s *TransporterService) toTransporterResponse(t models.Transporter) dtos.TransporterResponse {
+	response := dtos.TransporterResponse{
+		ID:                t.ID,
+		TransporterNo:     t.TransporterNo,
+		Category:          t.Category,
+		TransporterTypeID: t.TransporterTypeID,
+		PrimaryPhone:      t.PrimaryPhone,
+		EmailAddress:      t.EmailAddress,
+		RouteID:           t.RouteID,
+		Status:            t.Status,
+		Restricted:        t.Restricted,
+		CreatedAt:         t.CreatedAt,
+		UpdatedAt:         t.UpdatedAt,
+	}
+
+	if t.Individual != nil {
+		response.Individual = &dtos.IndividualTransporterResponse{
+			ID: t.Individual.ID, TransporterID: t.Individual.TransporterID, RouteID: t.RouteID, FirstName: t.Individual.FirstName, LastName: t.Individual.LastName, OtherNames: t.Individual.OtherNames, Gender: t.Individual.Gender, DateOfBirth: t.Individual.DateOfBirth, NationalIDNo: t.Individual.NationalIDNo, KraPin: t.Individual.KraPin, MaritalStatus: t.Individual.MaritalStatus, NextOfKinFullName: t.Individual.NextOfKinFullName, NextOfKinPhone: t.Individual.NextOfKinPhone, PassportPhoto: t.Individual.PassportPhoto, IDFrontPhoto: t.Individual.IDFrontPhoto, IDBackPhoto: t.Individual.IDBackPhoto,
+		}
+	}
+	if t.Company != nil {
+		response.Company = &dtos.CompanyTransporterResponse{
+			ID: t.Company.ID, TransporterID: t.Company.TransporterID, RouteID: t.RouteID, CompanyName: t.Company.CompanyName, RegistrationNo: t.Company.RegistrationNo, KraPin: t.Company.KraPin, ContactPersonName: t.Company.ContactPersonName, ContactPersonPhone: t.Company.ContactPersonPhone, PostalAddress: t.Company.PostalAddress, PostalCode: t.Company.PostalCode, Town: t.Company.Town, CertificateOfIncorporation: t.Company.CertificateOfIncorporation,
+		}
+	}
+	return response
 }
 
 func (s *TransporterService) UpdateTransporter(id string, req dtos.UpdateTransporterRequest) error {
@@ -54,11 +133,12 @@ func (s *TransporterService) UpdateTransporter(id string, req dtos.UpdateTranspo
 		return err
 	}
 
-	transporter.Name = req.Name
-	transporter.Phone = req.Phone
-	transporter.IDNumber = req.IDNumber
-	transporter.VehicleRegNo = req.VehicleRegNo
+	transporter.TransporterTypeID = req.TransporterTypeID
+	transporter.PrimaryPhone = req.PrimaryPhone
+	transporter.EmailAddress = req.EmailAddress
+	transporter.RouteID = req.RouteID
 	transporter.Status = req.Status
+	transporter.Restricted = req.Restricted
 
 	return db.DB.Save(&transporter).Error
 }

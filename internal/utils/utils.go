@@ -2,9 +2,11 @@ package utils
 
 import (
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func NormalizePhone(phone string) string {
@@ -30,4 +32,13 @@ func FormatValidationError(err error) map[string]string {
 	}
 
 	return errors
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+func Uint64ToString(n uint64) string {
+	return strconv.FormatUint(n, 10)
 }

@@ -54,16 +54,15 @@ type RolePermission struct {
 
 type User struct {
 	BaseModel
-	Name          string `gorm:"column:name"`
-	Email         string `gorm:"column:email;uniqueIndex"`
-	Password      string `gorm:"column:password"`
-	RememberToken string `gorm:"column:remember_token"`
-
-	IsVerified        bool `gorm:"column:is_verified"`
-	VerificationToken string
-
-	ResetToken       string
-	ResetTokenExpiry *time.Time
+	Name              string     `gorm:"column:name"`
+	Email             string     `gorm:"column:email;uniqueIndex"`
+	EmailVerifiedAt   *string    `gorm:"column:email_verified_at"`
+	Password          string     `gorm:"column:password"`
+	RememberToken     string     `gorm:"column:remember_token"`
+	IsVerified        bool       `gorm:"column:is_verified;default:0"`
+	VerificationToken string     `gorm:"column:verification_token"`
+	ResetToken        string     `gorm:"column:reset_token"`
+	ResetTokenExpiry  *time.Time `gorm:"column:reset_token_expiry"`
 
 	Roles       []Role       `gorm:"many2many:user_roles;constraint:OnDelete:CASCADE;"`
 	Permissions []Permission `gorm:"many2many:user_permissions;constraint:OnDelete:CASCADE;"`
@@ -182,17 +181,7 @@ type PaymentType struct {
 	IsSystem    bool   `gorm:"column:is_system"`
 }
 
-//Dairy Module
-
-type Transporter struct {
-	BaseModel
-	Name         string `gorm:"column:name"`
-	Phone        string `gorm:"column:phone"`
-	IDNumber     string `gorm:"uniqueIndex;column:id_number"`
-	VehicleRegNo string `gorm:"column:vehicle_registration_number"`
-	Status       string `gorm:"column:status"`
-}
-
+// Dairy Module
 type SubRoute struct {
 	BaseModel
 	RouteID     uint64 `gorm:"index;column:route_id"`

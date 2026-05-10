@@ -38,6 +38,14 @@ func SetupRouter() *gin.Engine {
 	memberBankAccountController := controllers.NewMemberBankAccountController()
 	milkDeliveryShiftController := controllers.NewMilkDeliveryShiftController()
 	transporterController := controllers.NewTransporterController()
+	individualTransporterController := controllers.NewIndividualTransporterController()
+	companyTransporterController := controllers.NewCompanyTransporterController()
+	driverController := controllers.NewTransporterDriverController()
+	vehicleController := controllers.NewTransporterVehicleController()
+	routeAssignmentController := controllers.NewTransporterRouteAssignmentController()
+	driverAssignmentController := controllers.NewTransporterDriverAssignmentController()
+	transporterBankAccountController := controllers.NewTransporterBankAccountController()
+	transporterBenefitController := controllers.NewTransporterBenefitController()
 	subRouteController := controllers.NewSubRouteController()
 	milkJournalController := controllers.NewMilkJournalController()
 	milkCanController := controllers.NewMilkCanController()
@@ -70,6 +78,8 @@ func SetupRouter() *gin.Engine {
 	assetAssignmentController := controllers.NewAssetAssignmentController()
 	assetDepreciationController := controllers.NewAssetDepreciationController()
 	permissionController := controllers.NewPermissionController()
+	roleController := controllers.NewRoleController()
+	userController := controllers.NewUserController()
 
 	adminDashboardController := controllers.NewAdminDashboardController()
 
@@ -137,6 +147,58 @@ func SetupRouter() *gin.Engine {
 		api.GET("/transporters/:id", transporterController.GetTransporter)
 		api.PUT("/transporters/:id", transporterController.UpdateTransporter)
 		api.DELETE("/transporters/:id", transporterController.DeleteTransporter)
+
+		// Individual Transporter Routes
+		api.GET("/individual-transporters", individualTransporterController.GetIndividualTransporters)
+		api.GET("/individual-transporters/:id", individualTransporterController.GetIndividualTransporter)
+		api.PUT("/individual-transporters/:id", individualTransporterController.UpdateIndividualTransporter)
+
+		// Company Transporter Routes
+		api.GET("/company-transporters", companyTransporterController.GetCompanyTransporters)
+		api.GET("/company-transporters/:id", companyTransporterController.GetCompanyTransporter)
+		api.PUT("/company-transporters/:id", companyTransporterController.UpdateCompanyTransporter)
+
+		// Transporter Driver Routes
+		api.POST("/transporter-drivers", driverController.CreateDriver)
+		api.GET("/transporter-drivers", driverController.GetDrivers)
+		api.GET("/transporter-drivers/:id", driverController.GetDriver)
+		api.PUT("/transporter-drivers/:id", driverController.UpdateDriver)
+		api.DELETE("/transporter-drivers/:id", driverController.DeleteDriver)
+
+		// Transporter Vehicle Routes
+		api.POST("/transporter-vehicles", vehicleController.CreateVehicle)
+		api.GET("/transporter-vehicles", vehicleController.GetVehicles)
+		api.GET("/transporter-vehicles/:id", vehicleController.GetVehicle)
+		api.PUT("/transporter-vehicles/:id", vehicleController.UpdateVehicle)
+		api.DELETE("/transporter-vehicles/:id", vehicleController.DeleteVehicle)
+
+		// Transporter Route Assignment Routes
+		api.POST("/transporter-route-assignments", routeAssignmentController.CreateAssignment)
+		api.GET("/transporter-route-assignments", routeAssignmentController.GetAssignments)
+		api.GET("/transporter-route-assignments/:id", routeAssignmentController.GetAssignment)
+		api.PUT("/transporter-route-assignments/:id", routeAssignmentController.UpdateAssignment)
+		api.DELETE("/transporter-route-assignments/:id", routeAssignmentController.DeleteAssignment)
+
+		// Transporter Driver Assignment Routes
+		api.POST("/transporter-driver-assignments", driverAssignmentController.CreateAssignment)
+		api.GET("/transporter-driver-assignments", driverAssignmentController.GetAssignments)
+		api.GET("/transporter-driver-assignments/:id", driverAssignmentController.GetAssignment)
+		api.PUT("/transporter-driver-assignments/:id", driverAssignmentController.UpdateAssignment)
+		api.DELETE("/transporter-driver-assignments/:id", driverAssignmentController.DeleteAssignment)
+
+		// Transporter Bank Account Routes
+		api.POST("/transporter-bank-accounts", transporterBankAccountController.CreateAccount)
+		api.GET("/transporter-bank-accounts", transporterBankAccountController.GetAccounts)
+		api.GET("/transporter-bank-accounts/:id", transporterBankAccountController.GetAccount)
+		api.PUT("/transporter-bank-accounts/:id", transporterBankAccountController.UpdateAccount)
+		api.DELETE("/transporter-bank-accounts/:id", transporterBankAccountController.DeleteAccount)
+
+		// Transporter Benefit Routes
+		api.POST("/transporter-benefits", transporterBenefitController.CreateBenefit)
+		api.GET("/transporter-benefits", transporterBenefitController.GetBenefits)
+		api.GET("/transporter-benefits/:id", transporterBenefitController.GetBenefit)
+		api.PUT("/transporter-benefits/:id", transporterBenefitController.UpdateBenefit)
+		api.DELETE("/transporter-benefits/:id", transporterBenefitController.DeleteBenefit)
 
 		// SubRoute Routes
 		api.POST("/sub-routes", subRouteController.CreateSubRoute)
@@ -373,6 +435,21 @@ func SetupRouter() *gin.Engine {
 		api.GET("/permissions/:id", permissionController.GetPermission)
 		api.PUT("/permissions/:id", permissionController.UpdatePermission)
 		api.DELETE("/permissions/:id", permissionController.DeletePermission)
+
+		// Role Routes
+		api.POST("/roles", roleController.CreateRole)
+		api.GET("/roles", roleController.GetRoles)
+		api.GET("/roles/:id", roleController.GetRole)
+		api.PUT("/roles/:id", roleController.UpdateRole)
+		api.DELETE("/roles/:id", roleController.DeleteRole)
+		api.POST("/roles-permissions/:id", roleController.AppendAllPermissions)
+
+		// User Routes
+		api.POST("/users", userController.CreateUser)
+		api.GET("/users", userController.GetUsers)
+		api.GET("/users/:id", userController.GetUser)
+		api.PUT("/users/:id", userController.UpdateUser)
+		api.DELETE("/users/:id", userController.DeleteUser)
 	}
 
 	return r

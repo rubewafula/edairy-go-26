@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"time"
@@ -57,7 +58,10 @@ func (s *AuthService) generateToken(
 }
 
 func (s *AuthService) Signup(req dtos.SignupRequest) error {
-	hash, _ := s.hashPassword(req.Password)
+	hash, err := s.hashPassword(req.Password)
+	if err != nil {
+		return err
+	}
 
 	user := models.User{
 		Name:              req.Name,
@@ -99,7 +103,7 @@ func (s *AuthService) Login(req dtos.LoginRequest) (*dtos.LoginResponse, error) 
 	}
 
 	if !s.checkPassword(user.Password, req.Password) {
-		return nil, gorm.ErrInvalidData
+		return nil, errors.New("invalid email or password")
 	}
 
 	roles := make([]string, 0)
@@ -160,10 +164,13 @@ func (s *AuthService) ResetPassword(token, password string) error {
 	}
 
 	if user.ResetTokenExpiry == nil || user.ResetTokenExpiry.Before(time.Now()) {
-		return gorm.ErrInvalidData
+		return errors.New("reset token has expired or is invalid")
 	}
 
-	hash, _ := s.hashPassword(password)
+	hash, err := s.hashPassword(password)
+	if err != nil {
+		return err
+	}
 
 	user.Password = hash
 	user.ResetToken = ""
@@ -180,10 +187,13 @@ func (s *AuthService) ChangePassword(userID uint64, oldPass, newPass string) err
 	}
 
 	if !s.checkPassword(user.Password, oldPass) {
-		return gorm.ErrInvalidData
+		return errors.New("incorrect old password")
 	}
 
-	hash, _ := s.hashPassword(newPass)
+	hash, err := s.hashPassword(newPass)
+	if err != nil {
+		return err
+	}
 	user.Password = hash
 
 	return db.DB.Save(&user).Error

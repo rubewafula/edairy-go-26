@@ -41,7 +41,7 @@ func (s *TransportRateService) GetTransportRates() ([]dtos.TransportRateResponse
 		SELECT 
 			tr.id, m.member_no, m.first_name AS member_first_name, m.last_name AS member_last_name,
 			r.route_name,
-			t.first_name AS transporter_first_name, t.last_name AS transporter_last_name,
+			t.transporter_no,
 			tr.transport_rate AS rate, tr.status, 
 			tr.created_at, tr.updated_at
 		FROM transport_rates tr
@@ -60,7 +60,7 @@ func (s *TransportRateService) GetTransportRate(id string) (*dtos.TransportRateR
 		SELECT 
 			tr.id, m.member_no, m.first_name AS member_first_name, m.last_name AS member_last_name,
 			r.route_name,
-			t.first_name AS transporter_first_name, t.last_name AS transporter_last_name,
+			t.transporter_no,
 			tr.transport_rate AS rate, tr.status, 
 			tr.created_at, tr.updated_at
 		FROM transport_rates tr
