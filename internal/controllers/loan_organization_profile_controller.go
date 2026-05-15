@@ -22,7 +22,7 @@ func NewLoanOrganizationProfileController() *LoanOrganizationProfileController {
 	}
 }
 
-func (c *LoanOrganizationProfileController) CreateProfile(ctx *gin.Context) {
+func (c *LoanOrganizationProfileController) CreateLoanOrganizationProfile(ctx *gin.Context) {
 	var req dtos.CreateLoanOrganizationProfileRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -35,20 +35,20 @@ func (c *LoanOrganizationProfileController) CreateProfile(ctx *gin.Context) {
 	}
 
 	userID := ctx.GetUint64("user_id")
-	profile, err := c.service.CreateProfile(req, userID)
+	profile, err := c.service.CreateLoanOrganizationProfile(req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response, _ := c.service.GetProfile(utils.Uint64ToString(profile.ID))
+	response, _ := c.service.GetLoanOrganizationProfile(utils.Uint64ToString(profile.ID))
 	ctx.JSON(http.StatusCreated, response)
 }
 
-func (c *LoanOrganizationProfileController) GetProfiles(ctx *gin.Context) {
+func (c *LoanOrganizationProfileController) GetLoanOrganizationProfiles(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 
-	results, total, err := c.service.GetProfiles(page, limit)
+	results, total, err := c.service.GetLoanOrganizationProfiles(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -56,8 +56,8 @@ func (c *LoanOrganizationProfileController) GetProfiles(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
 }
 
-func (c *LoanOrganizationProfileController) GetProfile(ctx *gin.Context) {
-	result, err := c.service.GetProfile(ctx.Param("id"))
+func (c *LoanOrganizationProfileController) GetLoanOrganizationProfile(ctx *gin.Context) {
+	result, err := c.service.GetLoanOrganizationProfile(ctx.Param("id"))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Loan organization profile not found"})
@@ -69,7 +69,7 @@ func (c *LoanOrganizationProfileController) GetProfile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func (c *LoanOrganizationProfileController) UpdateProfile(ctx *gin.Context) {
+func (c *LoanOrganizationProfileController) UpdateLoanOrganizationProfile(ctx *gin.Context) {
 	var req dtos.UpdateLoanOrganizationProfileRequest
 	id := ctx.Param("id")
 
@@ -84,17 +84,17 @@ func (c *LoanOrganizationProfileController) UpdateProfile(ctx *gin.Context) {
 	}
 
 	userID := ctx.GetUint64("user_id")
-	if err := c.service.UpdateProfile(id, req, userID); err != nil {
+	if err := c.service.UpdateLoanOrganizationProfile(id, req, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Loan organization profile updated successfully"})
 }
 
-func (c *LoanOrganizationProfileController) DeleteProfile(ctx *gin.Context) {
+func (c *LoanOrganizationProfileController) DeleteLoanOrganizationProfile(ctx *gin.Context) {
 	id := ctx.Param("id")
 	userID := ctx.GetUint64("user_id")
-	if err := c.service.DeleteProfile(id, userID); err != nil {
+	if err := c.service.DeleteLoanOrganizationProfile(id, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

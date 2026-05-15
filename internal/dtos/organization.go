@@ -2,43 +2,6 @@ package dtos
 
 import "time"
 
-// LoanOrganizationProfile DTOs
-type CreateLoanOrganizationProfileRequest struct {
-	NextLevel       string `json:"next_level"`
-	AstraID         string `json:"astra_id"`
-	LinkStatus      string `json:"link_status"`
-	UUID            string `json:"uuid"`
-	Version         string `json:"version"`
-	ProductID       string `json:"product_id"`
-	CompanyDetailID uint64 `json:"company_detail_id"`
-	ManuallyRatify  bool   `json:"manually_ratify"`
-}
-
-type UpdateLoanOrganizationProfileRequest struct {
-	NextLevel       string `json:"next_level"`
-	AstraID         string `json:"astra_id"`
-	LinkStatus      string `json:"link_status"`
-	UUID            string `json:"uuid"`
-	Version         string `json:"version"`
-	ProductID       string `json:"product_id"`
-	CompanyDetailID uint64 `json:"company_detail_id"`
-	ManuallyRatify  bool   `json:"manually_ratify"`
-}
-
-type LoanOrganizationProfileResponse struct {
-	ID              uint64    `json:"ID"`
-	NextLevel       string    `json:"NextLevel"`
-	AstraID         string    `json:"AstraID"`
-	LinkStatus      string    `json:"LinkStatus"`
-	UUID            string    `json:"UUID"`
-	Version         string    `json:"Version"`
-	ProductID       string    `json:"ProductID"`
-	CompanyDetailID uint64    `json:"CompanyDetailID"`
-	ManuallyRatify  bool      `json:"ManuallyRatify"`
-	CreatedAt       time.Time `json:"CreatedAt"`
-	UpdatedAt       time.Time `json:"UpdatedAt"`
-}
-
 // OrganizationAddress DTOs
 type CreateOrganizationAddressRequest struct {
 	AddressType string `json:"address_type" validate:"required"`

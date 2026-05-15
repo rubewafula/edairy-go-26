@@ -5,7 +5,6 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
-	"gorm.io/gorm"
 )
 
 type LoanManagementService struct{}
@@ -14,89 +13,110 @@ func NewLoanManagementService() *LoanManagementService {
 	return &LoanManagementService{}
 }
 
-// Loan Accounts
-func (s *LoanManagementService) CreateAccount(req dtos.CreateLoanAccountRequest, userID uint64) (*models.LoanAccount, error) {
+// --- LoanAccount CRUD ---
+func (s *LoanManagementService) CreateLoanAccount(req dtos.CreateLoanAccountRequest, userID uint64) (*models.LoanAccount, error) {
 	account := &models.LoanAccount{
 		BaseModel:     models.BaseModel{CreatedBy: userID},
 		MemberID:      req.MemberID,
 		AccountNumber: req.AccountNumber,
+		Balance:       req.Balance,
 		Status:        req.Status,
 	}
 	if account.Status == "" {
 		account.Status = "ACTIVE"
 	}
-	err := db.DB.Create(account).Error
-	return account, err
+	if err := db.DB.Create(account).Error; err != nil {
+		return nil, err
+	}
+	return account, nil
 }
 
-func (s *LoanManagementService) GetAccounts(page, limit int) ([]dtos.LoanAccountResponse, int64, error) {
-	var results []dtos.LoanAccountResponse
+func (s *LoanManagementService) GetLoanAccounts(page, limit int) ([]models.LoanAccount, int64, error) {
+	var accounts []models.LoanAccount
 	var total int64
 	db.DB.Model(&models.LoanAccount{}).Count(&total)
 	offset := (page - 1) * limit
-
-	query := `
-		SELECT la.*, CONCAT(m.first_name, ' ', m.last_name) as member_name
-		FROM loan_accounts la
-		LEFT JOIN member_registrations m ON la.member_id = m.id
-		WHERE la.deleted_at IS NULL
-		ORDER BY la.id DESC LIMIT ? OFFSET ?`
-	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
-	return results, total, err
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&accounts).Error
+	return accounts, total, err
 }
 
-// Loan Callbacks
-func (s *LoanManagementService) CreateCallback(req dtos.CreateLoanCallbackRequest, userID uint64) (*models.LoanCallback, error) {
+func (s *LoanManagementService) GetLoanAccount(id string) (*models.LoanAccount, error) {
+	var account models.LoanAccount
+	if err := db.DB.First(&account, id).Error; err != nil {
+		return nil, err
+	}
+	return &account, nil
+}
+
+func (s *LoanManagementService) UpdateLoanAccount(id string, req dtos.UpdateLoanAccountRequest, userID uint64) error {
+	var account models.LoanAccount
+	if err := db.DB.First(&account, id).Error; err != nil {
+		return err
+	}
+	updates := map[string]interface{}{
+		"member_id":      req.MemberID,
+		"account_number": req.AccountNumber,
+		"balance":        req.Balance,
+		"status":         req.Status,
+		"updated_by":     userID,
+	}
+	return db.DB.Model(&account).Updates(updates).Error
+}
+
+func (s *LoanManagementService) DeleteLoanAccount(id string, userID uint64) error {
+	var account models.LoanAccount
+	if err := db.DB.First(&account, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&account).Update("updated_by", userID).Delete(&account).Error
+}
+
+// --- LoanCallback CRUD ---
+func (s *LoanManagementService) CreateLoanCallback(req dtos.CreateLoanCallbackRequest, userID uint64) (*models.LoanCallback, error) {
 	callback := &models.LoanCallback{
 		BaseModel: models.BaseModel{CreatedBy: userID},
 		Detail:    req.Detail,
 		LoanID:    req.LoanID,
 		Type:      req.Type,
 	}
-	err := db.DB.Create(callback).Error
-	return callback, err
+	if err := db.DB.Create(callback).Error; err != nil {
+		return nil, err
+	}
+	return callback, nil
 }
 
-func (s *LoanManagementService) GetCallbacks(page, limit int) ([]dtos.LoanCallbackResponse, int64, error) {
-	var results []dtos.LoanCallbackResponse
+func (s *LoanManagementService) GetLoanCallbacks(page, limit int) ([]models.LoanCallback, int64, error) {
+	var callbacks []models.LoanCallback
 	var total int64
 	db.DB.Model(&models.LoanCallback{}).Count(&total)
 	offset := (page - 1) * limit
-
-	err := db.DB.Model(&models.LoanCallback{}).
-		Limit(limit).Offset(offset).Order("id DESC").Scan(&results).Error
-	return results, total, err
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&callbacks).Error
+	return callbacks, total, err
 }
 
-func (s *LoanManagementService) GetCallback(id string) (*dtos.LoanCallbackResponse, error) {
-	var result dtos.LoanCallbackResponse
-	err := db.DB.Model(&models.LoanCallback{}).First(&result, id).Error
-	if err != nil {
+func (s *LoanManagementService) GetLoanCallback(id string) (*models.LoanCallback, error) {
+	var callback models.LoanCallback
+	if err := db.DB.First(&callback, id).Error; err != nil {
 		return nil, err
 	}
-	if result.ID == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return &result, nil
+	return &callback, nil
 }
 
-func (s *LoanManagementService) UpdateCallback(id string, req dtos.UpdateLoanCallbackRequest, userID uint64) error {
+func (s *LoanManagementService) UpdateLoanCallback(id string, req dtos.UpdateLoanCallbackRequest, userID uint64) error {
 	var callback models.LoanCallback
 	if err := db.DB.First(&callback, id).Error; err != nil {
 		return err
 	}
-
 	updates := map[string]interface{}{
 		"detail":     req.Detail,
 		"loan_id":    req.LoanID,
 		"type":       req.Type,
 		"updated_by": userID,
 	}
-
 	return db.DB.Model(&callback).Updates(updates).Error
 }
 
-func (s *LoanManagementService) DeleteCallback(id string, userID uint64) error {
+func (s *LoanManagementService) DeleteLoanCallback(id string, userID uint64) error {
 	var callback models.LoanCallback
 	if err := db.DB.First(&callback, id).Error; err != nil {
 		return err
@@ -104,19 +124,122 @@ func (s *LoanManagementService) DeleteCallback(id string, userID uint64) error {
 	return db.DB.Model(&callback).Update("updated_by", userID).Delete(&callback).Error
 }
 
-// Loan Origination Logs
-func (s *LoanManagementService) CreateOriginationLog(req dtos.CreateLoanOriginationLogRequest, userID uint64) (*models.LoanOriginationCallbackLog, error) {
+// --- LoanOrganizationProfile CRUD ---
+func (s *LoanManagementService) CreateLoanOrganizationProfile(req dtos.CreateLoanOrganizationProfileRequest, userID uint64) (*models.LoanOrganizationProfile, error) {
+	profile := &models.LoanOrganizationProfile{
+		BaseModel:       models.BaseModel{CreatedBy: userID},
+		NextLevel:       req.NextLevel,
+		AstraID:         req.AstraID,
+		LinkStatus:      req.LinkStatus,
+		UUID:            req.UUID,
+		Version:         req.Version,
+		ProductID:       req.ProductID,
+		CompanyDetailID: req.CompanyDetailID,
+		ManuallyRatify:  req.ManuallyRatify,
+	}
+	if err := db.DB.Create(profile).Error; err != nil {
+		return nil, err
+	}
+	return profile, nil
+}
+
+func (s *LoanManagementService) GetLoanOrganizationProfiles(page, limit int) ([]models.LoanOrganizationProfile, int64, error) {
+	var profiles []models.LoanOrganizationProfile
+	var total int64
+	db.DB.Model(&models.LoanOrganizationProfile{}).Count(&total)
+	offset := (page - 1) * limit
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&profiles).Error
+	return profiles, total, err
+}
+
+func (s *LoanManagementService) GetLoanOrganizationProfile(id string) (*models.LoanOrganizationProfile, error) {
+	var profile models.LoanOrganizationProfile
+	if err := db.DB.First(&profile, id).Error; err != nil {
+		return nil, err
+	}
+	return &profile, nil
+}
+
+func (s *LoanManagementService) UpdateLoanOrganizationProfile(id string, req dtos.UpdateLoanOrganizationProfileRequest, userID uint64) error {
+	var profile models.LoanOrganizationProfile
+	if err := db.DB.First(&profile, id).Error; err != nil {
+		return err
+	}
+	updates := map[string]interface{}{
+		"next_level":        req.NextLevel,
+		"astra_id":          req.AstraID,
+		"link_status":       req.LinkStatus,
+		"uuid":              req.UUID,
+		"version":           req.Version,
+		"product_id":        req.ProductID,
+		"company_detail_id": req.CompanyDetailID,
+		"manually_ratify":   req.ManuallyRatify,
+		"updated_by":        userID,
+	}
+	return db.DB.Model(&profile).Updates(updates).Error
+}
+
+func (s *LoanManagementService) DeleteLoanOrganizationProfile(id string, userID uint64) error {
+	var profile models.LoanOrganizationProfile
+	if err := db.DB.First(&profile, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&profile).Update("updated_by", userID).Delete(&profile).Error
+}
+
+// --- LoanOriginationCallbackLog CRUD ---
+func (s *LoanManagementService) CreateLoanOriginationCallbackLog(req dtos.CreateLoanOriginationCallbackLogRequest, userID uint64) (*models.LoanOriginationCallbackLog, error) {
 	log := &models.LoanOriginationCallbackLog{
 		BaseModel:   models.BaseModel{CreatedBy: userID},
 		AstraDetail: req.AstraDetail,
 		SyncAttempt: req.SyncAttempt,
 	}
-	err := db.DB.Create(log).Error
-	return log, err
+	if err := db.DB.Create(log).Error; err != nil {
+		return nil, err
+	}
+	return log, nil
 }
 
-// Loan Transactions
-func (s *LoanManagementService) CreateTransaction(req dtos.CreateLoanTransactionRequest, userID uint64) (*models.LoanTransaction, error) {
+func (s *LoanManagementService) GetLoanOriginationCallbackLogs(page, limit int) ([]models.LoanOriginationCallbackLog, int64, error) {
+	var logs []models.LoanOriginationCallbackLog
+	var total int64
+	db.DB.Model(&models.LoanOriginationCallbackLog{}).Count(&total)
+	offset := (page - 1) * limit
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&logs).Error
+	return logs, total, err
+}
+
+func (s *LoanManagementService) GetLoanOriginationCallbackLog(id string) (*models.LoanOriginationCallbackLog, error) {
+	var log models.LoanOriginationCallbackLog
+	if err := db.DB.First(&log, id).Error; err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+func (s *LoanManagementService) UpdateLoanOriginationCallbackLog(id string, req dtos.UpdateLoanOriginationCallbackLogRequest, userID uint64) error {
+	var log models.LoanOriginationCallbackLog
+	if err := db.DB.First(&log, id).Error; err != nil {
+		return err
+	}
+	updates := map[string]interface{}{
+		"astra_detail": req.AstraDetail,
+		"sync_attempt": req.SyncAttempt,
+		"updated_by":   userID,
+	}
+	return db.DB.Model(&log).Updates(updates).Error
+}
+
+func (s *LoanManagementService) DeleteLoanOriginationCallbackLog(id string, userID uint64) error {
+	var log models.LoanOriginationCallbackLog
+	if err := db.DB.First(&log, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&log).Update("updated_by", userID).Delete(&log).Error
+}
+
+// --- LoanTransaction CRUD ---
+func (s *LoanManagementService) CreateLoanTransaction(req dtos.CreateLoanTransactionRequest, userID uint64) (*models.LoanTransaction, error) {
 	transaction := &models.LoanTransaction{
 		BaseModel:   models.BaseModel{CreatedBy: userID},
 		LoanID:      req.LoanID,
@@ -126,17 +249,61 @@ func (s *LoanManagementService) CreateTransaction(req dtos.CreateLoanTransaction
 		Description: req.Description,
 		Date:        utils.ParseDate(req.Date),
 	}
-	err := db.DB.Create(transaction).Error
-	return transaction, err
+	if err := db.DB.Create(transaction).Error; err != nil {
+		return nil, err
+	}
+	return transaction, nil
 }
 
-func (s *LoanManagementService) GetTransactions(loanID string) ([]dtos.LoanTransactionResponse, error) {
-	var results []dtos.LoanTransactionResponse
-	err := db.DB.Model(&models.LoanTransaction{}).Where("loan_id = ?", loanID).Find(&results).Error
-	return results, err
+func (s *LoanManagementService) GetLoanTransactions(page, limit int) ([]models.LoanTransaction, int64, error) {
+	var transactions []models.LoanTransaction
+	var total int64
+	db.DB.Model(&models.LoanTransaction{}).Count(&total)
+	offset := (page - 1) * limit
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&transactions).Error
+	return transactions, total, err
 }
 
-// Member Loans
+func (s *LoanManagementService) GetLoanTransaction(id string) (*models.LoanTransaction, error) {
+	var transaction models.LoanTransaction
+	if err := db.DB.First(&transaction, id).Error; err != nil {
+		return nil, err
+	}
+	return &transaction, nil
+}
+
+func (s *LoanManagementService) GetLoanTransactionsByLoanID(loanID string) ([]models.LoanTransaction, error) {
+	var transactions []models.LoanTransaction
+	err := db.DB.Where("loan_id = ?", loanID).Find(&transactions).Error
+	return transactions, err
+}
+
+func (s *LoanManagementService) UpdateLoanTransaction(id string, req dtos.UpdateLoanTransactionRequest, userID uint64) error {
+	var transaction models.LoanTransaction
+	if err := db.DB.First(&transaction, id).Error; err != nil {
+		return err
+	}
+	updates := map[string]interface{}{
+		"loan_id":     req.LoanID,
+		"amount":      req.Amount,
+		"type":        req.Type,
+		"reference":   req.Reference,
+		"description": req.Description,
+		"date":        utils.ParseDate(req.Date),
+		"updated_by":  userID,
+	}
+	return db.DB.Model(&transaction).Updates(updates).Error
+}
+
+func (s *LoanManagementService) DeleteLoanTransaction(id string, userID uint64) error {
+	var transaction models.LoanTransaction
+	if err := db.DB.First(&transaction, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&transaction).Update("updated_by", userID).Delete(&transaction).Error
+}
+
+// --- MemberLoan CRUD ---
 func (s *LoanManagementService) CreateMemberLoan(req dtos.CreateMemberLoanRequest, userID uint64) (*models.MemberLoan, error) {
 	loan := &models.MemberLoan{
 		BaseModel:    models.BaseModel{CreatedBy: userID},
@@ -146,27 +313,34 @@ func (s *LoanManagementService) CreateMemberLoan(req dtos.CreateMemberLoanReques
 		InterestRate: req.InterestRate,
 		Status:       req.Status,
 	}
+	if req.DisbursedAt != "" {
+		disbursedAt := utils.ParseDate(req.DisbursedAt)
+		loan.DisbursedAt = &disbursedAt
+	}
 	if loan.Status == "" {
 		loan.Status = "PENDING"
 	}
-	err := db.DB.Create(loan).Error
-	return loan, err
+	if err := db.DB.Create(loan).Error; err != nil {
+		return nil, err
+	}
+	return loan, nil
 }
 
-func (s *LoanManagementService) GetMemberLoans(page, limit int) ([]dtos.MemberLoanResponse, int64, error) {
-	var results []dtos.MemberLoanResponse
+func (s *LoanManagementService) GetMemberLoans(page, limit int) ([]models.MemberLoan, int64, error) {
+	var loans []models.MemberLoan
 	var total int64
 	db.DB.Model(&models.MemberLoan{}).Count(&total)
 	offset := (page - 1) * limit
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&loans).Error
+	return loans, total, err
+}
 
-	query := `
-		SELECT ml.*, CONCAT(m.first_name, ' ', m.last_name) as member_name
-		FROM member_loans ml
-		LEFT JOIN member_registrations m ON ml.member_id = m.id
-		WHERE ml.deleted_at IS NULL
-		ORDER BY ml.id DESC LIMIT ? OFFSET ?`
-	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
-	return results, total, err
+func (s *LoanManagementService) GetMemberLoan(id string) (*models.MemberLoan, error) {
+	var loan models.MemberLoan
+	if err := db.DB.First(&loan, id).Error; err != nil {
+		return nil, err
+	}
+	return &loan, nil
 }
 
 func (s *LoanManagementService) UpdateMemberLoan(id string, req dtos.UpdateMemberLoanRequest, userID uint64) error {
@@ -174,17 +348,24 @@ func (s *LoanManagementService) UpdateMemberLoan(id string, req dtos.UpdateMembe
 	if err := db.DB.First(&loan, id).Error; err != nil {
 		return err
 	}
-
 	updates := map[string]interface{}{
+		"loan_type":     req.LoanType,
 		"amount":        req.Amount,
 		"interest_rate": req.InterestRate,
 		"status":        req.Status,
 		"updated_by":    userID,
 	}
 	if req.DisbursedAt != "" {
-		t := utils.ParseDate(req.DisbursedAt)
-		updates["disbursed_at"] = &t
+		disbursedAt := utils.ParseDate(req.DisbursedAt)
+		updates["disbursed_at"] = &disbursedAt
 	}
-
 	return db.DB.Model(&loan).Updates(updates).Error
+}
+
+func (s *LoanManagementService) DeleteMemberLoan(id string, userID uint64) error {
+	var loan models.MemberLoan
+	if err := db.DB.First(&loan, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&loan).Update("updated_by", userID).Delete(&loan).Error
 }

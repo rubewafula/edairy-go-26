@@ -13,7 +13,7 @@ func NewLoanOrganizationProfileService() *LoanOrganizationProfileService {
 	return &LoanOrganizationProfileService{}
 }
 
-func (s *LoanOrganizationProfileService) CreateProfile(req dtos.CreateLoanOrganizationProfileRequest, userID uint64) (*models.LoanOrganizationProfile, error) {
+func (s *LoanOrganizationProfileService) CreateLoanOrganizationProfile(req dtos.CreateLoanOrganizationProfileRequest, userID uint64) (*models.LoanOrganizationProfile, error) {
 	profile := &models.LoanOrganizationProfile{
 		BaseModel:       models.BaseModel{CreatedBy: userID},
 		NextLevel:       req.NextLevel,
@@ -31,7 +31,7 @@ func (s *LoanOrganizationProfileService) CreateProfile(req dtos.CreateLoanOrgani
 	return profile, nil
 }
 
-func (s *LoanOrganizationProfileService) GetProfiles(page, limit int) ([]dtos.LoanOrganizationProfileResponse, int64, error) {
+func (s *LoanOrganizationProfileService) GetLoanOrganizationProfiles(page, limit int) ([]dtos.LoanOrganizationProfileResponse, int64, error) {
 	var results []dtos.LoanOrganizationProfileResponse
 	var total int64
 	db.DB.Model(&models.LoanOrganizationProfile{}).Count(&total)
@@ -42,7 +42,7 @@ func (s *LoanOrganizationProfileService) GetProfiles(page, limit int) ([]dtos.Lo
 	return results, total, err
 }
 
-func (s *LoanOrganizationProfileService) GetProfile(id string) (*dtos.LoanOrganizationProfileResponse, error) {
+func (s *LoanOrganizationProfileService) GetLoanOrganizationProfile(id string) (*dtos.LoanOrganizationProfileResponse, error) {
 	var result dtos.LoanOrganizationProfileResponse
 	err := db.DB.Model(&models.LoanOrganizationProfile{}).First(&result, id).Error
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *LoanOrganizationProfileService) GetProfile(id string) (*dtos.LoanOrgani
 	return &result, nil
 }
 
-func (s *LoanOrganizationProfileService) UpdateProfile(id string, req dtos.UpdateLoanOrganizationProfileRequest, userID uint64) error {
+func (s *LoanOrganizationProfileService) UpdateLoanOrganizationProfile(id string, req dtos.UpdateLoanOrganizationProfileRequest, userID uint64) error {
 	var profile models.LoanOrganizationProfile
 	if err := db.DB.First(&profile, id).Error; err != nil {
 		return err
@@ -75,7 +75,7 @@ func (s *LoanOrganizationProfileService) UpdateProfile(id string, req dtos.Updat
 	return db.DB.Model(&profile).Updates(updates).Error
 }
 
-func (s *LoanOrganizationProfileService) DeleteProfile(id string, userID uint64) error {
+func (s *LoanOrganizationProfileService) DeleteLoanOrganizationProfile(id string, userID uint64) error {
 	var profile models.LoanOrganizationProfile
 	if err := db.DB.First(&profile, id).Error; err != nil {
 		return err
