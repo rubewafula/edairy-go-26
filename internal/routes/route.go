@@ -84,6 +84,7 @@ func SetupRouter() *gin.Engine {
 	memberDependantController := controllers.NewMemberDependantController()
 	supplierCategoryController := controllers.NewSupplierCategoryController()
 	supplierController := controllers.NewSupplierController()
+
 	supplierContactController := controllers.NewSupplierContactController()
 	supplierDocumentController := controllers.NewSupplierDocumentController()
 	supplierQuoteController := controllers.NewSupplierQuoteController()
@@ -108,6 +109,16 @@ func SetupRouter() *gin.Engine {
 	shareAccountController := controllers.NewShareAccountController()
 	shareDividendController := controllers.NewShareDividendController()
 	dividendDeclarationController := controllers.NewDividendDeclarationController()
+	smsController := controllers.NewSMSController()
+	smsCampaignController := controllers.NewSMSCampaignController()
+	loanOrganizationProfileController := controllers.NewLoanOrganizationProfileController()
+	organizationAddressController := controllers.NewOrganizationAddressController()
+	organizationBankController := controllers.NewOrganizationBankController()
+	organizationDocumentController := controllers.NewOrganizationDocumentController()
+	organizationKybCommentController := controllers.NewOrganizationKybCommentController()
+	organizationLeadershipController := controllers.NewOrganizationLeadershipController()
+	organizationMemberController := controllers.NewOrganizationMemberController()
+	organizationWalletController := controllers.NewOrganizationWalletController()
 	sharePaymentController := controllers.NewSharePaymentController()
 	shareTransferController := controllers.NewShareTransferController()
 	shareTransactionController := controllers.NewShareTransactionController()
@@ -703,6 +714,83 @@ func SetupRouter() *gin.Engine {
 		api.GET("/share-transfers/:id", shareTransferController.GetShareTransfer)
 		api.PUT("/share-transfers/:id", shareTransferController.UpdateShareTransfer)
 		api.DELETE("/share-transfers/:id", shareTransferController.DeleteShareTransfer)
+
+		// Loan Organization Profile Routes
+		api.POST("/loan-organization-profiles", loanOrganizationProfileController.CreateProfile)
+		api.GET("/loan-organization-profiles", loanOrganizationProfileController.GetProfiles)
+		api.GET("/loan-organization-profiles/:id", loanOrganizationProfileController.GetProfile)
+		api.PUT("/loan-organization-profiles/:id", loanOrganizationProfileController.UpdateProfile)
+		api.DELETE("/loan-organization-profiles/:id", loanOrganizationProfileController.DeleteProfile)
+
+		// Organization Address Routes
+		api.POST("/organization-addresses", organizationAddressController.CreateAddress)
+		api.GET("/organization-addresses", organizationAddressController.GetAddresses)
+		api.GET("/organization-addresses/:id", organizationAddressController.GetAddress)
+		api.PUT("/organization-addresses/:id", organizationAddressController.UpdateAddress)
+		api.DELETE("/organization-addresses/:id", organizationAddressController.DeleteAddress)
+
+		// Organization Bank Routes
+		api.POST("/organization-banks", organizationBankController.CreateBank)
+		api.GET("/organization-banks", organizationBankController.GetBanks)
+		api.GET("/organization-banks/:id", organizationBankController.GetBank)
+		api.PUT("/organization-banks/:id", organizationBankController.UpdateBank)
+		api.DELETE("/organization-banks/:id", organizationBankController.DeleteBank)
+
+		// Organization Document Routes
+		api.POST("/organization-documents", organizationDocumentController.CreateDocument)
+		api.GET("/organization-documents", organizationDocumentController.GetDocuments)
+		api.GET("/organization-documents/:id", organizationDocumentController.GetDocument)
+		api.PUT("/organization-documents/:id", organizationDocumentController.UpdateDocument)
+		api.DELETE("/organization-documents/:id", organizationDocumentController.DeleteDocument)
+		api.GET("/organization-documents/astra/:astra_id", organizationDocumentController.GetDocumentsByAstraID)
+
+		// Organization KYB Comment Routes
+		api.POST("/organization-kyb-comments", organizationKybCommentController.CreateComment)
+		api.GET("/organization-kyb-comments", organizationKybCommentController.GetComments)
+		api.GET("/organization-kyb-comments/:id", organizationKybCommentController.GetComment)
+		api.PUT("/organization-kyb-comments/:id", organizationKybCommentController.UpdateComment)
+		api.DELETE("/organization-kyb-comments/:id", organizationKybCommentController.DeleteComment)
+		api.GET("/organization-kyb-comments/iteration/:iteration", organizationKybCommentController.GetCommentsByIteration)
+
+		// Organization Leadership Routes
+		api.POST("/organization-leaderships", organizationLeadershipController.CreateLeadership)
+		api.GET("/organization-leaderships", organizationLeadershipController.GetLeaderships)
+		api.GET("/organization-leaderships/:id", organizationLeadershipController.GetLeadership)
+		api.PUT("/organization-leaderships/:id", organizationLeadershipController.UpdateLeadership)
+		api.DELETE("/organization-leaderships/:id", organizationLeadershipController.DeleteLeadership)
+		api.GET("/organization-leaderships/national-id/:id_no", organizationLeadershipController.GetLeadershipByNationalID)
+
+		// Organization Member Routes
+		api.POST("/organization-members", organizationMemberController.CreateMember)
+		api.GET("/organization-members", organizationMemberController.GetMembers)
+		api.GET("/organization-members/:id", organizationMemberController.GetMember)
+		api.PUT("/organization-members/:id", organizationMemberController.UpdateMember)
+		api.DELETE("/organization-members/:id", organizationMemberController.DeleteMember)
+
+		// Organization Wallet Routes
+		api.POST("/organization-wallets", organizationWalletController.CreateWallet)
+		api.GET("/organization-wallets", organizationWalletController.GetWallets)
+		api.GET("/organization-wallets/:id", organizationWalletController.GetWallet)
+		api.PUT("/organization-wallets/:id", organizationWalletController.UpdateWallet)
+		api.DELETE("/organization-wallets/:id", organizationWalletController.DeleteWallet)
+
+		// SMS Routes
+		api.POST("/sms-groups", smsController.CreateGroup)
+		api.GET("/sms-groups", smsController.GetGroups)
+		api.POST("/sms-contacts", smsController.CreateContact)
+		api.POST("/sms-send", smsController.SendMessage)
+		api.GET("/sms-queue", smsController.GetQueue)
+
+		// SMS Config Routes
+		api.POST("/sms-providers", smsController.CreateProvider)
+		api.GET("/sms-providers", smsController.GetGroups) // Reuse logic or add GetProviders
+		api.POST("/sms-templates", smsController.CreateTemplate)
+		api.GET("/sms-templates", smsController.GetGroups) // Reuse logic or add GetTemplates
+
+		// SMS Campaign Routes
+		api.POST("/sms-campaigns", smsCampaignController.CreateCampaign)
+		api.GET("/sms-campaigns", smsCampaignController.GetCampaigns)
+		api.GET("/sms-campaigns/:id/recipients", smsCampaignController.GetRecipients)
 
 		api.POST("/asset-categories", assetCategoryController.CreateCategory)
 		api.GET("/asset-categories", assetCategoryController.GetCategories)
