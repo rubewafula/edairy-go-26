@@ -110,3 +110,21 @@ func (c *SMSController) CreateTemplate(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusCreated, tpl)
 }
+
+func (c *SMSController) GetProviders(ctx *gin.Context) {
+	results, err := c.service.GetProviders()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": results})
+}
+
+func (c *SMSController) GetTemplates(ctx *gin.Context) {
+	results, err := c.service.GetTemplates()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": results})
+}
