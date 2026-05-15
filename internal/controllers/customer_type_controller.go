@@ -7,16 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
+	validator "github.com/rubewafula/edairy-go-26/internal/validators"
 	"gorm.io/gorm"
 )
 
-type CustomerPayDateRangeController struct {
-	service *services.CustomerPayDateRangeService
+type CustomerTypeController struct {
+	service *services.CustomerTypeService
+	// Removed validator here as it's not used directly in the controller methods
 }
 
-func NewCustomerPayDateRangeController() *CustomerPayDateRangeController {
-	return &CustomerPayDateRangeController{
-		service: services.NewCustomerPayDateRangeService(),
+func NewCustomerTypeController() *CustomerTypeController {
+	return &CustomerTypeController{
+		service: services.NewCustomerTypeService(),
 	}
 }
 
@@ -31,21 +34,26 @@ func NewCustomerPayDateRangeController() *CustomerPayDateRangeController {
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /customer-types [post]
-func (c *CustomerPayDateRangeController) CreateCustomerPayDateRange(ctx *gin.Context) {
-	var req dtos.CreateCustomerPayDateRangeRequest
+func (c *CustomerTypeController) CreateCustomerType(ctx *gin.Context) {
+	var req dtos.CreateCustomerTypeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Added validation as per other controllers
+	if err := validator.Validate.Struct(req); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
+		return
+	}
 	userID := ctx.MustGet("user_id").(uint64)
 
-	customerPayDateRange, err := c.service.CreateCustomerPayDateRange(req, userID)
+	customerType, err := c.service.CreateCustomerType(req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, customerPayDateRange)
+	ctx.JSON(http.StatusCreated, customerType)
 }
 
 // GetCustomerTypes godoc
@@ -58,11 +66,10 @@ func (c *CustomerPayDateRangeController) CreateCustomerPayDateRange(ctx *gin.Con
 // @Success 200 {array} dtos.CustomerTypeResponse
 // @Failure 500 {object} map[string]string
 // @Router /customer-types [get]
-func (c *CustomerPayDateRangeController) GetCustomerPayDateRanges(ctx *gin.Context) {
+func (c *CustomerTypeController) GetCustomerTypes(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
-
-	customerTypes, total, err := c.service.GetCustomerPayDateRanges(page, limit)
+	customerTypes, total, err := c.service.GetCustomerTypes(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -80,9 +87,9 @@ func (c *CustomerPayDateRangeController) GetCustomerPayDateRanges(ctx *gin.Conte
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /customer-types/{id} [get]
-func (c *CustomerPayDateRangeController) GetCustomerPayDateRange(ctx *gin.Context) {
+func (c *CustomerTypeController) GetCustomerType(ctx *gin.Context) {
 	id := ctx.Param("id")
-	customerType, err := c.service.GetCustomerPayDateRange(id)
+	customerType, err := c.service.GetCustomerType(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer type not found"})
@@ -107,17 +114,22 @@ func (c *CustomerPayDateRangeController) GetCustomerPayDateRange(ctx *gin.Contex
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /customer-types/{id} [put]
-func (c *CustomerPayDateRangeController) UpdateCustomerPayDateRange(ctx *gin.Context) {
+func (c *CustomerTypeController) UpdateCustomerType(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var req dtos.UpdateCustomerPayDateRangeRequest
+	var req dtos.UpdateCustomerTypeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Added validation as per other controllers
+	if err := validator.Validate.Struct(req); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
+		return
+	}
 	userID := ctx.MustGet("user_id").(uint64)
 
-	err := c.service.UpdateCustomerPayDateRange(id, req, userID)
+	err := c.service.UpdateCustomerType(id, req, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer type not found"})
@@ -139,9 +151,9 @@ func (c *CustomerPayDateRangeController) UpdateCustomerPayDateRange(ctx *gin.Con
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /customer-types/{id} [delete]
-func (c *CustomerPayDateRangeController) DeleteCustomerPayDateRange(ctx *gin.Context) {
+func (c *CustomerTypeController) DeleteCustomerType(ctx *gin.Context) {
 	id := ctx.Param("id")
-	err := c.service.DeleteCustomerPayDateRange(id)
+	err := c.service.DeleteCustomerType(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer type not found"})

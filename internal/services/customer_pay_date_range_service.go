@@ -5,6 +5,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"gorm.io/gorm"
 )
 
 type CustomerPayDateRangeService struct{}
@@ -13,13 +14,14 @@ func NewCustomerPayDateRangeService() *CustomerPayDateRangeService {
 	return &CustomerPayDateRangeService{}
 }
 
-func (s *CustomerPayDateRangeService) CreateCustomerPayDateRange(req dtos.CreateCustomerPayDateRangeRequest) (*models.CustomerPayDateRange, error) {
+func (s *CustomerPayDateRangeService) CreateCustomerPayDateRange(req dtos.CreateCustomerPayDateRangeRequest, userID uint64) (*models.CustomerPayDateRange, error) {
 	dateRange := &models.CustomerPayDateRange{
+		BaseModel: models.BaseModel{
+			CreatedBy: userID,
+		},
 		Name:      req.Name,
 		StartDate: utils.ParseDate(req.StartDate),
 		EndDate:   utils.ParseDate(req.EndDate),
-		PayMonth:  req.PayMonth,
-		PayYear:   req.PayYear,
 	}
 
 	if err := db.DB.Create(dateRange).Error; err != nil {
@@ -28,23 +30,30 @@ func (s *CustomerPayDateRangeService) CreateCustomerPayDateRange(req dtos.Create
 	return dateRange, nil
 }
 
-func (s *CustomerPayDateRangeService) GetCustomerPayDateRanges() ([]models.CustomerPayDateRange, int64, error) {
-	var ranges []models.CustomerPayDateRange
+func (s *CustomerPayDateRangeService) GetCustomerPayDateRanges(page, limit int) ([]dtos.CustomerPayDateRangeResponse, int64, error) {
+	var results []dtos.CustomerPayDateRangeResponse
 	var total int64
 	db.DB.Model(&models.CustomerPayDateRange{}).Count(&total)
-	err := db.DB.Find(&ranges).Error
-	return ranges, total, err
+	offset := (page - 1) * limit
+
+	err := db.DB.Model(&models.CustomerPayDateRange{}).
+		Limit(limit).Offset(offset).Order("id DESC").Scan(&results).Error
+	return results, total, err
 }
 
-func (s *CustomerPayDateRangeService) GetCustomerPayDateRange(id string) (*models.CustomerPayDateRange, error) {
-	var dateRange models.CustomerPayDateRange
-	if err := db.DB.First(&dateRange, id).Error; err != nil {
+func (s *CustomerPayDateRangeService) GetCustomerPayDateRange(id string) (*dtos.CustomerPayDateRangeResponse, error) {
+	var result dtos.CustomerPayDateRangeResponse
+	err := db.DB.Model(&models.CustomerPayDateRange{}).First(&result, id).Error
+	if err != nil {
 		return nil, err
 	}
-	return &dateRange, nil
+	if result.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &result, nil
 }
 
-func (s *CustomerPayDateRangeService) UpdateCustomerPayDateRange(id string, req dtos.UpdateCustomerPayDateRangeRequest) error {
+func (s *CustomerPayDateRangeService) UpdateCustomerPayDateRange(id string, req dtos.UpdateCustomerPayDateRangeRequest, userID uint64) error {
 	var dateRange models.CustomerPayDateRange
 	if err := db.DB.First(&dateRange, id).Error; err != nil {
 		return err
@@ -53,8 +62,7 @@ func (s *CustomerPayDateRangeService) UpdateCustomerPayDateRange(id string, req 
 	dateRange.Name = req.Name
 	dateRange.StartDate = utils.ParseDate(req.StartDate)
 	dateRange.EndDate = utils.ParseDate(req.EndDate)
-	dateRange.PayMonth = req.PayMonth
-	dateRange.PayYear = req.PayYear
+	dateRange.UpdatedBy = userID
 
 	return db.DB.Save(&dateRange).Error
 }

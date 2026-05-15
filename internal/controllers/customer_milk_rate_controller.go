@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -32,16 +33,23 @@ func (c *CustomerMilkRateController) CreateRate(ctx *gin.Context) {
 		return
 	}
 
-	rate, err := c.service.CreateCustomerMilkRate(req)
+	userID := ctx.MustGet("user_id").(uint64)
+
+	rate, err := c.service.CreateCustomerMilkRate(req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, rate)
+
+	response, _ := c.service.GetCustomerMilkRate(utils.Uint64ToString(rate.ID))
+	ctx.JSON(http.StatusCreated, response)
 }
 
 func (c *CustomerMilkRateController) GetRates(ctx *gin.Context) {
-	rates, total, err := c.service.GetCustomerMilkRates()
+	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
+
+	rates, total, err := c.service.GetCustomerMilkRates(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -52,7 +60,7 @@ func (c *CustomerMilkRateController) GetRates(ctx *gin.Context) {
 func (c *CustomerMilkRateController) GetRate(ctx *gin.Context) {
 	rate, err := c.service.GetCustomerMilkRate(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Rate not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer milk rate not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, rate)
@@ -60,6 +68,8 @@ func (c *CustomerMilkRateController) GetRate(ctx *gin.Context) {
 
 func (c *CustomerMilkRateController) UpdateRate(ctx *gin.Context) {
 	var req dtos.UpdateCustomerMilkRateRequest
+	id := ctx.Param("id")
+
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -70,11 +80,13 @@ func (c *CustomerMilkRateController) UpdateRate(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.service.UpdateCustomerMilkRate(ctx.Param("id"), req); err != nil {
+	userID := ctx.MustGet("user_id").(uint64)
+
+	if err := c.service.UpdateCustomerMilkRate(id, req, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Rate updated successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Customer milk rate updated successfully"})
 }
 
 func (c *CustomerMilkRateController) DeleteRate(ctx *gin.Context) {
@@ -82,5 +94,5 @@ func (c *CustomerMilkRateController) DeleteRate(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Rate deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Customer milk rate deleted successfully"})
 }

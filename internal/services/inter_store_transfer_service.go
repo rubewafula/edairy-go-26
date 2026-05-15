@@ -40,7 +40,7 @@ func (s *InterStoreTransferService) GetTransfers(page, limit int) ([]dtos.InterS
 
 	query := `
 		SELECT 
-			ist.*, fs.store AS from_store_name, ts.store AS to_store_name
+			ist.*, fs.store AS from_store_name, ts.store AS to_store_name, ist.status
 		FROM inter_store_transfers ist
 		LEFT JOIN stores fs ON ist.from_store_id = fs.id
 		LEFT JOIN stores ts ON ist.to_store_id = ts.id
@@ -56,7 +56,7 @@ func (s *InterStoreTransferService) GetTransfer(id string) (*dtos.InterStoreTran
 	var result dtos.InterStoreTransferResponse
 	query := `
 		SELECT 
-			ist.*, fs.store AS from_store_name, ts.store AS to_store_name
+			ist.*, fs.store AS from_store_name, ts.store AS to_store_name, ist.status
 		FROM inter_store_transfers ist
 		LEFT JOIN stores fs ON ist.from_store_id = fs.id
 		LEFT JOIN stores ts ON ist.to_store_id = ts.id

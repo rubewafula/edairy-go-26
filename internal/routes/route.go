@@ -75,9 +75,25 @@ func SetupRouter() *gin.Engine {
 	routeController := controllers.NewRouteController()
 	customerController := controllers.NewCustomerController()
 	customerClassController := controllers.NewCustomerClassController()
+	customerBillingController := controllers.NewCustomerBillingController()
+	customerInvoiceController := controllers.NewCustomerInvoiceController()
+	customerPaymentController := controllers.NewCustomerPaymentController()
+	customerTypeController := controllers.NewCustomerTypeController()
 	customerMilkRateController := controllers.NewCustomerMilkRateController()
 	customerPayDateRangeController := controllers.NewCustomerPayDateRangeController()
 	memberDependantController := controllers.NewMemberDependantController()
+	supplierCategoryController := controllers.NewSupplierCategoryController()
+	supplierController := controllers.NewSupplierController()
+	supplierContactController := controllers.NewSupplierContactController()
+	supplierDocumentController := controllers.NewSupplierDocumentController()
+	supplierQuoteController := controllers.NewSupplierQuoteController()
+	supplyController := controllers.NewSupplyController()
+	supplierBankAccountController := controllers.NewSupplierBankAccountController()
+	walletTypeController := controllers.NewWalletTypeController()
+	cattleBreedController := controllers.NewCattleBreedController()
+	suppliedItemController := controllers.NewSuppliedItemController()
+	supplyRejectController := controllers.NewSupplyRejectController()
+	purchaseOrderController := controllers.NewPurchaseOrderController()
 	dailyMilkVarianceController := controllers.NewDailyMilkVarianceController()
 	loanController := controllers.NewLoanController()
 	transportRateController := controllers.NewTransportRateController()
@@ -102,7 +118,6 @@ func SetupRouter() *gin.Engine {
 	permissionController := controllers.NewPermissionController()
 	roleController := controllers.NewRoleController()
 	userController := controllers.NewUserController()
-
 	adminDashboardController := controllers.NewAdminDashboardController()
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -418,18 +433,18 @@ func SetupRouter() *gin.Engine {
 		api.DELETE("/routes/:id", routeController.DeleteRoute)
 
 		// Wallet Type Routes
-		api.POST("/wallet-types", controllers.NewWalletTypeController().CreateWalletType)
-		api.GET("/wallet-types", controllers.NewWalletTypeController().GetWalletTypes)
-		api.GET("/wallet-types/:id", controllers.NewWalletTypeController().GetWalletType)
-		api.PUT("/wallet-types/:id", controllers.NewWalletTypeController().UpdateWalletType)
-		api.DELETE("/wallet-types/:id", controllers.NewWalletTypeController().DeleteWalletType)
+		api.POST("/wallet-types", walletTypeController.CreateWalletType)
+		api.GET("/wallet-types", walletTypeController.GetWalletTypes)
+		api.GET("/wallet-types/:id", walletTypeController.GetWalletType)
+		api.PUT("/wallet-types/:id", walletTypeController.UpdateWalletType)
+		api.DELETE("/wallet-types/:id", walletTypeController.DeleteWalletType)
 
 		// Cattle Breed Routes
-		api.POST("/cattle-breeds", controllers.NewCattleBreedController().CreateCattleBreed)
-		api.GET("/cattle-breeds", controllers.NewCattleBreedController().GetCattleBreeds)
-		api.GET("/cattle-breeds/:id", controllers.NewCattleBreedController().GetCattleBreed)
-		api.PUT("/cattle-breeds/:id", controllers.NewCattleBreedController().UpdateCattleBreed)
-		api.DELETE("/cattle-breeds/:id", controllers.NewCattleBreedController().DeleteCattleBreed)
+		api.POST("/cattle-breeds", cattleBreedController.CreateCattleBreed)
+		api.GET("/cattle-breeds", cattleBreedController.GetCattleBreeds)
+		api.GET("/cattle-breeds/:id", cattleBreedController.GetCattleBreed)
+		api.PUT("/cattle-breeds/:id", cattleBreedController.UpdateCattleBreed)
+		api.DELETE("/cattle-breeds/:id", cattleBreedController.DeleteCattleBreed)
 
 		// Customer Routes
 		api.POST("/customers", customerController.CreateCustomer)
@@ -445,6 +460,29 @@ func SetupRouter() *gin.Engine {
 		api.PUT("/customer-classes/:id", customerClassController.UpdateClass)
 		api.DELETE("/customer-classes/:id", customerClassController.DeleteClass)
 
+		// Customer Type Routes
+		api.POST("/customer-types", customerTypeController.CreateCustomerType)       //
+		api.GET("/customer-types", customerTypeController.GetCustomerTypes)          //
+		api.GET("/customer-types/:id", customerTypeController.GetCustomerType)       //
+		api.PUT("/customer-types/:id", customerTypeController.UpdateCustomerType)    //
+		api.DELETE("/customer-types/:id", customerTypeController.DeleteCustomerType) //
+
+		// Customer Billing Routes
+		api.GET("/customer-billings", customerBillingController.GetBillings)
+		api.GET("/customer-billings/:id", customerBillingController.GetBilling)
+		api.GET("/customer-billings/:id/items", customerBillingController.GetBillingItems)
+
+		// Customer Invoice Routes
+		api.POST("/customer-invoices", customerInvoiceController.CreateInvoice)
+		api.GET("/customer-invoices", customerInvoiceController.GetInvoices)
+		api.GET("/customer-invoices/:id", customerInvoiceController.GetInvoice)
+		api.DELETE("/customer-invoices/:id", customerInvoiceController.DeleteInvoice)
+
+		// Customer Payment Routes
+		api.POST("/customer-payments", customerPaymentController.CreatePayment)
+		api.GET("/customer-payments", customerPaymentController.GetPayments)
+		api.GET("/customer-payments/:id", customerPaymentController.GetPayment)
+
 		// Customer Milk Rate Routes
 		api.POST("/customer-milk-rates", customerMilkRateController.CreateRate)
 		api.GET("/customer-milk-rates", customerMilkRateController.GetRates)
@@ -453,11 +491,99 @@ func SetupRouter() *gin.Engine {
 		api.DELETE("/customer-milk-rates/:id", customerMilkRateController.DeleteRate)
 
 		// Customer Pay Date Range Routes
-		api.POST("/customer-pay-date-ranges", customerPayDateRangeController.CreateRange)
-		api.GET("/customer-pay-date-ranges", customerPayDateRangeController.GetRanges)
-		api.GET("/customer-pay-date-ranges/:id", customerPayDateRangeController.GetRange)
-		api.PUT("/customer-pay-date-ranges/:id", customerPayDateRangeController.UpdateRange)
-		api.DELETE("/customer-pay-date-ranges/:id", customerPayDateRangeController.DeleteRange)
+		api.POST("/customer-pay-date-ranges", customerPayDateRangeController.CreateCustomerPayDateRange)       //
+		api.GET("/customer-pay-date-ranges", customerPayDateRangeController.GetCustomerPayDateRanges)          //
+		api.GET("/customer-pay-date-ranges/:id", customerPayDateRangeController.GetCustomerPayDateRange)       //
+		api.PUT("/customer-pay-date-ranges/:id", customerPayDateRangeController.UpdateCustomerPayDateRange)    //
+		api.DELETE("/customer-pay-date-ranges/:id", customerPayDateRangeController.DeleteCustomerPayDateRange) //
+
+		// Supplier Category Routes
+		api.POST("/supplier-categories", supplierCategoryController.CreateCategory)
+		api.GET("/supplier-categories", supplierCategoryController.GetCategories)
+		api.GET("/supplier-categories/:id", supplierCategoryController.GetCategory)
+		api.PUT("/supplier-categories/:id", supplierCategoryController.UpdateCategory)
+		api.DELETE("/supplier-categories/:id", supplierCategoryController.DeleteCategory)
+
+		// Supplier Routes
+		api.POST("/suppliers", supplierController.CreateSupplier)
+		api.GET("/suppliers", supplierController.GetSuppliers)
+		api.GET("/suppliers/:id", supplierController.GetSupplier)
+		api.POST("/suppliers/:id/contacts", supplierController.CreateContact)
+		api.GET("/suppliers/:id/contacts", supplierContactController.GetContactsBySupplier)
+		api.GET("/suppliers/:id/documents", supplierDocumentController.GetDocumentsBySupplier)
+		api.POST("/suppliers/:id/bank-accounts", supplierController.CreateBankAccount)
+		api.GET("/suppliers/:id/bank-accounts", supplierController.GetSupplierBankAccounts)
+
+		// Supplier Contact Routes
+		api.POST("/supplier-contacts", supplierContactController.CreateContact)
+		api.GET("/supplier-contacts", supplierContactController.GetContacts)
+		api.GET("/supplier-contacts/:id", supplierContactController.GetContact)
+		api.PUT("/supplier-contacts/:id", supplierContactController.UpdateContact)
+		api.DELETE("/supplier-contacts/:id", supplierContactController.DeleteContact)
+
+		// Supplier Document Routes
+		api.POST("/supplier-documents", supplierDocumentController.CreateDocument)
+		api.GET("/supplier-documents", supplierDocumentController.GetDocuments)
+		api.GET("/supplier-documents/:id", supplierDocumentController.GetDocument)
+		api.PUT("/supplier-documents/:id", supplierDocumentController.UpdateDocument)
+		api.DELETE("/supplier-documents/:id", supplierDocumentController.DeleteDocument)
+		api.PATCH("/supplier-documents/:id/verify", supplierDocumentController.VerifyDocument)
+
+		// Supplier Bank Account Routes
+		api.POST("/supplier-bank-accounts", supplierBankAccountController.CreateBankAccount)
+		api.GET("/supplier-bank-accounts", supplierBankAccountController.GetBankAccounts)
+		api.GET("/supplier-bank-accounts/:id", supplierBankAccountController.GetBankAccount)
+		api.PUT("/supplier-bank-accounts/:id", supplierBankAccountController.UpdateBankAccount)
+		api.DELETE("/supplier-bank-accounts/:id", supplierBankAccountController.DeleteBankAccount)
+
+		// Supplier Quote Routes
+		api.POST("/supplier-quotes", supplierQuoteController.CreateQuote)
+		api.GET("/supplier-quotes", supplierQuoteController.GetQuotes)
+		api.POST("/supplier-quotes/:id/items", supplierQuoteController.CreateQuoteItem)
+		api.GET("/supplier-quotes/:id/items", supplierQuoteController.GetQuoteItems)
+		api.GET("/supplier-quote-items/:id", supplierQuoteController.GetQuoteItem)
+		api.PUT("/supplier-quote-items/:id", supplierQuoteController.UpdateQuoteItem)
+		api.DELETE("/supplier-quote-items/:id", supplierQuoteController.DeleteQuoteItem)
+
+		// Supply Routes
+		api.POST("/supplies", supplyController.CreateSupply)
+		api.GET("/supplies", supplyController.GetSupplies)
+		api.GET("/supplies/:id/items", supplyController.GetSuppliedItems)
+
+		// Supply Reject Routes
+		api.POST("/supply-rejects", supplyRejectController.CreateReject)
+		api.GET("/supply-rejects", supplyRejectController.GetRejects)
+		api.GET("/supplies/:id/rejects", supplyRejectController.GetRejectsBySupply)
+		api.GET("/supply-rejects/:id", supplyRejectController.GetReject)
+		api.PUT("/supply-rejects/:id", supplyRejectController.UpdateReject)
+		api.DELETE("/supply-rejects/:id", supplyRejectController.DeleteReject)
+
+		// Supplied Item Routes
+		api.GET("/supplied-items/:id", suppliedItemController.GetSuppliedItem)
+		api.PUT("/supplied-items/:id", suppliedItemController.UpdateSuppliedItem)
+		api.DELETE("/supplied-items/:id", suppliedItemController.DeleteSuppliedItem)
+		//api.GET("/supplies/:supply_id/items-list", suppliedItemController.GetItemsBySupply)
+
+		// Purchase Order Routes
+		api.POST("/purchase-orders", purchaseOrderController.CreatePO)
+		api.GET("/purchase-orders", purchaseOrderController.GetPOs)
+		api.GET("/purchase-orders/:id/items", purchaseOrderController.GetPOItems)
+		api.GET("/purchase-orders/:id", purchaseOrderController.GetPO)
+		api.PUT("/purchase-orders/:id", purchaseOrderController.UpdatePO)
+		api.DELETE("/purchase-orders/:id", purchaseOrderController.DeletePO)
+		api.GET("/purchase-order-items/:id", purchaseOrderController.GetPOItem)
+		api.PUT("/purchase-order-items/:id", purchaseOrderController.UpdatePOItem)
+		api.DELETE("/purchase-order-items/:id", purchaseOrderController.DeletePOItem)
+		api.POST("/purchase-requisitions", purchaseOrderController.CreateRequisition)
+		api.GET("/purchase-requisitions", purchaseOrderController.GetRequisitions)
+		api.GET("/purchase-requisitions/:id", purchaseOrderController.GetRequisition)
+		api.PUT("/purchase-requisitions/:id", purchaseOrderController.UpdateRequisition)
+		api.DELETE("/purchase-requisitions/:id", purchaseOrderController.DeleteRequisition)
+		api.POST("/purchase-requisition-items", purchaseOrderController.CreateRequisitionItem)
+		api.GET("/purchase-requisitions/:id/items", purchaseOrderController.GetRequisitionItems)
+		api.GET("/purchase-requisition-items/:id", purchaseOrderController.GetRequisitionItem)
+		api.PUT("/purchase-requisition-items/:id", purchaseOrderController.UpdateRequisitionItem)
+		api.DELETE("/purchase-requisition-items/:id", purchaseOrderController.DeleteRequisitionItem)
 
 		// Member Dependant Routes
 		api.POST("/member-dependants", memberDependantController.CreateDependant)
