@@ -24,18 +24,18 @@ func NewStoreItemController() *StoreItemController {
 func (c *StoreItemController) CreateItem(ctx *gin.Context) {
 	var req dtos.CreateStoreItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	item, err := c.service.CreateStoreItem(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, item)
@@ -47,7 +47,7 @@ func (c *StoreItemController) GetItems(ctx *gin.Context) {
 
 	items, total, err := c.service.GetStoreItems(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": items, "total": total})
@@ -56,7 +56,7 @@ func (c *StoreItemController) GetItems(ctx *gin.Context) {
 func (c *StoreItemController) GetItem(ctx *gin.Context) {
 	item, err := c.service.GetStoreItem(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Item not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, item)
@@ -65,17 +65,17 @@ func (c *StoreItemController) GetItem(ctx *gin.Context) {
 func (c *StoreItemController) UpdateItem(ctx *gin.Context) {
 	var req dtos.UpdateStoreItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateStoreItem(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Item updated successfully"})
@@ -83,7 +83,7 @@ func (c *StoreItemController) UpdateItem(ctx *gin.Context) {
 
 func (c *StoreItemController) DeleteItem(ctx *gin.Context) {
 	if err := c.service.DeleteStoreItem(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Item deleted successfully"})

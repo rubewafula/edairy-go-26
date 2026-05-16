@@ -24,18 +24,18 @@ func NewMilkRejectController() *MilkRejectController {
 func (c *MilkRejectController) CreateReject(ctx *gin.Context) {
 	var req dtos.CreateMilkRejectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	reject, err := c.service.CreateReject(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, reject)
@@ -47,7 +47,7 @@ func (c *MilkRejectController) GetRejects(ctx *gin.Context) {
 
 	rejects, total, err := c.service.GetRejects(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": rejects, "total": total})
@@ -56,7 +56,7 @@ func (c *MilkRejectController) GetRejects(ctx *gin.Context) {
 func (c *MilkRejectController) GetReject(ctx *gin.Context) {
 	reject, err := c.service.GetReject(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Reject entry not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Reject entry not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, reject)
@@ -64,7 +64,7 @@ func (c *MilkRejectController) GetReject(ctx *gin.Context) {
 
 func (c *MilkRejectController) DeleteReject(ctx *gin.Context) {
 	if err := c.service.DeleteReject(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Reject entry deleted successfully"})

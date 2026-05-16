@@ -38,13 +38,32 @@ func (s *EmployeeDependantService) GetEmployeeDependants(employeeID string, page
 	queryBuilder.Count(&total)
 	offset := (page - 1) * limit
 
-	err := queryBuilder.Limit(limit).Offset(offset).Order("id DESC").Find(&results).Error
+	query := `
+		SELECT 
+			ed.id, ed.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			ed.name, ed.relationship, ed.created_at, ed.updated_at
+		FROM employee_dependants ed
+		LEFT JOIN employees e ON ed.employee_id = e.id
+		WHERE ed.deleted_at IS NULL AND (? = '' OR ed.employee_id = ?)
+		ORDER BY ed.id DESC
+		LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, employeeID, employeeID, limit, offset).Scan(&results).Error
 	return results, total, err
 }
 
 func (s *EmployeeDependantService) GetEmployeeDependant(id string) (*dtos.EmployeeDependantResponse, error) {
 	var result dtos.EmployeeDependantResponse
-	err := db.DB.Model(&models.EmployeeDependant{}).Where("id = ? AND deleted_at IS NULL", id).First(&result).Error
+	query := `
+		SELECT 
+			ed.id, ed.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			ed.name, ed.relationship, ed.created_at, ed.updated_at
+		FROM employee_dependants ed
+		LEFT JOIN employees e ON ed.employee_id = e.id
+		WHERE ed.id = ? AND ed.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&result).Error
 	if err != nil {
 		return nil, err
 	}

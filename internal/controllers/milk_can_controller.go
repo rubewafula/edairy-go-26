@@ -24,18 +24,18 @@ func NewMilkCanController() *MilkCanController {
 func (c *MilkCanController) CreateMilkCan(ctx *gin.Context) {
 	var req dtos.CreateMilkCanRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	milkCan, err := c.service.CreateMilkCan(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (c *MilkCanController) GetMilkCans(ctx *gin.Context) {
 
 	milkCans, total, err := c.service.GetMilkCans(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": milkCans, "total": total})
@@ -58,7 +58,7 @@ func (c *MilkCanController) GetMilkCans(ctx *gin.Context) {
 func (c *MilkCanController) GetMilkCan(ctx *gin.Context) {
 	milkCan, err := c.service.GetMilkCan(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Milk Can not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Milk Can not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, milkCan)
@@ -67,17 +67,17 @@ func (c *MilkCanController) GetMilkCan(ctx *gin.Context) {
 func (c *MilkCanController) UpdateMilkCan(ctx *gin.Context) {
 	var req dtos.UpdateMilkCanRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateMilkCan(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Can updated successfully"})
@@ -85,7 +85,7 @@ func (c *MilkCanController) UpdateMilkCan(ctx *gin.Context) {
 
 func (c *MilkCanController) DeleteMilkCan(ctx *gin.Context) {
 	if err := c.service.DeleteMilkCan(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Can deleted successfully"})

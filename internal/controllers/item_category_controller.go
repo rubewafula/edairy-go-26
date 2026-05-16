@@ -24,18 +24,18 @@ func NewItemCategoryController() *ItemCategoryController {
 func (c *ItemCategoryController) CreateCategory(ctx *gin.Context) {
 	var req dtos.CreateItemCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	category, err := c.service.CreateCategory(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, category)
@@ -47,7 +47,7 @@ func (c *ItemCategoryController) GetCategories(ctx *gin.Context) {
 
 	results, total, err := c.service.GetCategories(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -56,7 +56,7 @@ func (c *ItemCategoryController) GetCategories(ctx *gin.Context) {
 func (c *ItemCategoryController) GetCategory(ctx *gin.Context) {
 	category, err := c.service.GetCategory(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Category not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, category)
@@ -65,17 +65,17 @@ func (c *ItemCategoryController) GetCategory(ctx *gin.Context) {
 func (c *ItemCategoryController) UpdateCategory(ctx *gin.Context) {
 	var req dtos.UpdateItemCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateCategory(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Category updated successfully"})
@@ -83,7 +83,7 @@ func (c *ItemCategoryController) UpdateCategory(ctx *gin.Context) {
 
 func (c *ItemCategoryController) DeleteCategory(ctx *gin.Context) {
 	if err := c.service.DeleteCategory(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Category deleted successfully"})

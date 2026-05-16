@@ -24,18 +24,18 @@ func NewProductGradeController() *ProductGradeController {
 func (c *ProductGradeController) CreateGrade(ctx *gin.Context) {
 	var req dtos.CreateProductGradeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	grade, err := c.service.CreateProductGrade(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, grade)
@@ -47,7 +47,7 @@ func (c *ProductGradeController) GetGrades(ctx *gin.Context) {
 
 	grades, total, err := c.service.GetProductGrades(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": grades, "total": total})
@@ -56,7 +56,7 @@ func (c *ProductGradeController) GetGrades(ctx *gin.Context) {
 func (c *ProductGradeController) GetGrade(ctx *gin.Context) {
 	grade, err := c.service.GetProductGrade(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Grade not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Grade not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, grade)
@@ -65,17 +65,17 @@ func (c *ProductGradeController) GetGrade(ctx *gin.Context) {
 func (c *ProductGradeController) UpdateGrade(ctx *gin.Context) {
 	var req dtos.UpdateProductGradeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateProductGrade(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Grade updated successfully"})
@@ -83,7 +83,7 @@ func (c *ProductGradeController) UpdateGrade(ctx *gin.Context) {
 
 func (c *ProductGradeController) DeleteGrade(ctx *gin.Context) {
 	if err := c.service.DeleteProductGrade(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Grade deleted successfully"})

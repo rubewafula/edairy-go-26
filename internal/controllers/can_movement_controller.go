@@ -24,18 +24,18 @@ func NewCanMovementController() *CanMovementController {
 func (c *CanMovementController) CreateMovement(ctx *gin.Context) {
 	var req dtos.CreateCanMovementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	movement, err := c.service.CreateMovement(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (c *CanMovementController) GetMovements(ctx *gin.Context) {
 
 	movements, total, err := c.service.GetMovements(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": movements, "total": total})
@@ -58,7 +58,7 @@ func (c *CanMovementController) GetMovements(ctx *gin.Context) {
 func (c *CanMovementController) GetMovement(ctx *gin.Context) {
 	movement, err := c.service.GetMovement(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Can movement not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Can movement not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, movement)
@@ -67,17 +67,17 @@ func (c *CanMovementController) GetMovement(ctx *gin.Context) {
 func (c *CanMovementController) UpdateMovement(ctx *gin.Context) {
 	var req dtos.UpdateCanMovementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateMovement(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Can movement updated successfully"})
@@ -85,7 +85,7 @@ func (c *CanMovementController) UpdateMovement(ctx *gin.Context) {
 
 func (c *CanMovementController) DeleteMovement(ctx *gin.Context) {
 	if err := c.service.DeleteMovement(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Can movement deleted successfully"})

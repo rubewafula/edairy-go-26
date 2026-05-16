@@ -23,18 +23,18 @@ func NewTrainingSessionController() *TrainingSessionController {
 func (c *TrainingSessionController) CreateSession(ctx *gin.Context) {
 	var req dtos.CreateTrainingSessionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	session, err := c.service.CreateSession(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, session)
@@ -43,7 +43,7 @@ func (c *TrainingSessionController) CreateSession(ctx *gin.Context) {
 func (c *TrainingSessionController) GetSessions(ctx *gin.Context) {
 	sessions, total, err := c.service.GetSessions()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": sessions, "total": total})
@@ -52,7 +52,7 @@ func (c *TrainingSessionController) GetSessions(ctx *gin.Context) {
 func (c *TrainingSessionController) GetSession(ctx *gin.Context) {
 	session, err := c.service.GetSession(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Training session not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Training session not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, session)
@@ -61,17 +61,17 @@ func (c *TrainingSessionController) GetSession(ctx *gin.Context) {
 func (c *TrainingSessionController) UpdateSession(ctx *gin.Context) {
 	var req dtos.UpdateTrainingSessionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateSession(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Training session updated successfully"})
@@ -79,7 +79,7 @@ func (c *TrainingSessionController) UpdateSession(ctx *gin.Context) {
 
 func (c *TrainingSessionController) DeleteSession(ctx *gin.Context) {
 	if err := c.service.DeleteSession(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Training session deleted successfully"})

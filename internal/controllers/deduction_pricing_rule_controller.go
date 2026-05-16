@@ -24,18 +24,18 @@ func NewDeductionPricingRuleController() *DeductionPricingRuleController {
 func (c *DeductionPricingRuleController) CreateRule(ctx *gin.Context) {
 	var req dtos.CreateDeductionPricingRuleRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	rule, err := c.service.CreateRule(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (c *DeductionPricingRuleController) GetRules(ctx *gin.Context) {
 
 	rules, total, err := c.service.GetRules(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": rules, "total": total})
@@ -58,7 +58,7 @@ func (c *DeductionPricingRuleController) GetRules(ctx *gin.Context) {
 func (c *DeductionPricingRuleController) GetRule(ctx *gin.Context) {
 	rule, err := c.service.GetRule(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Pricing rule not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Pricing rule not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, rule)
@@ -67,17 +67,17 @@ func (c *DeductionPricingRuleController) GetRule(ctx *gin.Context) {
 func (c *DeductionPricingRuleController) UpdateRule(ctx *gin.Context) {
 	var req dtos.UpdateDeductionPricingRuleRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateRule(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Pricing rule updated successfully"})
@@ -85,7 +85,7 @@ func (c *DeductionPricingRuleController) UpdateRule(ctx *gin.Context) {
 
 func (c *DeductionPricingRuleController) DeleteRule(ctx *gin.Context) {
 	if err := c.service.DeleteRule(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Pricing rule deleted successfully"})

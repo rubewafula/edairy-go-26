@@ -24,18 +24,18 @@ func NewStoreStockController() *StoreStockController {
 func (c *StoreStockController) CreateStock(ctx *gin.Context) {
 	var req dtos.CreateStoreStockRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	stock, err := c.service.CreateStock(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (c *StoreStockController) GetStocks(ctx *gin.Context) {
 
 	results, total, err := c.service.GetStocks(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -58,7 +58,7 @@ func (c *StoreStockController) GetStocks(ctx *gin.Context) {
 func (c *StoreStockController) GetStock(ctx *gin.Context) {
 	stock, err := c.service.GetStock(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Stock entry not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Stock entry not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, stock)
@@ -67,17 +67,17 @@ func (c *StoreStockController) GetStock(ctx *gin.Context) {
 func (c *StoreStockController) UpdateStock(ctx *gin.Context) {
 	var req dtos.UpdateStoreStockRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateStock(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock updated successfully"})
@@ -85,7 +85,7 @@ func (c *StoreStockController) UpdateStock(ctx *gin.Context) {
 
 func (c *StoreStockController) DeleteStock(ctx *gin.Context) {
 	if err := c.service.DeleteStock(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock deleted successfully"})

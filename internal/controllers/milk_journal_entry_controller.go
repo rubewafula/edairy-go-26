@@ -24,18 +24,18 @@ func NewMilkJournalEntryController() *MilkJournalEntryController {
 func (c *MilkJournalEntryController) CreateEntry(ctx *gin.Context) {
 	var req dtos.CreateMilkJournalEntryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	entry, err := c.service.CreateEntry(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, entry)
@@ -47,7 +47,7 @@ func (c *MilkJournalEntryController) GetEntries(ctx *gin.Context) {
 
 	entries, total, err := c.service.GetEntries(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": entries, "total": total})
@@ -56,7 +56,7 @@ func (c *MilkJournalEntryController) GetEntries(ctx *gin.Context) {
 func (c *MilkJournalEntryController) GetEntry(ctx *gin.Context) {
 	entry, err := c.service.GetEntry(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Entry not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Entry not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, entry)
@@ -65,17 +65,17 @@ func (c *MilkJournalEntryController) GetEntry(ctx *gin.Context) {
 func (c *MilkJournalEntryController) UpdateEntry(ctx *gin.Context) {
 	var req dtos.UpdateMilkJournalEntryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateEntry(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Entry updated successfully"})
@@ -83,7 +83,7 @@ func (c *MilkJournalEntryController) UpdateEntry(ctx *gin.Context) {
 
 func (c *MilkJournalEntryController) DeleteEntry(ctx *gin.Context) {
 	if err := c.service.DeleteEntry(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Entry deleted successfully"})
@@ -95,7 +95,7 @@ func (c *MilkJournalEntryController) GetStrayEntries(ctx *gin.Context) {
 
 	entries, total, err := c.service.GetStrayEntries(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": entries, "total": total})

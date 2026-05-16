@@ -24,18 +24,18 @@ func NewDefaultMilkRateController() *DefaultMilkRateController {
 func (c *DefaultMilkRateController) CreateRate(ctx *gin.Context) {
 	var req dtos.CreateDefaultMilkRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	rate, err := c.service.CreateDefaultMilkRate(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (c *DefaultMilkRateController) GetRates(ctx *gin.Context) {
 
 	rates, total, err := c.service.GetDefaultMilkRates(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": rates, "total": total})
@@ -58,7 +58,7 @@ func (c *DefaultMilkRateController) GetRates(ctx *gin.Context) {
 func (c *DefaultMilkRateController) GetRate(ctx *gin.Context) {
 	rate, err := c.service.GetDefaultMilkRate(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Default milk rate not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Default milk rate not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, rate)
@@ -67,17 +67,17 @@ func (c *DefaultMilkRateController) GetRate(ctx *gin.Context) {
 func (c *DefaultMilkRateController) UpdateRate(ctx *gin.Context) {
 	var req dtos.UpdateDefaultMilkRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateDefaultMilkRate(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Default milk rate updated successfully"})
@@ -85,7 +85,7 @@ func (c *DefaultMilkRateController) UpdateRate(ctx *gin.Context) {
 
 func (c *DefaultMilkRateController) DeleteRate(ctx *gin.Context) {
 	if err := c.service.DeleteDefaultMilkRate(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Default milk rate deleted successfully"})

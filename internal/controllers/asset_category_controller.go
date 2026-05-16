@@ -23,18 +23,18 @@ func NewAssetCategoryController() *AssetCategoryController {
 func (c *AssetCategoryController) CreateCategory(ctx *gin.Context) {
 	var req dtos.CreateAssetCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	category, err := c.service.CreateCategory(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, category)
@@ -43,7 +43,7 @@ func (c *AssetCategoryController) CreateCategory(ctx *gin.Context) {
 func (c *AssetCategoryController) GetCategories(ctx *gin.Context) {
 	categories, total, err := c.service.GetCategories()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": categories, "total": total})
@@ -52,7 +52,7 @@ func (c *AssetCategoryController) GetCategories(ctx *gin.Context) {
 func (c *AssetCategoryController) GetCategory(ctx *gin.Context) {
 	category, err := c.service.GetCategory(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Asset category not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Asset category not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, category)
@@ -61,17 +61,17 @@ func (c *AssetCategoryController) GetCategory(ctx *gin.Context) {
 func (c *AssetCategoryController) UpdateCategory(ctx *gin.Context) {
 	var req dtos.UpdateAssetCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateCategory(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Asset category updated successfully"})
@@ -79,7 +79,7 @@ func (c *AssetCategoryController) UpdateCategory(ctx *gin.Context) {
 
 func (c *AssetCategoryController) DeleteCategory(ctx *gin.Context) {
 	if err := c.service.DeleteCategory(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Asset category deleted successfully"})

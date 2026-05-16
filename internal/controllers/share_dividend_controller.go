@@ -23,18 +23,18 @@ func NewShareDividendController() *ShareDividendController {
 func (c *ShareDividendController) CreateDividend(ctx *gin.Context) {
 	var req dtos.CreateShareDividendRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	dividend, err := c.service.CreateDividend(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, dividend)
@@ -43,7 +43,7 @@ func (c *ShareDividendController) CreateDividend(ctx *gin.Context) {
 func (c *ShareDividendController) GetDividends(ctx *gin.Context) {
 	dividends, total, err := c.service.GetDividends()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": dividends, "total": total})
@@ -52,7 +52,7 @@ func (c *ShareDividendController) GetDividends(ctx *gin.Context) {
 func (c *ShareDividendController) GetDividend(ctx *gin.Context) {
 	dividend, err := c.service.GetDividend(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Share dividend not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Share dividend not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, dividend)
@@ -61,17 +61,17 @@ func (c *ShareDividendController) GetDividend(ctx *gin.Context) {
 func (c *ShareDividendController) UpdateDividend(ctx *gin.Context) {
 	var req dtos.UpdateShareDividendRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateDividend(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Share dividend updated successfully"})
@@ -79,7 +79,7 @@ func (c *ShareDividendController) UpdateDividend(ctx *gin.Context) {
 
 func (c *ShareDividendController) DeleteDividend(ctx *gin.Context) {
 	if err := c.service.DeleteDividend(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Share dividend deleted successfully"})

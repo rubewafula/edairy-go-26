@@ -23,18 +23,18 @@ func NewRoleController() *RoleController {
 func (c *RoleController) CreateRole(ctx *gin.Context) {
 	var req dtos.CreateRoleRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	role, err := c.service.CreateRole(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, role)
@@ -43,7 +43,7 @@ func (c *RoleController) CreateRole(ctx *gin.Context) {
 func (c *RoleController) GetRoles(ctx *gin.Context) {
 	roles, total, err := c.service.GetRoles()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": roles, "total": total})
@@ -52,7 +52,7 @@ func (c *RoleController) GetRoles(ctx *gin.Context) {
 func (c *RoleController) GetRole(ctx *gin.Context) {
 	role, err := c.service.GetRole(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Role not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, role)
@@ -61,17 +61,17 @@ func (c *RoleController) GetRole(ctx *gin.Context) {
 func (c *RoleController) UpdateRole(ctx *gin.Context) {
 	var req dtos.UpdateRoleRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateRole(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Role updated successfully"})
@@ -79,7 +79,7 @@ func (c *RoleController) UpdateRole(ctx *gin.Context) {
 
 func (c *RoleController) DeleteRole(ctx *gin.Context) {
 	if err := c.service.DeleteRole(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Role deleted successfully"})
@@ -87,7 +87,7 @@ func (c *RoleController) DeleteRole(ctx *gin.Context) {
 
 func (c *RoleController) AppendAllPermissions(ctx *gin.Context) {
 	if err := c.service.AppendAllPermissionsToRole(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

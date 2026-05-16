@@ -23,18 +23,18 @@ func NewAssetController() *AssetController {
 func (c *AssetController) CreateAsset(ctx *gin.Context) {
 	var req dtos.CreateAssetRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	asset, err := c.service.CreateAsset(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, asset)
@@ -43,7 +43,7 @@ func (c *AssetController) CreateAsset(ctx *gin.Context) {
 func (c *AssetController) GetAssets(ctx *gin.Context) {
 	assets, total, err := c.service.GetAssets()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": assets, "total": total})
@@ -52,7 +52,7 @@ func (c *AssetController) GetAssets(ctx *gin.Context) {
 func (c *AssetController) GetAsset(ctx *gin.Context) {
 	asset, err := c.service.GetAsset(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Asset not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Asset not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, asset)
@@ -61,17 +61,17 @@ func (c *AssetController) GetAsset(ctx *gin.Context) {
 func (c *AssetController) UpdateAsset(ctx *gin.Context) {
 	var req dtos.UpdateAssetRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateAsset(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Asset updated successfully"})
@@ -79,7 +79,7 @@ func (c *AssetController) UpdateAsset(ctx *gin.Context) {
 
 func (c *AssetController) DeleteAsset(ctx *gin.Context) {
 	if err := c.service.DeleteAsset(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Asset deleted successfully"})

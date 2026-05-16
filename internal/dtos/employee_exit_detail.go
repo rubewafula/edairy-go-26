@@ -22,6 +22,8 @@ type UpdateEmployeeExitDetailRequest struct {
 type EmployeeExitDetailResponse struct {
 	ID              uint64    `json:"id"`
 	EmployeeID      uint64    `json:"employee_id"`
+	EmployeeName    string    `json:"employee_name"`
+	EmployeeNo      string    `json:"employee_no"`
 	ContractType    string    `json:"contract_type"`
 	ContractEndDate time.Time `json:"contract_end_date"`
 	DateOfLeaving   time.Time `json:"date_of_leaving"`

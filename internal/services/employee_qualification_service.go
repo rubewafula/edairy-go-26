@@ -45,9 +45,11 @@ func (s *EmployeeQualificationService) GetEmployeeQualifications(employeeID stri
 
 	query := `
 		SELECT 
-			eq.id, eq.employee_id, eq.qualification, eq.institution,
+			eq.id, eq.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			eq.qualification, eq.institution,
 			eq.start_date, eq.end_date, eq.score, eq.created_at, eq.updated_at
 		FROM employee_qualifications eq
+		LEFT JOIN employees e ON eq.employee_id = e.id
 		WHERE eq.deleted_at IS NULL AND (? = '' OR eq.employee_id = ?)
 		ORDER BY eq.id DESC
 		LIMIT ? OFFSET ?
@@ -60,10 +62,12 @@ func (s *EmployeeQualificationService) GetQualification(id string) (*dtos.Employ
 	var result dtos.EmployeeQualificationResponse
 	query := `
 		SELECT 
-			id, employee_id, qualification, institution,
-			start_date, end_date, score, created_at, updated_at
-		FROM employee_qualifications
-		WHERE id = ? AND deleted_at IS NULL
+			eq.id, eq.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			eq.qualification, eq.institution,
+			eq.start_date, eq.end_date, eq.score, eq.created_at, eq.updated_at
+		FROM employee_qualifications eq
+		LEFT JOIN employees e ON eq.employee_id = e.id
+		WHERE eq.id = ? AND eq.deleted_at IS NULL
 		LIMIT 1
 	`
 	err := db.DB.Raw(query, id).Scan(&result).Error

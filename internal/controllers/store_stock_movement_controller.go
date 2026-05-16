@@ -24,12 +24,12 @@ func NewStoreStockMovementController() *StoreStockMovementController {
 func (c *StoreStockMovementController) CreateMovement(ctx *gin.Context) {
 	var req dtos.CreateStoreStockMovementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
@@ -37,7 +37,7 @@ func (c *StoreStockMovementController) CreateMovement(ctx *gin.Context) {
 
 	movement, err := c.service.CreateMovement(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -51,7 +51,7 @@ func (c *StoreStockMovementController) GetMovements(ctx *gin.Context) {
 
 	results, total, err := c.service.GetMovements(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -60,7 +60,7 @@ func (c *StoreStockMovementController) GetMovements(ctx *gin.Context) {
 func (c *StoreStockMovementController) GetMovement(ctx *gin.Context) {
 	result, err := c.service.GetMovement(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Stock movement record not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Stock movement record not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -69,17 +69,17 @@ func (c *StoreStockMovementController) GetMovement(ctx *gin.Context) {
 func (c *StoreStockMovementController) UpdateMovement(ctx *gin.Context) {
 	var req dtos.UpdateStoreStockMovementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateMovement(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock movement record updated successfully"})
@@ -87,7 +87,7 @@ func (c *StoreStockMovementController) UpdateMovement(ctx *gin.Context) {
 
 func (c *StoreStockMovementController) DeleteMovement(ctx *gin.Context) {
 	if err := c.service.DeleteMovement(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock movement record deleted successfully"})

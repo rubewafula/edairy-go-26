@@ -23,18 +23,18 @@ func NewTransporterDriverController() *TransporterDriverController {
 func (c *TransporterDriverController) CreateDriver(ctx *gin.Context) {
 	var req dtos.CreateTransporterDriverRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	driver, err := c.service.CreateDriver(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -45,7 +45,7 @@ func (c *TransporterDriverController) CreateDriver(ctx *gin.Context) {
 func (c *TransporterDriverController) GetDrivers(ctx *gin.Context) {
 	drivers, total, err := c.service.GetDrivers() // Now returns dtos.TransporterDriverResponse
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": drivers, "total": total})
@@ -54,7 +54,7 @@ func (c *TransporterDriverController) GetDrivers(ctx *gin.Context) {
 func (c *TransporterDriverController) GetDriver(ctx *gin.Context) {
 	driver, err := c.service.GetDriver(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Driver not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Driver not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, driver)
@@ -63,17 +63,17 @@ func (c *TransporterDriverController) GetDriver(ctx *gin.Context) {
 func (c *TransporterDriverController) UpdateDriver(ctx *gin.Context) {
 	var req dtos.UpdateTransporterDriverRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateDriver(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Driver updated successfully"})
@@ -81,7 +81,7 @@ func (c *TransporterDriverController) UpdateDriver(ctx *gin.Context) {
 
 func (c *TransporterDriverController) DeleteDriver(ctx *gin.Context) {
 	if err := c.service.DeleteDriver(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Driver deleted successfully"})

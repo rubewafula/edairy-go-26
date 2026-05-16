@@ -23,18 +23,18 @@ func NewExchangeVisitController() *ExchangeVisitController {
 func (c *ExchangeVisitController) CreateVisit(ctx *gin.Context) {
 	var req dtos.CreateExchangeVisitRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	visit, err := c.service.CreateVisit(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, visit)
@@ -43,7 +43,7 @@ func (c *ExchangeVisitController) CreateVisit(ctx *gin.Context) {
 func (c *ExchangeVisitController) GetVisits(ctx *gin.Context) {
 	visits, total, err := c.service.GetVisits()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": visits, "total": total})
@@ -52,7 +52,7 @@ func (c *ExchangeVisitController) GetVisits(ctx *gin.Context) {
 func (c *ExchangeVisitController) GetVisit(ctx *gin.Context) {
 	visit, err := c.service.GetVisit(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Visit not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Visit not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, visit)
@@ -61,17 +61,17 @@ func (c *ExchangeVisitController) GetVisit(ctx *gin.Context) {
 func (c *ExchangeVisitController) UpdateVisit(ctx *gin.Context) {
 	var req dtos.UpdateExchangeVisitRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateVisit(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Visit updated successfully"})
@@ -79,7 +79,7 @@ func (c *ExchangeVisitController) UpdateVisit(ctx *gin.Context) {
 
 func (c *ExchangeVisitController) DeleteVisit(ctx *gin.Context) {
 	if err := c.service.DeleteVisit(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Visit deleted successfully"})

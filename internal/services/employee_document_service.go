@@ -35,10 +35,10 @@ func (s *EmployeeDocumentService) GetEmployeeDocuments(page, limit int) ([]dtos.
 
 	query := `
 		SELECT 
-			ed.id, ed.employee_id, ed.document_type_id, dt.name AS document_type,
+			ed.id, ed.employee_id, ed.document_type_id, dt.document_type,
 			ed.file_name, ed.file_description, ed.created_at, ed.updated_at
 		FROM employee_documents ed
-		LEFT JOIN document_types dt ON ed.document_type_id = dt.id -- Assuming a document_types table/model
+		LEFT JOIN document_types dt ON ed.document_type_id = dt.id 
 		WHERE ed.deleted_at IS NULL
 		ORDER BY ed.id DESC
 		LIMIT ? OFFSET ?
@@ -51,7 +51,7 @@ func (s *EmployeeDocumentService) GetEmployeeDocument(id string) (*dtos.Employee
 	var result dtos.EmployeeDocumentResponse
 	query := `
 		SELECT 
-			ed.id, ed.employee_id, ed.document_type_id, dt.name AS document_type,
+			ed.id, ed.employee_id, ed.document_type_id, dt.document_type,
 			ed.file_name, ed.file_description, ed.created_at, ed.updated_at
 		FROM employee_documents ed
 		LEFT JOIN document_types dt ON ed.document_type_id = dt.id

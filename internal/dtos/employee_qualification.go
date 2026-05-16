@@ -22,6 +22,8 @@ type UpdateEmployeeQualificationRequest struct {
 type EmployeeQualificationResponse struct {
 	ID            uint64    `json:"id"`
 	EmployeeID    uint64    `json:"employee_id"`
+	EmployeeName  string    `json:"employee_name"`
+	EmployeeNo    string    `json:"employee_no"`
 	Qualification string    `json:"qualification"`
 	Institution   string    `json:"institution"`
 	StartDate     time.Time `json:"start_date"`

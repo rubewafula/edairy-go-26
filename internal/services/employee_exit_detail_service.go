@@ -45,9 +45,11 @@ func (s *EmployeeExitDetailService) GetExitDetails(employeeID string, page, limi
 
 	query := `
 		SELECT 
-			eed.id, eed.employee_id, eed.contract_type, eed.contract_end_date,
+			eed.id, eed.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			eed.contract_type, eed.contract_end_date,
 			eed.date_of_leaving, eed.exit_category, eed.reasons, eed.created_at, eed.updated_at
 		FROM employee_exit_details eed
+		LEFT JOIN employees e ON eed.employee_id = e.id
 		WHERE eed.deleted_at IS NULL AND (? = '' OR eed.employee_id = ?)
 		ORDER BY eed.id DESC
 		LIMIT ? OFFSET ?
@@ -60,9 +62,11 @@ func (s *EmployeeExitDetailService) GetExitDetail(id string) (*dtos.EmployeeExit
 	var result dtos.EmployeeExitDetailResponse
 	query := `
 		SELECT 
-			eed.id, eed.employee_id, eed.contract_type, eed.contract_end_date,
+			eed.id, eed.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			eed.contract_type, eed.contract_end_date,
 			eed.date_of_leaving, eed.exit_category, eed.reasons, eed.created_at, eed.updated_at
 		FROM employee_exit_details eed
+		LEFT JOIN employees e ON eed.employee_id = e.id
 		WHERE eed.id = ? AND eed.deleted_at IS NULL
 		LIMIT 1
 	`

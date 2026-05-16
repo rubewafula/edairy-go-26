@@ -23,7 +23,7 @@ func NewIndividualTransporterController() *IndividualTransporterController {
 func (c *IndividualTransporterController) GetIndividualTransporters(ctx *gin.Context) {
 	individuals, total, err := c.service.GetIndividualTransporters()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": individuals, "total": total})
@@ -32,7 +32,7 @@ func (c *IndividualTransporterController) GetIndividualTransporters(ctx *gin.Con
 func (c *IndividualTransporterController) GetIndividualTransporter(ctx *gin.Context) {
 	individual, err := c.service.GetIndividualTransporter(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Individual transporter details not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Individual transporter details not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, individual)
@@ -41,17 +41,17 @@ func (c *IndividualTransporterController) GetIndividualTransporter(ctx *gin.Cont
 func (c *IndividualTransporterController) UpdateIndividualTransporter(ctx *gin.Context) {
 	var req dtos.UpdateIndividualTransporterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateIndividualTransporter(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Individual transporter details updated successfully"})

@@ -118,6 +118,8 @@ type UpdateEmployeeBankAccountRequest struct {
 type EmployeeBankAccountResponse struct {
 	ID            uint64    `json:"id"`
 	EmployeeID    uint64    `json:"employee_id"`
+	EmployeeName  string    `json:"employee_name"`
+	EmployeeNo    string    `json:"employee_no"`
 	BankID        uint64    `json:"bank_id"`
 	BankName      string    `json:"bank_name"`
 	AccountNumber string    `json:"account_number"`
@@ -249,6 +251,8 @@ type UpdateEmployeeDependantRequest struct {
 type EmployeeDependantResponse struct {
 	ID           uint64 `json:"id"`
 	EmployeeID   uint64 `json:"employee_id"`
+	EmployeeName string `json:"employee_name"`
+	EmployeeNo   string `json:"employee_no"`
 	Name         string `json:"name"`
 	Relationship string `json:"relationship"`
 }

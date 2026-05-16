@@ -24,12 +24,12 @@ func NewMilkDeliveryShiftController() *MilkDeliveryShiftController {
 func (c *MilkDeliveryShiftController) CreateShift(ctx *gin.Context) {
 	var req dtos.CreateMilkDeliveryShiftRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
@@ -47,7 +47,7 @@ func (c *MilkDeliveryShiftController) GetShifts(ctx *gin.Context) {
 
 	shifts, total, err := c.service.GetShifts(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": shifts, "total": total})
@@ -56,7 +56,7 @@ func (c *MilkDeliveryShiftController) GetShifts(ctx *gin.Context) {
 func (c *MilkDeliveryShiftController) GetShift(ctx *gin.Context) {
 	shift, err := c.service.GetShift(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Shift not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Shift not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, shift)
@@ -65,12 +65,12 @@ func (c *MilkDeliveryShiftController) GetShift(ctx *gin.Context) {
 func (c *MilkDeliveryShiftController) UpdateShift(ctx *gin.Context) {
 	var req dtos.UpdateMilkDeliveryShiftRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
@@ -83,7 +83,7 @@ func (c *MilkDeliveryShiftController) UpdateShift(ctx *gin.Context) {
 
 func (c *MilkDeliveryShiftController) DeleteShift(ctx *gin.Context) {
 	if err := c.service.DeleteShift(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Shift deleted successfully"})

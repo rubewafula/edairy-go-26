@@ -24,12 +24,12 @@ func NewInterStoreTransferItemController() *InterStoreTransferItemController {
 func (c *InterStoreTransferItemController) CreateTransferItem(ctx *gin.Context) {
 	var req dtos.CreateInterStoreTransferItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
@@ -37,7 +37,7 @@ func (c *InterStoreTransferItemController) CreateTransferItem(ctx *gin.Context) 
 
 	item, err := c.service.CreateTransferItem(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -51,7 +51,7 @@ func (c *InterStoreTransferItemController) GetTransferItems(ctx *gin.Context) {
 
 	results, total, err := c.service.GetTransferItems(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -60,7 +60,7 @@ func (c *InterStoreTransferItemController) GetTransferItems(ctx *gin.Context) {
 func (c *InterStoreTransferItemController) GetTransferItem(ctx *gin.Context) {
 	result, err := c.service.GetTransferItem(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Transfer item not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Transfer item not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -69,19 +69,19 @@ func (c *InterStoreTransferItemController) GetTransferItem(ctx *gin.Context) {
 func (c *InterStoreTransferItemController) UpdateTransferItem(ctx *gin.Context) {
 	var req dtos.UpdateInterStoreTransferItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 
 	if err := c.service.UpdateTransferItem(ctx.Param("id"), req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Transfer item updated successfully"})
@@ -89,7 +89,7 @@ func (c *InterStoreTransferItemController) UpdateTransferItem(ctx *gin.Context) 
 
 func (c *InterStoreTransferItemController) DeleteTransferItem(ctx *gin.Context) {
 	if err := c.service.DeleteTransferItem(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Transfer item deleted successfully"})

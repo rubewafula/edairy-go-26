@@ -23,18 +23,18 @@ func NewDividendDeclarationController() *DividendDeclarationController {
 func (c *DividendDeclarationController) CreateDeclaration(ctx *gin.Context) {
 	var req dtos.CreateDividendDeclarationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	declaration, err := c.service.CreateDeclaration(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, declaration)
@@ -43,7 +43,7 @@ func (c *DividendDeclarationController) CreateDeclaration(ctx *gin.Context) {
 func (c *DividendDeclarationController) GetDeclarations(ctx *gin.Context) {
 	declarations, total, err := c.service.GetDeclarations()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": declarations, "total": total})
@@ -52,7 +52,7 @@ func (c *DividendDeclarationController) GetDeclarations(ctx *gin.Context) {
 func (c *DividendDeclarationController) GetDeclaration(ctx *gin.Context) {
 	declaration, err := c.service.GetDeclaration(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Dividend declaration not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Dividend declaration not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, declaration)
@@ -61,17 +61,17 @@ func (c *DividendDeclarationController) GetDeclaration(ctx *gin.Context) {
 func (c *DividendDeclarationController) UpdateDeclaration(ctx *gin.Context) {
 	var req dtos.UpdateDividendDeclarationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateDeclaration(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Dividend declaration updated successfully"})
@@ -79,7 +79,7 @@ func (c *DividendDeclarationController) UpdateDeclaration(ctx *gin.Context) {
 
 func (c *DividendDeclarationController) DeleteDeclaration(ctx *gin.Context) {
 	if err := c.service.DeleteDeclaration(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Dividend declaration deleted successfully"})

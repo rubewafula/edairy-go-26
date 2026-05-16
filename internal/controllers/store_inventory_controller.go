@@ -24,18 +24,18 @@ func NewStoreInventoryController() *StoreInventoryController {
 func (c *StoreInventoryController) CreateInventory(ctx *gin.Context) {
 	var req dtos.CreateStoreInventoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	inventory, err := c.service.CreateInventory(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -49,7 +49,7 @@ func (c *StoreInventoryController) GetInventories(ctx *gin.Context) {
 
 	results, total, err := c.service.GetInventories(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -58,7 +58,7 @@ func (c *StoreInventoryController) GetInventories(ctx *gin.Context) {
 func (c *StoreInventoryController) GetInventory(ctx *gin.Context) {
 	inventory, err := c.service.GetInventory(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Inventory not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, inventory)
@@ -67,17 +67,17 @@ func (c *StoreInventoryController) GetInventory(ctx *gin.Context) {
 func (c *StoreInventoryController) UpdateInventory(ctx *gin.Context) {
 	var req dtos.UpdateStoreInventoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateInventory(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Inventory updated successfully"})
@@ -85,7 +85,7 @@ func (c *StoreInventoryController) UpdateInventory(ctx *gin.Context) {
 
 func (c *StoreInventoryController) DeleteInventory(ctx *gin.Context) {
 	if err := c.service.DeleteInventory(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Inventory deleted successfully"})

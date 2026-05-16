@@ -42,11 +42,13 @@ func (s *EmployeeBankAccountService) GetAccounts(employeeID string, page, limit 
 
 	query := `
 		SELECT 
-			eba.id, eba.employee_id, eba.bank_id, b.bank_name,
+			eba.id, eba.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			eba.bank_id, b.bank_name,
 			eba.account_number, eba.account_name, eba.created_at, eba.updated_at,
 			eba.created_by, eba.updated_by
 		FROM employee_bank_accounts eba
 		LEFT JOIN banks b ON eba.bank_id = b.id
+		LEFT JOIN employees e ON eba.employee_id = e.id
 		WHERE eba.deleted_at IS NULL AND (? = '' OR eba.employee_id = ?)
 		ORDER BY eba.id DESC
 		LIMIT ? OFFSET ?
@@ -59,10 +61,12 @@ func (s *EmployeeBankAccountService) GetAccount(id string) (*dtos.EmployeeBankAc
 	var result dtos.EmployeeBankAccountResponse
 	query := `
 		SELECT 
-			eba.id, eba.employee_id, eba.bank_id, b.bank_name,
+			eba.id, eba.employee_id, e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name,
+			eba.bank_id, b.bank_name,
 			eba.account_number, eba.account_name, eba.created_at, eba.updated_at
 		FROM employee_bank_accounts eba
 		LEFT JOIN banks b ON eba.bank_id = b.id
+		LEFT JOIN employees e ON eba.employee_id = e.id
 		WHERE eba.id = ? AND eba.deleted_at IS NULL
 		LIMIT 1
 	`

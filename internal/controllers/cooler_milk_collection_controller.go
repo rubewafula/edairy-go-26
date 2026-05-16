@@ -24,18 +24,18 @@ func NewCoolerMilkCollectionController() *CoolerMilkCollectionController {
 func (c *CoolerMilkCollectionController) CreateCollection(ctx *gin.Context) {
 	var req dtos.CreateCoolerMilkCollectionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	collection, err := c.service.CreateCollection(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, collection)
@@ -47,7 +47,7 @@ func (c *CoolerMilkCollectionController) GetCollections(ctx *gin.Context) {
 
 	collections, total, err := c.service.GetCollections(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": collections, "total": total})
@@ -56,7 +56,7 @@ func (c *CoolerMilkCollectionController) GetCollections(ctx *gin.Context) {
 func (c *CoolerMilkCollectionController) GetCollection(ctx *gin.Context) {
 	collection, err := c.service.GetCollection(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Collection entry not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Collection entry not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, collection)
@@ -65,17 +65,17 @@ func (c *CoolerMilkCollectionController) GetCollection(ctx *gin.Context) {
 func (c *CoolerMilkCollectionController) UpdateCollection(ctx *gin.Context) {
 	var req dtos.UpdateCoolerMilkCollectionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateCollection(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Collection entry updated successfully"})
@@ -83,7 +83,7 @@ func (c *CoolerMilkCollectionController) UpdateCollection(ctx *gin.Context) {
 
 func (c *CoolerMilkCollectionController) DeleteCollection(ctx *gin.Context) {
 	if err := c.service.DeleteCollection(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Collection entry deleted successfully"})

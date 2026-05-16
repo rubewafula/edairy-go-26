@@ -23,7 +23,7 @@ func NewCompanyTransporterController() *CompanyTransporterController {
 func (c *CompanyTransporterController) GetCompanyTransporters(ctx *gin.Context) {
 	companies, total, err := c.service.GetCompanyTransporters()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": companies, "total": total})
@@ -32,7 +32,7 @@ func (c *CompanyTransporterController) GetCompanyTransporters(ctx *gin.Context) 
 func (c *CompanyTransporterController) GetCompanyTransporter(ctx *gin.Context) {
 	company, err := c.service.GetCompanyTransporter(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"Error": "Company transporter details not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Company transporter details not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, company)
@@ -41,17 +41,17 @@ func (c *CompanyTransporterController) GetCompanyTransporter(ctx *gin.Context) {
 func (c *CompanyTransporterController) UpdateCompanyTransporter(ctx *gin.Context) {
 	var req dtos.UpdateCompanyTransporterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"Error": utils.FormatValidationError(err)})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateCompanyTransporter(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Company transporter details updated successfully"})
