@@ -46,7 +46,7 @@ func (c *ShareTypeController) GetShareTypes(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": shareTypes, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": shareTypes, "total": total})
 }
 
 func (c *ShareTypeController) GetShareType(ctx *gin.Context) {

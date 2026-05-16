@@ -22,11 +22,11 @@ type SendSMSRequest struct {
 }
 
 type SMSMessageResponse struct {
-	ID        uint64    `json:"ID"`
-	Recipient string    `json:"Recipient"`
-	Message   string    `json:"Message"`
-	Status    string    `json:"Status"`
-	CreatedAt time.Time `json:"CreatedAt"`
+	ID        uint64    `json:"id"`
+	Recipient string    `json:"recipient"`
+	Message   string    `json:"message"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // SMS Provider
@@ -45,12 +45,12 @@ type CreateSMSProviderRequest struct {
 }
 
 type SMSProviderResponse struct {
-	ID           uint64    `json:"ID"`
-	ProviderCode string    `json:"ProviderCode"`
-	ProviderName string    `json:"ProviderName"`
-	IsDefault    string    `json:"IsDefault"`
-	Status       string    `json:"Status"`
-	CreatedAt    time.Time `json:"CreatedAt"`
+	ID           uint64    `json:"id"`
+	ProviderCode string    `json:"provider_code"`
+	ProviderName string    `json:"provider_name"`
+	IsDefault    string    `json:"is_default"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // SMS Template
@@ -64,13 +64,13 @@ type CreateSMSTemplateRequest struct {
 }
 
 type SMSTemplateResponse struct {
-	ID           uint64    `json:"ID"`
-	TemplateCode string    `json:"TemplateCode"`
-	TemplateName string    `json:"TemplateName"`
-	ModuleName   string    `json:"ModuleName"`
-	Message      string    `json:"Message"`
-	Status       string    `json:"Status"`
-	CreatedAt    time.Time `json:"CreatedAt"`
+	ID           uint64    `json:"id"`
+	TemplateCode string    `json:"template_code"`
+	TemplateName string    `json:"template_name"`
+	ModuleName   string    `json:"module_name"`
+	Message      string    `json:"message"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // SMS Campaign
@@ -85,31 +85,31 @@ type CreateSMSCampaignRequest struct {
 }
 
 type SMSCampaignResponse struct {
-	ID              uint64     `json:"ID"`
-	CampaignCode    string     `json:"CampaignCode"`
-	CampaignName    string     `json:"CampaignName"`
-	GroupName       string     `json:"GroupName"`
-	TotalRecipients int        `json:"TotalRecipients"`
-	TotalSent       int        `json:"TotalSent"`
-	Status          string     `json:"Status"`
-	ScheduledAt     *time.Time `json:"ScheduledAt"`
-	CreatedAt       time.Time  `json:"CreatedAt"`
+	ID              uint64     `json:"id"`
+	CampaignCode    string     `json:"campaign_code"`
+	CampaignName    string     `json:"campaign_name"`
+	GroupName       string     `json:"group_name"`
+	TotalRecipients int        `json:"total_recipients"`
+	TotalSent       int        `json:"total_sent"`
+	Status          string     `json:"status"`
+	ScheduledAt     *time.Time `json:"scheduled_at"`
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 type SMSCampaignRecipientResponse struct {
-	ID              uint64     `json:"ID"`
-	RecipientName   string     `json:"RecipientName"`
-	PhoneNo         string     `json:"PhoneNo"`
-	Status          string     `json:"Status"`
-	SentAt          *time.Time `json:"SentAt"`
-	DeliveredAt     *time.Time `json:"DeliveredAt"`
-	ResponseMessage string     `json:"ResponseMessage"`
+	ID              uint64     `json:"id"`
+	RecipientName   string     `json:"recipient_name"`
+	PhoneNo         string     `json:"phone_no"`
+	Status          string     `json:"status"`
+	SentAt          *time.Time `json:"sent_at"`
+	DeliveredAt     *time.Time `json:"delivered_at"`
+	ResponseMessage string     `json:"response_message"`
 }
 
 type SMSQueueResponse struct {
-	ID                 uint64     `json:"ID"`
-	SMSMessageID       uint64     `json:"SMSMessageID"`
-	Processed          string     `json:"Processed"`
-	ProcessingAttempts int        `json:"ProcessingAttempts"`
-	LastAttemptAt      *time.Time `json:"LastAttemptAt"`
+	ID                 uint64     `json:"id"`
+	SMSMessageID       uint64     `json:"sms_message_id"`
+	Processed          string     `json:"processed"`
+	ProcessingAttempts int        `json:"processing_attempts"`
+	LastAttemptAt      *time.Time `json:"last_attempt_at"`
 }

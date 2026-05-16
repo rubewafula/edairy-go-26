@@ -50,7 +50,7 @@ func (c *StoreItemController) GetItems(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": items, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": items, "total": total})
 }
 
 func (c *StoreItemController) GetItem(ctx *gin.Context) {

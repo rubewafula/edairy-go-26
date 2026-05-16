@@ -50,7 +50,7 @@ func (c *MilkRejectController) GetRejects(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": rejects, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": rejects, "total": total})
 }
 
 func (c *MilkRejectController) GetReject(ctx *gin.Context) {

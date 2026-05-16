@@ -46,7 +46,7 @@ func (c *AssetAssignmentController) GetAssignments(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": assignments, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": assignments, "total": total})
 }
 
 func (c *AssetAssignmentController) GetAssignment(ctx *gin.Context) {

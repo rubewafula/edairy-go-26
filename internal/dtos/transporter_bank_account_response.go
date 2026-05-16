@@ -3,13 +3,13 @@ package dtos
 import "time"
 
 type TransporterBankAccountResponse struct {
-	ID            uint64    `json:"ID"`
-	TransporterID uint64    `json:"TransporterID"`
-	TransporterNo string    `json:"TransporterNo"`
-	BankID        uint64    `json:"BankID"`
-	BankName      string    `json:"BankName"`
-	AccountNumber string    `json:"AccountNumber"`
-	AccountName   string    `json:"AccountName"`
-	CreatedAt     time.Time `json:"CreatedAt"`
-	UpdatedAt     time.Time `json:"UpdatedAt"`
+	ID            uint64    `json:"id"`
+	TransporterID uint64    `json:"transporter_id"`
+	TransporterNo string    `json:"transporter_no"`
+	BankID        uint64    `json:"bank_id"`
+	BankName      string    `json:"bank_name"`
+	AccountNumber string    `json:"account_number"`
+	AccountName   string    `json:"account_name"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

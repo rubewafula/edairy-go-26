@@ -46,7 +46,7 @@ func (c *ShareAccountController) GetAccounts(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": accounts, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": accounts, "total": total})
 }
 
 func (c *ShareAccountController) GetAccount(ctx *gin.Context) {

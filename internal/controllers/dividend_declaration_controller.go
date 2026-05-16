@@ -46,7 +46,7 @@ func (c *DividendDeclarationController) GetDeclarations(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": declarations, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": declarations, "total": total})
 }
 
 func (c *DividendDeclarationController) GetDeclaration(ctx *gin.Context) {

@@ -3,31 +3,31 @@ package dtos
 import "time"
 
 type CreateStoreStockMovementTypeRequest struct {
-	MovementCode string `json:"MovementCode" validate:"required,max=100"`
-	MovementName string `json:"MovementName" validate:"required,max=255"`
-	Direction    string `json:"Direction" validate:"required,oneof=IN OUT"`
-	AffectsStock bool   `json:"AffectsStock"`
-	Description  string `json:"Description" validate:"max=255"`
-	IsSystem     bool   `json:"IsSystem"`
+	MovementCode string `json:"movement_code" validate:"required,max=100"`
+	MovementName string `json:"movement_name" validate:"required,max=255"`
+	Direction    string `json:"direction" validate:"required,oneof=IN OUT"`
+	AffectsStock bool   `json:"affects_stock"`
+	Description  string `json:"description" validate:"max=255"`
+	IsSystem     bool   `json:"is_system"`
 }
 
 type UpdateStoreStockMovementTypeRequest struct {
-	MovementCode string `json:"MovementCode" validate:"required,max=100"`
-	MovementName string `json:"MovementName" validate:"required,max=255"`
-	Direction    string `json:"Direction" validate:"required,oneof=IN OUT"`
-	AffectsStock bool   `json:"AffectsStock"`
-	Description  string `json:"Description" validate:"max=255"`
-	IsSystem     bool   `json:"IsSystem"`
+	MovementCode string `json:"movement_code" validate:"required,max=100"`
+	MovementName string `json:"movement_name" validate:"required,max=255"`
+	Direction    string `json:"direction" validate:"required,oneof=IN OUT"`
+	AffectsStock bool   `json:"affects_stock"`
+	Description  string `json:"description" validate:"max=255"`
+	IsSystem     bool   `json:"is_system"`
 }
 
 type StoreStockMovementTypeResponse struct {
-	ID           uint64    `json:"ID"`
-	MovementCode string    `json:"MovementCode"`
-	MovementName string    `json:"MovementName"`
-	Direction    string    `json:"Direction"`
-	AffectsStock bool      `json:"AffectsStock"`
-	Description  string    `json:"Description"`
-	IsSystem     bool      `json:"IsSystem"`
-	CreatedAt    time.Time `json:"CreatedAt"`
-	UpdatedAt    time.Time `json:"UpdatedAt"`
+	ID           uint64    `json:"id"`
+	MovementCode string    `json:"movement_code"`
+	MovementName string    `json:"movement_name"`
+	Direction    string    `json:"direction"`
+	AffectsStock bool      `json:"affects_stock"`
+	Description  string    `json:"description"`
+	IsSystem     bool      `json:"is_system"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }

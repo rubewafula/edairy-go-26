@@ -50,7 +50,7 @@ func (c *MilkJournalController) GetMilkJournals(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": journals, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": journals, "total": total})
 }
 
 func (c *MilkJournalController) GetMilkJournal(ctx *gin.Context) {

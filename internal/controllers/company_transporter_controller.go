@@ -26,7 +26,7 @@ func (c *CompanyTransporterController) GetCompanyTransporters(ctx *gin.Context) 
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": companies, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": companies, "total": total})
 }
 
 func (c *CompanyTransporterController) GetCompanyTransporter(ctx *gin.Context) {

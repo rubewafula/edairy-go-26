@@ -27,5 +27,5 @@ func (c *DailyMilkVarianceController) GetDailyVariances(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": variances, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": variances, "total": total})
 }

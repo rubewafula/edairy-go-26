@@ -54,7 +54,7 @@ func (c *InterStoreTransferController) GetTransfers(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": results, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
 }
 
 func (c *InterStoreTransferController) GetTransfer(ctx *gin.Context) {

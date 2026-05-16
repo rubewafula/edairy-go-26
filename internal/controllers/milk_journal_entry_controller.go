@@ -50,7 +50,7 @@ func (c *MilkJournalEntryController) GetEntries(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": entries, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": entries, "total": total})
 }
 
 func (c *MilkJournalEntryController) GetEntry(ctx *gin.Context) {
@@ -98,7 +98,7 @@ func (c *MilkJournalEntryController) GetStrayEntries(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": entries, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": entries, "total": total})
 }
 
 func (c *MilkJournalEntryController) UploadEntries(ctx *gin.Context) {

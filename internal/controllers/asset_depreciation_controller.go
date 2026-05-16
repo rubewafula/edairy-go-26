@@ -46,7 +46,7 @@ func (c *AssetDepreciationController) GetEntries(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": entries, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": entries, "total": total})
 }
 
 func (c *AssetDepreciationController) GetEntry(ctx *gin.Context) {

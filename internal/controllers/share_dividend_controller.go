@@ -46,7 +46,7 @@ func (c *ShareDividendController) GetDividends(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": dividends, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": dividends, "total": total})
 }
 
 func (c *ShareDividendController) GetDividend(ctx *gin.Context) {

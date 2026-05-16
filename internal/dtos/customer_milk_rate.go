@@ -17,16 +17,16 @@ type UpdateCustomerMilkRateRequest struct {
 }
 
 type CustomerMilkRateResponse struct {
-	ID               uint64    `json:"ID"`
-	CustomerID       uint64    `json:"CustomerID"`
-	CustomerName     string    `json:"CustomerName"`
-	Rate             float64   `json:"Rate"`
-	GradeID          uint64    `json:"GradeID"`
-	GradeName        string    `json:"GradeName"`
-	PayDateRange     uint64    `json:"PayDateRangeID" gorm:"column:customer_pay_date_range_id"`
-	PayDateRangeName string    `json:"PayDateRangeName"`
-	CreatedBy        uint64    `json:"CreatedBy"`
-	UpdatedBy        uint64    `json:"UpdatedBy"`
-	CreatedAt        time.Time `json:"CreatedAt"`
-	UpdatedAt        time.Time `json:"UpdatedAt"`
+	ID               uint64    `json:"id"`
+	CustomerID       uint64    `json:"customer_id"`
+	CustomerName     string    `json:"customer_name"`
+	Rate             float64   `json:"rate"`
+	GradeID          uint64    `json:"grade_id"`
+	GradeName        string    `json:"grade_name"`
+	PayDateRange     uint64    `json:"pay_date_range_id"`
+	PayDateRangeName string    `json:"pay_date_range_name"`
+	CreatedBy        uint64    `json:"created_by"`
+	UpdatedBy        uint64    `json:"updated_by"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }

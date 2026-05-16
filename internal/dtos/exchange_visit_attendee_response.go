@@ -3,17 +3,17 @@ package dtos
 import "time"
 
 type ExchangeVisitAttendeeResponse struct {
-	ID                   uint64    `json:"ID"`
-	ExchangeVisitID      uint64    `json:"ExchangeVisitID"`
-	Partner              string    `json:"Partner"`
-	Attendee             string    `json:"Attendee"`
-	AttendeeOrganization string    `json:"AttendeeOrganization"`
-	AttendeeDesignation  string    `json:"AttendeeDesignation"`
-	Attended             string    `json:"Attended"`
-	Comments             string    `json:"Comments"`
-	AttendanceEmployeeID uint64    `json:"AttendanceEmployeeID"`
-	EmployeeFirstName    string    `json:"EmployeeFirstName"`
-	EmployeeSurname      string    `json:"EmployeeSurname"`
-	CreatedAt            time.Time `json:"CreatedAt"`
-	UpdatedAt            time.Time `json:"UpdatedAt"`
+	ID                   uint64    `json:"id"`
+	ExchangeVisitID      uint64    `json:"exchange_visit_id"`
+	Partner              string    `json:"partner"`
+	Attendee             string    `json:"attendee"`
+	AttendeeOrganization string    `json:"attendee_organization"`
+	AttendeeDesignation  string    `json:"attendee_designation"`
+	Attended             string    `json:"attended"`
+	Comments             string    `json:"comments"`
+	AttendanceEmployeeID uint64    `json:"attendance_employee_id"`
+	EmployeeFirstName    string    `json:"employee_first_name"`
+	EmployeeSurname      string    `json:"employee_surname"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }

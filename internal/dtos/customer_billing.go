@@ -9,24 +9,24 @@ type CreateCustomerBillingRequest struct {
 }
 
 type CustomerBillingResponse struct {
-	ID               uint64    `json:"ID"`
-	PayDateRangeID   uint64    `json:"PayDateRangeID"`
-	PayDateRangeName string    `json:"PayDateRangeName"`
-	TotalDeliveries  float64   `json:"TotalDeliveries"`
-	TotalAmount      float64   `json:"TotalAmount"`
-	Status           string    `json:"Status"`
-	InvoiceID        *uint64   `json:"InvoiceID"`
-	CreatedAt        time.Time `json:"CreatedAt"`
-	UpdatedAt        time.Time `json:"UpdatedAt"`
+	ID               uint64    `json:"id"`
+	PayDateRangeID   uint64    `json:"pay_date_range_id"`
+	PayDateRangeName string    `json:"pay_date_range_name"`
+	TotalDeliveries  float64   `json:"total_deliveries"`
+	TotalAmount      float64   `json:"total_amount"`
+	Status           string    `json:"status"`
+	InvoiceID        *uint64   `json:"invoice_id"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 type CustomerBillingItemResponse struct {
-	ID                uint64    `json:"ID"`
-	CustomerBillingID uint64    `json:"CustomerBillingID"`
-	ProductGradeID    uint64    `json:"ProductGradeID"`
-	GradeName         string    `json:"GradeName"`
-	TotalQuantity     float64   `json:"TotalQuantity"`
-	UnitPrice         float64   `json:"UnitPrice"`
-	TotalAmount       float64   `json:"TotalAmount"`
-	CreatedAt         time.Time `json:"CreatedAt"`
+	ID                uint64    `json:"id"`
+	CustomerBillingID uint64    `json:"customer_billing_id"`
+	ProductGradeID    uint64    `json:"product_grade_id"`
+	GradeName         string    `json:"grade_name"`
+	TotalQuantity     float64   `json:"total_quantity"`
+	UnitPrice         float64   `json:"unit_price"`
+	TotalAmount       float64   `json:"total_amount"`
+	CreatedAt         time.Time `json:"created_at"`
 }

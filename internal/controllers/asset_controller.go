@@ -46,7 +46,7 @@ func (c *AssetController) GetAssets(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": assets, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": assets, "total": total})
 }
 
 func (c *AssetController) GetAsset(ctx *gin.Context) {

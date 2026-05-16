@@ -51,7 +51,7 @@ func (c *SupplyRejectController) GetRejects(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": results, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
 }
 
 func (c *SupplyRejectController) GetRejectsBySupply(ctx *gin.Context) {
@@ -60,7 +60,7 @@ func (c *SupplyRejectController) GetRejectsBySupply(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": results})
+	ctx.JSON(http.StatusOK, gin.H{"data": results})
 }
 
 func (c *SupplyRejectController) GetReject(ctx *gin.Context) {

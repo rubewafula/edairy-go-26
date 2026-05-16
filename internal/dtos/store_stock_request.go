@@ -3,36 +3,36 @@ package dtos
 import "time"
 
 type CreateStoreStockRequest struct {
-	ItemID             uint64  `json:"ItemID" validate:"required"`
-	StoreID            uint64  `json:"StoreID" validate:"required"`
-	Quantity           float64 `json:"Quantity"`
-	Unit               string  `json:"Unit"`
-	BuyingPrice        float64 `json:"BuyingPrice" validate:"required"`
-	SellingPrice       float64 `json:"SellingPrice"`
-	CreditSellingPrice float64 `json:"CreditSellingPrice"`
+	ItemID             uint64  `json:"item_id" validate:"required"`
+	StoreID            uint64  `json:"store_id" validate:"required"`
+	Quantity           float64 `json:"quantity"`
+	Unit               string  `json:"unit"`
+	BuyingPrice        float64 `json:"buying_price" validate:"required"`
+	SellingPrice       float64 `json:"selling_price"`
+	CreditSellingPrice float64 `json:"credit_selling_price"`
 }
 
 type UpdateStoreStockRequest struct {
-	ItemID             uint64  `json:"ItemID" validate:"required"`
-	StoreID            uint64  `json:"StoreID" validate:"required"`
-	Quantity           float64 `json:"Quantity"`
-	Unit               string  `json:"Unit"`
-	BuyingPrice        float64 `json:"BuyingPrice" validate:"required"`
-	SellingPrice       float64 `json:"SellingPrice"`
-	CreditSellingPrice float64 `json:"CreditSellingPrice"`
+	ItemID             uint64  `json:"item_id" validate:"required"`
+	StoreID            uint64  `json:"store_id" validate:"required"`
+	Quantity           float64 `json:"quantity"`
+	Unit               string  `json:"unit"`
+	BuyingPrice        float64 `json:"buying_price" validate:"required"`
+	SellingPrice       float64 `json:"selling_price"`
+	CreditSellingPrice float64 `json:"credit_selling_price"`
 }
 
 type StoreStockResponse struct {
-	ID                 uint64    `json:"ID"`
-	ItemID             uint64    `json:"ItemID"`
-	ItemName           string    `json:"ItemName"`
-	StoreID            uint64    `json:"StoreID"`
-	StoreName          string    `json:"StoreName"`
-	Quantity           float64   `json:"Quantity"`
-	Unit               string    `json:"Unit"`
-	BuyingPrice        float64   `json:"BuyingPrice"`
-	SellingPrice       float64   `json:"SellingPrice"`
-	CreditSellingPrice float64   `json:"CreditSellingPrice"`
-	CreatedAt          time.Time `json:"CreatedAt"`
-	UpdatedAt          time.Time `json:"UpdatedAt"`
+	ID                 uint64    `json:"id"`
+	ItemID             uint64    `json:"item_id"`
+	ItemName           string    `json:"item_name"`
+	StoreID            uint64    `json:"store_id"`
+	StoreName          string    `json:"store_name"`
+	Quantity           float64   `json:"quantity"`
+	Unit               string    `json:"unit"`
+	BuyingPrice        float64   `json:"buying_price"`
+	SellingPrice       float64   `json:"selling_price"`
+	CreditSellingPrice float64   `json:"credit_selling_price"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }

@@ -54,50 +54,35 @@ func (c *LoanManagementController) GetLoanAccounts(ctx *gin.Context) {
 }
 
 func (c *LoanManagementController) GetLoanAccount(ctx *gin.Context) {
-	id := ctx.Param("id")
-	result, err := c.service.GetLoanAccount(id)
+	result, err := c.service.GetLoanAccount(ctx.Param("id"))
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Loan account not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
 }
 
 func (c *LoanManagementController) UpdateLoanAccount(ctx *gin.Context) {
-	id := ctx.Param("id")
 	var req dtos.UpdateLoanAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	userID := ctx.GetUint64("user_id")
-	if err := c.service.UpdateLoanAccount(id, req, userID); err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Loan account not found"})
-			return
-		}
+	if err := c.service.UpdateLoanAccount(ctx.Param("id"), req, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Loan account updated successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Account updated successfully"})
 }
 
 func (c *LoanManagementController) DeleteLoanAccount(ctx *gin.Context) {
-	id := ctx.Param("id")
 	userID := ctx.GetUint64("user_id")
-	if err := c.service.DeleteLoanAccount(id, userID); err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Loan account not found"})
-			return
-		}
+	if err := c.service.DeleteLoanAccount(ctx.Param("id"), userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Loan account deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully"})
 }
 
 // --- LoanCallback Handlers ---
@@ -301,50 +286,6 @@ func (c *LoanManagementController) GetLoanTransaction(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func (c *LoanManagementController) CreateMemberLoan(ctx *gin.Context) {
-	var req dtos.CreateMemberLoanRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
-		return
-	}
-	userID := ctx.GetUint64("user_id")
-	loan, err := c.service.CreateMemberLoan(req, userID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusCreated, loan)
-}
-
-func (c *LoanManagementController) GetMemberLoans(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
-	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
-	results, total, err := c.service.GetMemberLoans(page, limit)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
-}
-
-func (c *LoanManagementController) GetMemberLoan(ctx *gin.Context) {
-	id := ctx.Param("id")
-	result, err := c.service.GetMemberLoan(id)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member loan not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, result)
-}
-
 func (c *LoanManagementController) GetLoanTransactionsByLoanID(ctx *gin.Context) {
 	loanID := ctx.Param("loan_id")
 	results, err := c.service.GetLoanTransactionsByLoanID(loanID)
@@ -353,25 +294,6 @@ func (c *LoanManagementController) GetLoanTransactionsByLoanID(ctx *gin.Context)
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results})
-}
-
-func (c *LoanManagementController) UpdateMemberLoan(ctx *gin.Context) {
-	id := ctx.Param("id")
-	var req dtos.UpdateMemberLoanRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userID := ctx.GetUint64("user_id")
-	if err := c.service.UpdateMemberLoan(id, req, userID); err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member loan not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Member loan updated successfully"})
 }
 
 func (c *LoanManagementController) UpdateLoanTransaction(ctx *gin.Context) {
@@ -405,19 +327,4 @@ func (c *LoanManagementController) DeleteLoanTransaction(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Loan transaction deleted successfully"})
-}
-
-// --- MemberLoan Handlers ---
-func (c *LoanManagementController) DeleteMemberLoan(ctx *gin.Context) {
-	id := ctx.Param("id")
-	userID := ctx.GetUint64("user_id")
-	if err := c.service.DeleteMemberLoan(id, userID); err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member loan not found"})
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Member loan deleted successfully"})
 }

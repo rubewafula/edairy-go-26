@@ -15,12 +15,12 @@ type UpdateCustomerPayDateRangeRequest struct {
 }
 
 type CustomerPayDateRangeResponse struct {
-	ID        uint64    `json:"ID"`
-	Name      string    `json:"Name"`
-	StartDate time.Time `json:"StartDate"`
-	EndDate   time.Time `json:"EndDate"`
-	CreatedAt time.Time `json:"CreatedAt"`
-	UpdatedAt time.Time `json:"UpdatedAt"`
-	CreatedBy uint64    `json:"CreatedBy"`
-	UpdatedBy uint64    `json:"UpdatedBy"`
+	ID        uint64    `json:"id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	CreatedBy uint64    `json:"created_by"`
+	UpdatedBy uint64    `json:"updated_by"`
 }

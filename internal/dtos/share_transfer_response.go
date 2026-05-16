@@ -3,24 +3,24 @@ package dtos
 import "time"
 
 type ShareTransferResponse struct {
-	ID                  uint64    `json:"ID"`
-	TransactionID       uint64    `json:"TransactionID"`
-	FromMemberID        uint64    `json:"FromMemberID"`
-	FromMemberNo        string    `json:"FromMemberNo"`
-	FromMemberFirstName string    `json:"FromMemberFirstName"`
-	FromMemberLastName  string    `json:"FromMemberLastName"`
-	ToMemberID          uint64    `json:"ToMemberID"`
-	ToMemberNo          string    `json:"ToMemberNo"`
-	ToMemberFirstName   string    `json:"ToMemberFirstName"`
-	ToMemberLastName    string    `json:"ToMemberLastName"`
-	ShareUnits          float64   `json:"ShareUnits"`
-	TransferAmount      float64   `json:"TransferAmount"`
-	ReferenceNo         string    `json:"ReferenceNo"` // This will now come from the transactions table
-	Status              string    `json:"Status"`
-	TransactionDate     time.Time `json:"TransactionDate"`
-	ApprovedBy          uint64    `json:"ApprovedBy"`
-	ApprovedByUserName  string    `json:"ApprovedByUserName"`
-	DateApproved        time.Time `json:"DateApproved"`
-	CreatedAt           time.Time `json:"CreatedAt"`
-	UpdatedAt           time.Time `json:"UpdatedAt"`
+	ID                  uint64    `json:"id"`
+	TransactionID       uint64    `json:"transaction_id"`
+	FromMemberID        uint64    `json:"from_member_id"`
+	FromMemberNo        string    `json:"from_member_no"`
+	FromMemberFirstName string    `json:"from_member_first_name"`
+	FromMemberLastName  string    `json:"from_member_last_name"`
+	ToMemberID          uint64    `json:"to_member_id"`
+	ToMemberNo          string    `json:"to_member_no"`
+	ToMemberFirstName   string    `json:"to_member_first_name"`
+	ToMemberLastName    string    `json:"to_member_last_name"`
+	ShareUnits          float64   `json:"share_units"`
+	TransferAmount      float64   `json:"transfer_amount"`
+	ReferenceNo         string    `json:"reference_no"` // This will now come from the transactions table
+	Status              string    `json:"status"`
+	TransactionDate     time.Time `json:"transaction_date"`
+	ApprovedBy          uint64    `json:"approved_by"`
+	ApprovedByUserName  string    `json:"approved_by_user_name"`
+	DateApproved        time.Time `json:"date_approved"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }

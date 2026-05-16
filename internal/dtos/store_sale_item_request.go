@@ -3,30 +3,29 @@ package dtos
 import "time"
 
 type CreateStoreSaleItemRequest struct {
-	ItemID      uint64  `json:"ItemID" validate:"required"`
-	Quantity    int     `json:"Quantity" validate:"required"`
-	UnitPrice   float64 `json:"UnitPrice" validate:"required"`
-	Total       float64 `json:"Total" validate:"required"`
-	StoreSaleID uint64  `json:"StoreSaleID" validate:"required"`
+	ItemID      uint64  `json:"item_id" validate:"required"`
+	Quantity    int     `json:"quantity" validate:"required"`
+	UnitPrice   float64 `json:"unit_price" validate:"required"`
+	Total       float64 `json:"total" validate:"required"`
+	StoreSaleID uint64  `json:"store_sale_id" validate:"required"`
 }
 
 type UpdateStoreSaleItemRequest struct {
-	ItemID      uint64  `json:"ItemID" validate:"required"`
-	Quantity    int     `json:"Quantity" validate:"required"`
-	UnitPrice   float64 `json:"UnitPrice" validate:"required"`
-	Total       float64 `json:"Total" validate:"required"`
-	StoreSaleID uint64  `json:"StoreSaleID" validate:"required"`
+	ItemID      uint64  `json:"item_id" validate:"required"`
+	Quantity    int     `json:"quantity" validate:"required"`
+	UnitPrice   float64 `json:"unit_price" validate:"required"`
+	Total       float64 `json:"total" validate:"required"`
+	StoreSaleID uint64  `json:"store_sale_id" validate:"required"`
 }
-
 type StoreSaleItemResponse struct {
-	ID            uint64    `json:"ID"`
-	ItemID        uint64    `json:"ItemID"`
-	ItemName      string    `json:"ItemName"`
-	Quantity      int       `json:"Quantity"`
-	UnitPrice     float64   `json:"UnitPrice"`
-	Total         float64   `json:"Total"`
-	StoreSaleID   uint64    `json:"StoreSaleID"`
-	SaleReference string    `json:"SaleReference"`
-	CreatedAt     time.Time `json:"CreatedAt"`
-	UpdatedAt     time.Time `json:"UpdatedAt"`
+	ID            uint64    `json:"id"`
+	ItemID        uint64    `json:"item_id"`
+	ItemName      string    `json:"item_name"`
+	Quantity      int       `json:"quantity"`
+	UnitPrice     float64   `json:"unit_price"`
+	Total         float64   `json:"total"`
+	StoreSaleID   uint64    `json:"store_sale_id"`
+	SaleReference string    `json:"sale_reference"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

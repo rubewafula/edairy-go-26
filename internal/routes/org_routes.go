@@ -9,17 +9,9 @@ func registerOrgRoutes(api *gin.RouterGroup) {
 	organizationAddressController := controllers.NewOrganizationAddressController()
 	organizationDocumentController := controllers.NewOrganizationDocumentController()
 	organizationBankController := controllers.NewOrganizationBankController()
-	organizationMemberController := controllers.NewOrganizationMemberController()
 	organizationLeadershipController := controllers.NewOrganizationLeadershipController()
 	organizationWalletController := controllers.NewOrganizationWalletController()
 	organizationKybCommentController := controllers.NewOrganizationKybCommentController()
-
-	// Organization Member Routes
-	api.POST("/organization-members", organizationMemberController.CreateMember)
-	api.GET("/organization-members", organizationMemberController.GetMembers)
-	api.GET("/organization-members/:id", organizationMemberController.GetMember)
-	api.PUT("/organization-members/:id", organizationMemberController.UpdateMember)
-	api.DELETE("/organization-members/:id", organizationMemberController.DeleteMember)
 
 	// Organization Address Routes
 	api.POST("/organization-addresses", organizationAddressController.CreateAddress)

@@ -66,5 +66,5 @@ func (c *SuppliedItemController) GetItemsBySupply(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": items})
+	ctx.JSON(http.StatusOK, gin.H{"data": items})
 }

@@ -94,33 +94,3 @@ func (c *EmployeeController) DeleteEmployee(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Employee deleted successfully"})
 }
-
-func (c *EmployeeController) CreateSalary(ctx *gin.Context) {
-	var req dtos.CreateEmployeeSalaryRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userID := ctx.GetUint64("user_id")
-	salary, err := c.service.CreateSalary(req, userID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusCreated, salary)
-}
-
-func (c *EmployeeController) CreateBankAccount(ctx *gin.Context) {
-	var req dtos.CreateEmployeeBankAccountRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userID := ctx.GetUint64("user_id")
-	account, err := c.service.CreateBankAccount(req, userID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusCreated, account)
-}

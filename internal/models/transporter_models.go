@@ -132,3 +132,15 @@ type TransporterBenefit struct {
 	CreatedBy   uint64    `json:"created_by"`
 	UpdatedBy   uint64    `json:"updated_by"`
 }
+
+type TransportRate struct {
+	BaseModel
+	RouteID       uint64      `gorm:"index;column:route_id"`
+	Route         Route       `gorm:"foreignKey:RouteID" json:"route"`
+	TransporterID uint64      `gorm:"index;column:transporter_id"`
+	Transporter   Transporter `gorm:"foreignKey:TransporterID" json:"transporter"`
+	Rate          float64     `gorm:"column:transport_rate"`
+	MemberID      uint64      `gorm:"index;column:member_id"`
+	Member        Member      `gorm:"foreignKey:MemberID" json:"member"`
+	Status        string      `gorm:"column:status"`
+}

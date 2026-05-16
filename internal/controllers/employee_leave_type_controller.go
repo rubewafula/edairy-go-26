@@ -56,7 +56,7 @@ func (c *EmployeeLeaveTypeController) GetEmployeeLeaveType(ctx *gin.Context) {
 	id := ctx.Param("id")
 	result, err := c.service.GetEmployeeLeaveType(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == gorm.ErrRecordNotFound || result == nil {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Employee leave type not found"})
 			return
 		}

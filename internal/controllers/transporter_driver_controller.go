@@ -48,7 +48,7 @@ func (c *TransporterDriverController) GetDrivers(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": drivers, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": drivers, "total": total})
 }
 
 func (c *TransporterDriverController) GetDriver(ctx *gin.Context) {

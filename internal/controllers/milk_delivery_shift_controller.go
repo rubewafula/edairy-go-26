@@ -50,7 +50,7 @@ func (c *MilkDeliveryShiftController) GetShifts(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": shifts, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": shifts, "total": total})
 }
 
 func (c *MilkDeliveryShiftController) GetShift(ctx *gin.Context) {

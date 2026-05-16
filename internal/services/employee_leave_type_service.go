@@ -4,6 +4,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"gorm.io/gorm"
 )
 
 type EmployeeLeaveTypeService struct{}
@@ -26,21 +27,27 @@ func (s *EmployeeLeaveTypeService) CreateEmployeeLeaveType(req dtos.CreateEmploy
 	return leaveType, nil
 }
 
-func (s *EmployeeLeaveTypeService) GetEmployeeLeaveTypes(page, limit int) ([]models.EmployeeLeaveType, int64, error) {
-	var leaveTypes []models.EmployeeLeaveType
+func (s *EmployeeLeaveTypeService) GetEmployeeLeaveTypes(page, limit int) ([]dtos.EmployeeLeaveTypeResponse, int64, error) {
+	var results []dtos.EmployeeLeaveTypeResponse
 	var total int64
-	db.DB.Model(&models.EmployeeLeaveType{}).Count(&total)
+	if err := db.DB.Model(&models.EmployeeLeaveType{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	offset := (page - 1) * limit
-	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&leaveTypes).Error
-	return leaveTypes, total, err
+	err := db.DB.Model(&models.EmployeeLeaveType{}).Limit(limit).Offset(offset).Order("id DESC").Scan(&results).Error
+	return results, total, err
 }
 
-func (s *EmployeeLeaveTypeService) GetEmployeeLeaveType(id string) (*models.EmployeeLeaveType, error) {
-	var leaveType models.EmployeeLeaveType
-	if err := db.DB.First(&leaveType, id).Error; err != nil {
+func (s *EmployeeLeaveTypeService) GetEmployeeLeaveType(id string) (*dtos.EmployeeLeaveTypeResponse, error) {
+	var result dtos.EmployeeLeaveTypeResponse
+	if err := db.DB.Model(&models.EmployeeLeaveType{}).Where("id = ? AND deleted_at IS NULL", id).First(&result).Error; err != nil {
 		return nil, err
 	}
-	return &leaveType, nil
+	if result.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &result, nil
 }
 
 func (s *EmployeeLeaveTypeService) UpdateEmployeeLeaveType(id string, req dtos.UpdateEmployeeLeaveTypeRequest, userID uint64) error {

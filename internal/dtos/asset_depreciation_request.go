@@ -6,5 +6,5 @@ type CreateAssetDepreciationRequest struct {
 	DepreciationAmount      float64 `json:"depreciation_amount" validate:"required"`
 	AccumulatedDepreciation float64 `json:"accumulated_depreciation" validate:"required"`
 	BookValue               float64 `json:"book_value" validate:"required"`
-	TransactionID           *uint64 `json:"transaction_id"`
+	TransactionID           uint64  `json:"transaction_id"`
 }

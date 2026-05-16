@@ -39,13 +39,6 @@ func registerLoanRoutes(api *gin.RouterGroup) {
 	api.DELETE("/loan-transactions/:id", loanManagementController.DeleteLoanTransaction)
 	api.GET("/loan-transactions/loan/:loan_id", loanManagementController.GetLoanTransactionsByLoanID) // Assuming this is GetTransactionsByLoanID
 
-	// Member Loan Routes
-	api.POST("/member-loans", loanManagementController.CreateMemberLoan)
-	api.GET("/member-loans", loanManagementController.GetMemberLoans)
-	api.GET("/member-loans/:id", loanManagementController.GetMemberLoan)
-	api.PUT("/member-loans/:id", loanManagementController.UpdateMemberLoan)
-	api.DELETE("/member-loans/:id", loanManagementController.DeleteMemberLoan)
-
 	// Loan Origination Callback Log Routes
 	api.POST("/loan-origination-logs", loanManagementController.CreateLoanOriginationCallbackLog)
 	api.GET("/loan-origination-logs", loanManagementController.GetLoanOriginationCallbackLogs)

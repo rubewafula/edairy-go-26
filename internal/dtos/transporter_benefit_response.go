@@ -3,15 +3,15 @@ package dtos
 import "time"
 
 type TransporterBenefitResponse struct {
-	ID          uint64    `json:"ID"`
-	Name        string    `json:"Name"`
-	MinQuantity string    `json:"MinQuantity"`
-	Rate        string    `json:"Rate"`
-	RouteID     uint64    `json:"RouteID"`
-	RouteName   string    `json:"RouteName"`
-	Status      string    `json:"Status"`
-	StartDate   time.Time `json:"StartDate"`
-	EndDate     time.Time `json:"EndDate"`
-	CreatedAt   time.Time `json:"CreatedAt"`
-	UpdatedAt   time.Time `json:"UpdatedAt"`
+	ID          uint64    `json:"id"`
+	Name        string    `json:"name"`
+	MinQuantity string    `json:"min_quantity"`
+	Rate        string    `json:"rate"`
+	RouteID     uint64    `json:"route_id"`
+	RouteName   string    `json:"route_name"`
+	Status      string    `json:"status"`
+	StartDate   time.Time `json:"start_date"`
+	EndDate     time.Time `json:"end_date"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

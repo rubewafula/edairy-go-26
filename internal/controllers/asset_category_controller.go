@@ -46,7 +46,7 @@ func (c *AssetCategoryController) GetCategories(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": categories, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": categories, "total": total})
 }
 
 func (c *AssetCategoryController) GetCategory(ctx *gin.Context) {

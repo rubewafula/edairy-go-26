@@ -3,13 +3,13 @@ package dtos
 import "time"
 
 type TrainingResponse struct {
-	ID           uint64    `json:"ID"`
-	Topic        string    `json:"Topic"`
-	Description  string    `json:"Description"`
-	Venue        string    `json:"Venue"`
-	Facilitator  string    `json:"Facilitator"`
-	TrainingDate time.Time `json:"TrainingDate"`
-	Status       string    `json:"Status"`
-	CreatedAt    time.Time `json:"CreatedAt"`
-	UpdatedAt    time.Time `json:"UpdatedAt"`
+	ID           uint64    `json:"id"`
+	Topic        string    `json:"topic"`
+	Description  string    `json:"description"`
+	Venue        string    `json:"venue"`
+	Facilitator  string    `json:"facilitator"`
+	TrainingDate time.Time `json:"training_date"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }

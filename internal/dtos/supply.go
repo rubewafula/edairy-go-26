@@ -27,15 +27,15 @@ type UpdateSuppliedItemRequest struct {
 }
 
 type SupplyResponse struct {
-	ID           uint64    `json:"ID"`
-	VendorName   string    `json:"VendorName"`
-	TotalAmount  float64   `json:"TotalAmount"`
-	ItemCount    uint64    `json:"ItemCount"`
-	Reference    string    `json:"Reference"`
-	SuppliedDate time.Time `json:"SuppliedDate"`
-	Settled      bool      `json:"Settled"`
-	StoreName    string    `json:"StoreName"`
-	CreatedAt    time.Time `json:"CreatedAt"`
+	ID           uint64    `json:"id"`
+	VendorName   string    `json:"vendor_name"`
+	TotalAmount  float64   `json:"total_amount"`
+	ItemCount    uint64    `json:"item_count"`
+	Reference    string    `json:"reference"`
+	SuppliedDate time.Time `json:"supplied_date"`
+	Settled      bool      `json:"settled"`
+	StoreName    string    `json:"store_name"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type CreateSupplyRejectRequest struct {
@@ -51,24 +51,24 @@ type UpdateSupplyRejectRequest struct {
 }
 
 type SupplyRejectResponse struct {
-	ID         uint64    `json:"ID"`
-	ItemID     uint64    `json:"ItemID"`
-	ItemName   string    `json:"ItemName"`
-	SupplyID   uint64    `json:"SupplyID"`
-	VendorName string    `json:"VendorName"`
-	Quantity   string    `json:"Quantity"`
-	Reason     string    `json:"Reason"`
-	CreatedBy  uint64    `json:"CreatedBy"`
-	CreatedAt  time.Time `json:"CreatedAt"`
-	UpdatedAt  time.Time `json:"UpdatedAt"`
+	ID         uint64    `json:"id"`
+	ItemID     uint64    `json:"item_id"`
+	ItemName   string    `json:"item_name"`
+	SupplyID   uint64    `json:"supply_id"`
+	VendorName string    `json:"vendor_name"`
+	Quantity   string    `json:"quantity"`
+	Reason     string    `json:"reason"`
+	CreatedBy  uint64    `json:"created_by"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type SuppliedItemResponse struct {
-	ID         uint64  `json:"ID"`
-	SupplyID   uint64  `json:"SupplyID"`
-	ItemID     uint64  `json:"ItemID"`
-	ItemName   string  `json:"ItemName"`
-	Quantity   int     `json:"Quantity"`
-	UnitPrice  float64 `json:"UnitPrice"`
-	TotalPrice float64 `json:"TotalPrice"`
+	ID         uint64  `json:"id"`
+	SupplyID   uint64  `json:"supply_id"`
+	ItemID     uint64  `json:"item_id"`
+	ItemName   string  `json:"item_name"`
+	Quantity   int     `json:"quantity"`
+	UnitPrice  float64 `json:"unit_price"`
+	TotalPrice float64 `json:"total_price"`
 }

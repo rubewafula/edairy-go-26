@@ -117,6 +117,7 @@ type EmployeeDependant struct {
 
 type EmployeeContractDetail struct {
 	BaseModel
+	EmployeeID      uint64    `gorm:"index;column:employee_id"`
 	ContractType    string    `gorm:"column:contract_type"`
 	ContractEndDate time.Time `gorm:"column:contract_end_date"`
 	NoticePeriod    string    `gorm:"column:notice_period"`
@@ -125,16 +126,18 @@ type EmployeeContractDetail struct {
 
 type EmployeeExitDetail struct {
 	BaseModel
+	EmployeeID      uint64    `gorm:"index;column:employee_id"`
 	ContractType    string    `gorm:"column:contract_type"`
 	ContractEndDate time.Time `gorm:"column:contract_end_date"`
-	DateOfLeaving   time.Time `gorm:"column:dateof_living"`
+	DateOfLeaving   time.Time `gorm:"column:date_of_leaving"` // Corrected typo
 	ExitCategory    string    `gorm:"column:exit_category"`
-	Reasons         string    `gorm:"column:reasonsfoexit"`
+	Reasons         string    `gorm:"column:reasons_for_exit"` // Corrected typo
 }
 
 type EmployeeTerminationCategory struct {
 	BaseModel
-	TerminationCategory string `gorm:"column:termination_category"`
+	Name        string `gorm:"column:name"`
+	Description string `gorm:"column:description"`
 }
 
 type EmployeeDocument struct {
@@ -158,6 +161,7 @@ type EmployeeQualification struct {
 	Institution   string    `gorm:"column:institution"`
 	StartDate     time.Time `gorm:"column:start_date"`
 	EndDate       time.Time `gorm:"column:end_date"`
+	Score         string    `gorm:"column:score"`
 }
 
 type EmployeeSalary struct {
@@ -251,4 +255,90 @@ type EmployeePayrollRelief struct {
 	EmployeeID uint64 `gorm:"index;column:employee_id"`
 	Amount     string `gorm:"column:amount"`
 	PayrollID  uint64 `gorm:"index;column:payroll_id"`
+}
+
+type JobCategory struct {
+	BaseModel
+	Code string `gorm:"uniqueIndex;column:code"`
+	Name string `gorm:"column:name"`
+}
+
+type JobDetail struct {
+	BaseModel
+	JobPositionID uint64 `gorm:"index;column:job_position_id"`
+	JobTitle      string `gorm:"column:job_title"`
+	Department    string `gorm:"column:department"`
+}
+
+type JobHODRequisition struct {
+	BaseModel
+	JobPositionID uint64 `gorm:"index;column:job_position_id"`
+	HOD           string `gorm:"column:hod"`
+}
+
+type JobGrade struct {
+	BaseModel
+	Code            string  `gorm:"uniqueIndex;column:code"`
+	Name            string  `gorm:"column:name"`
+	MinSalary       float64 `gorm:"column:min_salary"`
+	MaxSalary       float64 `gorm:"column:max_salary"`
+	YearlyIncrement float64 `gorm:"column:yearly_increment"`
+}
+
+type JobReasonToFillVacancy struct {
+	BaseModel
+	Reason string `gorm:"column:reason"`
+}
+
+type JobRequisition struct {
+	BaseModel
+	JobPositionID     uint64 `gorm:"index;column:job_position_id"`
+	RequiredPositions int    `gorm:"column:required_positions"`
+	Status            string `gorm:"column:status"`
+}
+
+type JobPosition struct {
+	BaseModel
+	Code           string `gorm:"uniqueIndex;column:code"`
+	Name           string `gorm:"column:name"`
+	JobDescription string `gorm:"column:job_description"`
+	DepartmentID   uint64 `gorm:"index;column:department_id"`
+}
+
+type JobQualificationType struct {
+	BaseModel
+	QualificationType string `gorm:"column:qualification_type"`
+	Description       string `gorm:"column:description"`
+}
+
+type JobQualification struct {
+	BaseModel
+	QualificationTypeID uint64 `gorm:"index;column:qualification_type_id"`
+	Code                string `gorm:"uniqueIndex;column:qualification_code"`
+	Qualification       string `gorm:"column:qualification"`
+}
+
+type EmployeePayrollEntry struct { // Original Payroll model, renamed to reflect its role as an entry
+	BaseModel
+	EmployeeID uint64    `gorm:"index;column:employee_id"`
+	Amount     float64   `gorm:"column:amount"`
+	Period     string    `gorm:"column:period"`
+	PaidAt     time.Time `gorm:"column:paid_at"`
+}
+
+type EmployerPayrollDeduction struct {
+	BaseModel
+	EmployeeID  uint64  `gorm:"index;column:employee_id"`
+	DeductionID uint64  `gorm:"index;column:employee_deduction_id"`
+	Amount      float64 `gorm:"column:amount"`
+	Month       string  `gorm:"column:month"`
+	Year        string  `gorm:"column:year"`
+	PayrollID   uint64  `gorm:"index;column:payroll_id"`
+}
+
+type TaxRelief struct {
+	BaseModel
+	Code        string `gorm:"uniqueIndex;column:code"`
+	Name        string `gorm:"column:name"`
+	Description string `gorm:"type:text;column:description"`
 }

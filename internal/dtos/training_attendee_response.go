@@ -3,15 +3,15 @@ package dtos
 import "time"
 
 type TrainingAttendeeResponse struct {
-	ID                uint64    `json:"ID"`
-	TrainingSessionID uint64    `json:"TrainingSessionID"`
-	Topic             string    `json:"Topic"`
-	Names             string    `json:"Names"`
-	IDNumber          string    `json:"IDNumber"`
-	PhoneNumber       string    `json:"PhoneNumber"`
-	MembershipNumber  string    `json:"MembershipNumber"`
-	Comments          string    `json:"Comments"`
-	MemberID          uint64    `json:"MemberID"`
-	CreatedAt         time.Time `json:"CreatedAt"`
-	UpdatedAt         time.Time `json:"UpdatedAt"`
+	ID                uint64    `json:"id"`
+	TrainingSessionID uint64    `json:"training_session_id"`
+	Topic             string    `json:"topic"`
+	Names             string    `json:"names"`
+	IDNumber          string    `json:"id_number"`
+	PhoneNumber       string    `json:"phone_number"`
+	MembershipNumber  string    `json:"membership_number"`
+	Comments          string    `json:"comments"`
+	MemberID          uint64    `json:"member_id"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }

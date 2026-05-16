@@ -3,15 +3,15 @@ package dtos
 import "time"
 
 type ExchangeVisitResponse struct {
-	ID                uint64    `json:"ID"`
-	Partner           string    `json:"Partner"`
-	VisitDate         time.Time `json:"VisitDate"`
-	Purpose           string    `json:"Purpose"`
-	Venue             string    `json:"Venue"`
-	EmployeeID        uint64    `json:"EmployeeID"`
-	EmployeeFirstName string    `json:"EmployeeFirstName"`
-	EmployeeSurname   string    `json:"EmployeeSurname"`
-	VisitNotes        string    `json:"VisitNotes"`
-	CreatedAt         time.Time `json:"CreatedAt"`
-	UpdatedAt         time.Time `json:"UpdatedAt"`
+	ID                uint64    `json:"id"`
+	Partner           string    `json:"partner"`
+	VisitDate         time.Time `json:"visit_date"`
+	Purpose           string    `json:"purpose"`
+	Venue             string    `json:"venue"`
+	EmployeeID        uint64    `json:"employee_id"`
+	EmployeeFirstName string    `json:"employee_first_name"`
+	EmployeeSurname   string    `json:"employee_surname"`
+	VisitNotes        string    `json:"visit_notes"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }

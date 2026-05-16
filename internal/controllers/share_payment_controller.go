@@ -46,7 +46,7 @@ func (c *SharePaymentController) GetSharePayments(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": payments, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": payments, "total": total})
 }
 
 func (c *SharePaymentController) GetSharePayment(ctx *gin.Context) {

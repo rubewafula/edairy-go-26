@@ -10,7 +10,23 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	employeeBenefitController := controllers.NewEmployeeBenefitController()
 	employeeDocumentController := controllers.NewEmployeeDocumentController()
 	employeeLeaveTypeController := controllers.NewEmployeeLeaveTypeController()
+	employeeLeaveApplicationController := controllers.NewEmployeeLeaveApplicationController()
+	employeeLeaveAssignmentController := controllers.NewEmployeeLeaveAssignmentController()
 	employeePayrollController := controllers.NewEmployeePayrollController()
+	deductionTypeController := controllers.NewEmployeeDeductionTypeController()
+	employeeQualificationController := controllers.NewEmployeeQualificationController()
+	employeeBankAccountController := controllers.NewEmployeeBankAccountController()
+	employeeSalaryController := controllers.NewEmployeeSalaryController()
+	employeeContractController := controllers.NewEmployeeContractController()
+	employeeExitDetailController := controllers.NewEmployeeExitDetailController()
+	employeeDependantController := controllers.NewEmployeeDependantController()
+	employeeLeaveDetailController := controllers.NewEmployeeLeaveDetailController()
+	employeePayrollBenefitController := controllers.NewEmployeePayrollBenefitController()
+	employeePayrollDeductionController := controllers.NewEmployeePayrollDeductionController()
+	employeePayrollReliefController := controllers.NewEmployeePayrollReliefController()
+	employeePayslipController := controllers.NewEmployeePayslipController()
+	employeeProfessionalTitleController := controllers.NewEmployeeProfessionalTitleController()
+	employeeTerminationCategoryController := controllers.NewEmployeeTerminationCategoryController()
 
 	api.POST("/employees", employeeController.CreateEmployee)
 	api.GET("/employees", employeeController.GetEmployees)
@@ -18,8 +34,19 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.PUT("/employees/:id", employeeController.UpdateEmployee)
 	api.DELETE("/employees/:id", employeeController.DeleteEmployee)
 
-	api.POST("/employees/:id/salaries", employeeController.CreateSalary)
-	api.POST("/employees/:id/bank-accounts", employeeController.CreateBankAccount)
+	// Employee Salary Routes (now using dedicated controller)
+	api.POST("/employee-salaries", employeeSalaryController.Create)
+	api.GET("/employee-salaries", employeeSalaryController.List)
+	api.GET("/employee-salaries/:id", employeeSalaryController.Get)
+	api.PUT("/employee-salaries/:id", employeeSalaryController.Update)
+	api.DELETE("/employee-salaries/:id", employeeSalaryController.Delete)
+
+	// Employee Bank Account Routes
+	api.POST("/employee-bank-accounts", employeeBankAccountController.Create)
+	api.GET("/employee-bank-accounts", employeeBankAccountController.List)
+	api.GET("/employee-bank-accounts/:id", employeeBankAccountController.Get)
+	api.PUT("/employee-bank-accounts/:id", employeeBankAccountController.Update)
+	api.DELETE("/employee-bank-accounts/:id", employeeBankAccountController.Delete)
 
 	// Employee Benefits
 	api.POST("/employee-benefits", employeeBenefitController.CreateEmployeeBenefit)
@@ -42,10 +69,108 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.PUT("/employee-leave-types/:id", employeeLeaveTypeController.UpdateEmployeeLeaveType)
 	api.DELETE("/employee-leave-types/:id", employeeLeaveTypeController.DeleteEmployeeLeaveType)
 
+	// Employee Leave Applications
+	api.POST("/employee-leave-applications", employeeLeaveApplicationController.Create)
+	api.GET("/employee-leave-applications", employeeLeaveApplicationController.List)
+	api.GET("/employee-leave-applications/:id", employeeLeaveApplicationController.Get)
+	api.PUT("/employee-leave-applications/:id", employeeLeaveApplicationController.Update)
+	api.DELETE("/employee-leave-applications/:id", employeeLeaveApplicationController.Delete)
+
+	// Employee Leave Assignments
+	api.POST("/employee-leave-assignments", employeeLeaveAssignmentController.Create)
+	api.GET("/employee-leave-assignments", employeeLeaveAssignmentController.List)
+	api.GET("/employee-leave-assignments/:id", employeeLeaveAssignmentController.Get)
+	api.PUT("/employee-leave-assignments/:id", employeeLeaveAssignmentController.Update)
+	api.DELETE("/employee-leave-assignments/:id", employeeLeaveAssignmentController.Delete)
+
 	// Employee Payrolls
 	api.POST("/employee-payrolls", employeePayrollController.CreateEmployeePayroll)
 	api.GET("/employee-payrolls", employeePayrollController.GetEmployeePayrolls)
 	api.GET("/employee-payrolls/:id", employeePayrollController.GetEmployeePayroll)
 	api.PUT("/employee-payrolls/:id", employeePayrollController.UpdateEmployeePayroll)
 	api.DELETE("/employee-payrolls/:id", employeePayrollController.DeleteEmployeePayroll)
+
+	// Employee Deduction Types
+	api.POST("/employee-deduction-types", deductionTypeController.CreateDeductionType)
+	api.GET("/employee-deduction-types", deductionTypeController.GetDeductionTypes)
+	api.GET("/employee-deduction-types/:id", deductionTypeController.GetDeductionType)
+	api.PUT("/employee-deduction-types/:id", deductionTypeController.UpdateDeductionType)
+	api.DELETE("/employee-deduction-types/:id", deductionTypeController.DeleteDeductionType)
+
+	// Employee Qualifiactions
+	api.POST("/employee-qualifications", employeeQualificationController.Create)
+	api.GET("/employee-qualifications", employeeQualificationController.List)
+	api.GET("/employee-qualifications/:id", employeeQualificationController.Get)
+	api.PUT("/employee-qualifications/:id", employeeQualificationController.Update)
+	api.DELETE("/employee-qualifications/:id", employeeQualificationController.Delete)
+
+	// Employee Contract Routes
+	api.POST("/employee-contracts", employeeContractController.Create)
+	api.GET("/employee-contracts", employeeContractController.List)
+	api.GET("/employee-contracts/:id", employeeContractController.Get)
+	api.PUT("/employee-contracts/:id", employeeContractController.Update)
+	api.DELETE("/employee-contracts/:id", employeeContractController.Delete)
+
+	// Employee Dependant Routes
+	api.POST("/employee-dependants", employeeDependantController.CreateEmployeeDependant)
+	api.GET("/employee-dependants", employeeDependantController.GetEmployeeDependants)
+	api.GET("/employee-dependants/:id", employeeDependantController.GetEmployeeDependant)
+	api.PUT("/employee-dependants/:id", employeeDependantController.UpdateEmployeeDependant)
+	api.DELETE("/employee-dependants/:id", employeeDependantController.DeleteEmployeeDependant)
+
+	// Employee Exit Detail Routes
+	api.POST("/employee-exit-details", employeeExitDetailController.Create)
+	api.GET("/employee-exit-details", employeeExitDetailController.List)
+	api.GET("/employee-exit-details/:id", employeeExitDetailController.Get)
+	api.PUT("/employee-exit-details/:id", employeeExitDetailController.Update)
+	api.DELETE("/employee-exit-details/:id", employeeExitDetailController.Delete)
+
+	// Employee Leave Detail Routes
+	api.POST("/employee-leave-details", employeeLeaveDetailController.Create)
+	api.GET("/employee-leave-details", employeeLeaveDetailController.List)
+	api.GET("/employee-leave-details/:id", employeeLeaveDetailController.Get)
+	api.PUT("/employee-leave-details/:id", employeeLeaveDetailController.Update)
+	api.DELETE("/employee-leave-details/:id", employeeLeaveDetailController.Delete)
+
+	// Employee Payroll Benefits
+	api.POST("/employee-payroll-benefits", employeePayrollBenefitController.Create)
+	api.GET("/employee-payroll-benefits", employeePayrollBenefitController.List)
+	api.GET("/employee-payroll-benefits/:id", employeePayrollBenefitController.Get)
+	api.PUT("/employee-payroll-benefits/:id", employeePayrollBenefitController.Update)
+	api.DELETE("/employee-payroll-benefits/:id", employeePayrollBenefitController.Delete)
+
+	// Employee Payroll Deductions
+	api.POST("/employee-payroll-deductions", employeePayrollDeductionController.Create)
+	api.GET("/employee-payroll-deductions", employeePayrollDeductionController.List)
+	api.GET("/employee-payroll-deductions/:id", employeePayrollDeductionController.Get)
+	api.PUT("/employee-payroll-deductions/:id", employeePayrollDeductionController.Update)
+	api.DELETE("/employee-payroll-deductions/:id", employeePayrollDeductionController.Delete)
+
+	// Employee Payroll Reliefs
+	api.POST("/employee-payroll-reliefs", employeePayrollReliefController.Create)
+	api.GET("/employee-payroll-reliefs", employeePayrollReliefController.List)
+	api.GET("/employee-payroll-reliefs/:id", employeePayrollReliefController.Get)
+	api.PUT("/employee-payroll-reliefs/:id", employeePayrollReliefController.Update)
+	api.DELETE("/employee-payroll-reliefs/:id", employeePayrollReliefController.Delete)
+
+	// Employee Payslips
+	api.POST("/employee-payslips", employeePayslipController.Create)
+	api.GET("/employee-payslips", employeePayslipController.List)
+	api.GET("/employee-payslips/:id", employeePayslipController.Get)
+	api.PUT("/employee-payslips/:id", employeePayslipController.Update)
+	api.DELETE("/employee-payslips/:id", employeePayslipController.Delete)
+
+	// Employee Professional Titles
+	api.POST("/employee-professional-titles", employeeProfessionalTitleController.Create)
+	api.GET("/employee-professional-titles", employeeProfessionalTitleController.List)
+	api.GET("/employee-professional-titles/:id", employeeProfessionalTitleController.Get)
+	api.PUT("/employee-professional-titles/:id", employeeProfessionalTitleController.Update)
+	api.DELETE("/employee-professional-titles/:id", employeeProfessionalTitleController.Delete)
+
+	// Employee Termination Categories
+	api.POST("/employee-termination-categories", employeeTerminationCategoryController.Create)
+	api.GET("/employee-termination-categories", employeeTerminationCategoryController.List)
+	api.GET("/employee-termination-categories/:id", employeeTerminationCategoryController.Get)
+	api.PUT("/employee-termination-categories/:id", employeeTerminationCategoryController.Update)
+	api.DELETE("/employee-termination-categories/:id", employeeTerminationCategoryController.Delete)
 }

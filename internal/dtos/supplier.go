@@ -12,12 +12,12 @@ type CreateSupplierCategoryRequest struct {
 }
 
 type SupplierCategoryResponse struct {
-	ID           uint64    `json:"ID"`
-	CategoryCode string    `json:"CategoryCode"`
-	CategoryName string    `json:"CategoryName"`
-	Description  string    `json:"Description"`
-	Status       string    `json:"Status"`
-	CreatedAt    time.Time `json:"CreatedAt"`
+	ID           uint64    `json:"id"`
+	CategoryCode string    `json:"category_code"`
+	CategoryName string    `json:"category_name"`
+	Description  string    `json:"description"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // Supplier
@@ -40,17 +40,17 @@ type CreateSupplierRequest struct {
 }
 
 type SupplierResponse struct {
-	ID             uint64    `json:"ID"`
-	SupplierCode   string    `json:"SupplierCode"`
-	SupplierType   string    `json:"SupplierType"`
-	CompanyName    string    `json:"CompanyName"`
-	FullName       string    `json:"FullName"`
-	CategoryName   string    `json:"CategoryName"`
-	EmailAddress   string    `json:"EmailAddress"`
-	PhoneNo        string    `json:"PhoneNo"`
-	CurrentBalance float64   `json:"CurrentBalance"`
-	Status         string    `json:"Status"`
-	CreatedAt      time.Time `json:"CreatedAt"`
+	ID             uint64    `json:"id"`
+	SupplierCode   string    `json:"supplier_code"`
+	SupplierType   string    `json:"supplier_type"`
+	CompanyName    string    `json:"company_name"`
+	FullName       string    `json:"full_name"`
+	CategoryName   string    `json:"category_name"`
+	EmailAddress   string    `json:"email_address"`
+	PhoneNo        string    `json:"phone_no"`
+	CurrentBalance float64   `json:"current_balance"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // Supplier Contact
@@ -78,19 +78,19 @@ type UpdateSupplierContactRequest struct {
 }
 
 type SupplierContactResponse struct {
-	ID                 uint64    `json:"ID"`
-	SupplierID         uint64    `json:"SupplierID"`
-	SupplierName       string    `json:"SupplierName"`
-	ContactType        string    `json:"ContactType"`
-	FullName           string    `json:"FullName"`
-	Designation        string    `json:"Designation"`
-	PhoneNo            string    `json:"PhoneNo"`
-	AlternativePhoneNo string    `json:"AlternativePhoneNo"`
-	EmailAddress       string    `json:"EmailAddress"`
-	IsDefault          string    `json:"IsDefault"`
-	Notes              string    `json:"Notes"`
-	CreatedAt          time.Time `json:"CreatedAt"`
-	UpdatedAt          time.Time `json:"UpdatedAt"`
+	ID                 uint64    `json:"id"`
+	SupplierID         uint64    `json:"supplier_id"`
+	SupplierName       string    `json:"supplier_name"`
+	ContactType        string    `json:"contact_type"`
+	FullName           string    `json:"full_name"`
+	Designation        string    `json:"designation"`
+	PhoneNo            string    `json:"phone_no"`
+	AlternativePhoneNo string    `json:"alternative_phone_no"`
+	EmailAddress       string    `json:"email_address"`
+	IsDefault          string    `json:"is_default"`
+	Notes              string    `json:"notes"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // Supplier Bank Account
@@ -119,20 +119,20 @@ type UpdateSupplierBankAccountRequest struct {
 }
 
 type SupplierBankAccountResponse struct {
-	ID             uint64    `json:"ID"`
-	SupplierID     uint64    `json:"SupplierID"`
-	BankName       string    `json:"BankName"`
-	BankBranchName string    `json:"BankBranchName"`
-	AccountName    string    `json:"AccountName"`
-	AccountNumber  string    `json:"AccountNumber"`
-	AccountType    string    `json:"AccountType"`
-	CurrencyCode   string    `json:"CurrencyCode"`
-	SwiftCode      string    `json:"SwiftCode"`
-	MobileMoneyNo  string    `json:"MobileMoneyNo"`
-	IsDefault      string    `json:"IsDefault"`
-	Status         string    `json:"Status"`
-	CreatedAt      time.Time `json:"CreatedAt"`
-	UpdatedAt      time.Time `json:"UpdatedAt"`
+	ID             uint64    `json:"id"`
+	SupplierID     uint64    `json:"supplier_id"`
+	BankName       string    `json:"bank_name"`
+	BankBranchName string    `json:"bank_branch_name"`
+	AccountName    string    `json:"account_name"`
+	AccountNumber  string    `json:"account_number"`
+	AccountType    string    `json:"account_type"`
+	CurrencyCode   string    `json:"currency_code"`
+	SwiftCode      string    `json:"swift_code"`
+	MobileMoneyNo  string    `json:"mobile_money_no"`
+	IsDefault      string    `json:"is_default"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Supplier Document
@@ -158,21 +158,21 @@ type VerifySupplierDocumentRequest struct {
 }
 
 type SupplierDocumentResponse struct {
-	ID             uint64     `json:"ID"`
-	SupplierID     uint64     `json:"SupplierID"`
-	SupplierName   string     `json:"SupplierName"`
-	DocumentType   string     `json:"DocumentType"`
-	DocumentNumber string     `json:"DocumentNumber"`
-	FileName       string     `json:"FileName"`
-	FilePath       string     `json:"FilePath"`
-	IssueDate      *time.Time `json:"IssueDate"`
-	ExpiryDate     *time.Time `json:"ExpiryDate"`
-	Verified       string     `json:"Verified"`
-	VerifiedBy     *uint64    `json:"VerifiedBy"`
-	VerifiedAt     *time.Time `json:"VerifiedAt"`
-	Notes          string     `json:"Notes"`
-	CreatedAt      time.Time  `json:"CreatedAt"`
-	UpdatedAt      time.Time  `json:"UpdatedAt"`
+	ID             uint64     `json:"id"`
+	SupplierID     uint64     `json:"supplier_id"`
+	SupplierName   string     `json:"supplier_name"`
+	DocumentType   string     `json:"document_type"`
+	DocumentNumber string     `json:"document_number"`
+	FileName       string     `json:"file_name"`
+	FilePath       string     `json:"file_path"`
+	IssueDate      *time.Time `json:"issue_date"`
+	ExpiryDate     *time.Time `json:"expiry_date"`
+	Verified       string     `json:"verified"`
+	VerifiedBy     *uint64    `json:"verified_by"`
+	VerifiedAt     *time.Time `json:"verified_at"`
+	Notes          string     `json:"notes"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // Supplier Quote
@@ -184,14 +184,14 @@ type CreateSupplierQuoteRequest struct {
 }
 
 type SupplierQuoteResponse struct {
-	ID               uint64    `json:"ID"`
-	VendorID         uint64    `json:"VendorID"`
-	VendorName       string    `json:"VendorName"`
-	Description      string    `json:"Description"`
-	Status           string    `json:"Status"`
-	RfqNo            string    `json:"RfqNo"`
-	SupplierQuoteRef string    `json:"SupplierQuoteRef"`
-	CreatedAt        time.Time `json:"CreatedAt"`
+	ID               uint64    `json:"id"`
+	VendorID         uint64    `json:"vendor_id"`
+	VendorName       string    `json:"vendor_name"`
+	Description      string    `json:"description"`
+	Status           string    `json:"status"`
+	RfqNo            string    `json:"rfq_no"`
+	SupplierQuoteRef string    `json:"supplier_quote_ref"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // Supplier Quote Item
@@ -210,11 +210,11 @@ type UpdateSupplierQuoteItemRequest struct {
 }
 
 type SupplierQuoteItemResponse struct {
-	ID                uint64  `json:"ID"`
-	SupplierQuoteID   uint64  `json:"SupplierQuoteID"`
-	ItemName          string  `json:"ItemName"`
-	QuantityRequested float64 `json:"QuantityRequested"`
-	QuantitySupplied  float64 `json:"QuantitySupplied"`
-	UnitPrice         float64 `json:"UnitPrice"`
-	LineTotal         float64 `json:"LineTotal"`
+	ID                uint64  `json:"id"`
+	SupplierQuoteID   uint64  `json:"supplier_quote_id"`
+	ItemName          string  `json:"item_name"`
+	QuantityRequested float64 `json:"quantity_requested"`
+	QuantitySupplied  float64 `json:"quantity_supplied"`
+	UnitPrice         float64 `json:"unit_price"`
+	LineTotal         float64 `json:"line_total"`
 }

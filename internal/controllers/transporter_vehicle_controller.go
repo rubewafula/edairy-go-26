@@ -58,7 +58,7 @@ func (c *TransporterVehicleController) GetVehicles(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": vehicles, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": vehicles, "total": total})
 }
 
 func (c *TransporterVehicleController) GetVehicle(ctx *gin.Context) {

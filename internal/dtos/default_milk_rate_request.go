@@ -3,20 +3,20 @@ package dtos
 import "time"
 
 type CreateDefaultMilkRateRequest struct {
-	Rate    float64 `json:"Rate" validate:"required"`
-	RouteID uint64  `json:"RouteID" validate:"required"`
+	Rate    float64 `json:"rate" validate:"required"`
+	RouteID uint64  `json:"route_id" validate:"required"`
 }
 
 type UpdateDefaultMilkRateRequest struct {
-	Rate    float64 `json:"Rate" validate:"required"`
-	RouteID uint64  `json:"RouteID" validate:"required"`
+	Rate    float64 `json:"rate" validate:"required"`
+	RouteID uint64  `json:"route_id" validate:"required"`
 }
 
 type DefaultMilkRateResponse struct {
-	ID        uint64    `json:"ID"`
-	Rate      float64   `json:"Rate"`
-	RouteID   uint64    `json:"RouteID"`
-	RouteName string    `json:"RouteName"`
-	CreatedAt time.Time `json:"CreatedAt"`
-	UpdatedAt time.Time `json:"UpdatedAt"`
+	ID        uint64    `json:"id"`
+	Rate      float64   `json:"rate"`
+	RouteID   uint64    `json:"route_id"`
+	RouteName string    `json:"route_name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -52,7 +52,7 @@ func (c *MilkLocalSaleController) GetMilkLocalSales(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": sales, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": sales, "total": total})
 }
 
 func (c *MilkLocalSaleController) GetMilkLocalSale(ctx *gin.Context) {

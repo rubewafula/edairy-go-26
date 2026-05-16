@@ -26,7 +26,7 @@ func (c *IndividualTransporterController) GetIndividualTransporters(ctx *gin.Con
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": individuals, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": individuals, "total": total})
 }
 
 func (c *IndividualTransporterController) GetIndividualTransporter(ctx *gin.Context) {

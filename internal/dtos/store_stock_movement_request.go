@@ -3,50 +3,50 @@ package dtos
 import "time"
 
 type CreateStoreStockMovementRequest struct {
-	TransactionDate string  `json:"TransactionDate" validate:"required,datetime"`
-	StoreID         uint64  `json:"StoreID" validate:"required"`
-	ItemID          uint64  `json:"ItemID" validate:"required"`
-	MovementType    string  `json:"MovementType" validate:"required,max=50"`
-	ReferenceTable  string  `json:"ReferenceTable" validate:"max=100"`
-	ReferenceID     uint64  `json:"ReferenceID"`
-	QtyIn           float64 `json:"QtyIn"`
-	QtyOut          float64 `json:"QtyOut"`
-	BalanceAfter    float64 `json:"BalanceAfter" validate:"required"`
-	UnitCost        float64 `json:"UnitCost"`
-	SellingPrice    float64 `json:"SellingPrice"`
-	Remarks         string  `json:"Remarks" validate:"max=255"`
+	TransactionDate string  `json:"transaction_date" validate:"required,datetime"`
+	StoreID         uint64  `json:"store_id" validate:"required"`
+	ItemID          uint64  `json:"item_id" validate:"required"`
+	MovementType    string  `json:"movement_type" validate:"required,max=50"`
+	ReferenceTable  string  `json:"reference_table" validate:"max=100"`
+	ReferenceID     uint64  `json:"reference_id"`
+	QtyIn           float64 `json:"qty_in"`
+	QtyOut          float64 `json:"qty_out"`
+	BalanceAfter    float64 `json:"balance_after" validate:"required"`
+	UnitCost        float64 `json:"unit_cost"`
+	SellingPrice    float64 `json:"selling_price"`
+	Remarks         string  `json:"remarks" validate:"max=255"`
 }
 
 type UpdateStoreStockMovementRequest struct {
-	TransactionDate string  `json:"TransactionDate" validate:"required,datetime"`
-	StoreID         uint64  `json:"StoreID" validate:"required"`
-	ItemID          uint64  `json:"ItemID" validate:"required"`
-	MovementType    string  `json:"MovementType" validate:"required,max=50"`
-	ReferenceTable  string  `json:"ReferenceTable" validate:"max=100"`
-	ReferenceID     uint64  `json:"ReferenceID"`
-	QtyIn           float64 `json:"QtyIn"`
-	QtyOut          float64 `json:"QtyOut"`
-	BalanceAfter    float64 `json:"BalanceAfter" validate:"required"`
-	UnitCost        float64 `json:"UnitCost"`
-	SellingPrice    float64 `json:"SellingPrice"`
-	Remarks         string  `json:"Remarks" validate:"max=255"`
+	TransactionDate string  `json:"transaction_date" validate:"required,datetime"`
+	StoreID         uint64  `json:"store_id" validate:"required"`
+	ItemID          uint64  `json:"item_id" validate:"required"`
+	MovementType    string  `json:"movement_type" validate:"required,max=50"`
+	ReferenceTable  string  `json:"reference_table" validate:"max=100"`
+	ReferenceID     uint64  `json:"reference_id"`
+	QtyIn           float64 `json:"qty_in"`
+	QtyOut          float64 `json:"qty_out"`
+	BalanceAfter    float64 `json:"balance_after" validate:"required"`
+	UnitCost        float64 `json:"unit_cost"`
+	SellingPrice    float64 `json:"selling_price"`
+	Remarks         string  `json:"remarks" validate:"max=255"`
 }
 
 type StoreStockMovementResponse struct {
-	ID              uint64    `json:"ID"`
-	TransactionDate time.Time `json:"TransactionDate"`
-	StoreID         uint64    `json:"StoreID"`
-	StoreName       string    `json:"StoreName"`
-	ItemID          uint64    `json:"ItemID"`
-	ItemName        string    `json:"ItemName"`
-	MovementType    string    `json:"MovementType"`
-	ReferenceTable  string    `json:"ReferenceTable"`
-	ReferenceID     uint64    `json:"ReferenceID"`
-	QtyIn           float64   `json:"QtyIn"`
-	QtyOut          float64   `json:"QtyOut"`
-	BalanceAfter    float64   `json:"BalanceAfter"`
-	UnitCost        float64   `json:"UnitCost"`
-	SellingPrice    float64   `json:"SellingPrice"`
-	Remarks         string    `json:"Remarks"`
-	CreatedAt       time.Time `json:"CreatedAt"`
+	ID              uint64    `json:"id"`
+	TransactionDate time.Time `json:"transaction_date"`
+	StoreID         uint64    `json:"store_id"`
+	StoreName       string    `json:"store_name"`
+	ItemID          uint64    `json:"item_id"`
+	ItemName        string    `json:"item_name"`
+	MovementType    string    `json:"movement_type"`
+	ReferenceTable  string    `json:"reference_table"`
+	ReferenceID     uint64    `json:"reference_id"`
+	QtyIn           float64   `json:"qty_in"`
+	QtyOut          float64   `json:"qty_out"`
+	BalanceAfter    float64   `json:"balance_after"`
+	UnitCost        float64   `json:"unit_cost"`
+	SellingPrice    float64   `json:"selling_price"`
+	Remarks         string    `json:"remarks"`
+	CreatedAt       time.Time `json:"created_at"`
 }

@@ -50,7 +50,7 @@ func (c *ProductGradeController) GetGrades(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": grades, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": grades, "total": total})
 }
 
 func (c *ProductGradeController) GetGrade(ctx *gin.Context) {

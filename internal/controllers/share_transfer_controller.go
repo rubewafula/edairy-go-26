@@ -46,7 +46,7 @@ func (c *ShareTransferController) GetShareTransfers(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": transfers, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": transfers, "total": total})
 }
 
 func (c *ShareTransferController) GetShareTransfer(ctx *gin.Context) {

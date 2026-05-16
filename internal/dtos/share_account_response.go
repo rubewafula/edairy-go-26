@@ -3,17 +3,17 @@ package dtos
 import "time"
 
 type ShareAccountResponse struct {
-	ID            uint64    `json:"ID"`
-	MemberID      uint64    `json:"MemberID"`
-	MemberNo      string    `json:"MemberNo"`
-	FirstName     string    `json:"FirstName"`
-	LastName      string    `json:"LastName"`
-	ShareTypeID   uint64    `json:"ShareTypeID"`
-	ShareCode     string    `json:"ShareCode"`
-	ShareTypeName string    `json:"ShareTypeName"`
-	Description   string    `json:"Description"`
-	Status        string    `json:"Status"`
-	OpenedAt      time.Time `json:"OpenedAt"`
-	CreatedAt     time.Time `json:"CreatedAt"`
-	UpdatedAt     time.Time `json:"UpdatedAt"`
+	ID            uint64    `json:"id"`
+	MemberID      uint64    `json:"member_id"`
+	MemberNo      string    `json:"member_no"`
+	FirstName     string    `json:"first_name"`
+	LastName      string    `json:"last_name"`
+	ShareTypeID   uint64    `json:"share_type_id"`
+	ShareCode     string    `json:"share_code"`
+	ShareTypeName string    `json:"share_type_name"`
+	Description   string    `json:"description"`
+	Status        string    `json:"status"`
+	OpenedAt      time.Time `json:"opened_at"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

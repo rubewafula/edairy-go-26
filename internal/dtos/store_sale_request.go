@@ -3,41 +3,40 @@ package dtos
 import "time"
 
 type CreateStoreSaleRequest struct {
-	TotalAmount   float64 `json:"TotalAmount" validate:"required"`
-	AmountPaid    float64 `json:"AmountPaid"`
-	AmountDue     float64 `json:"AmountDue"`
-	Reference     string  `json:"Reference"`
-	StoreID       uint64  `json:"StoreID" validate:"required"`
-	SaleType      string  `json:"SaleType" validate:"required"`
-	CustomerID    uint64  `json:"CustomerID"`
-	CustomerType  string  `json:"CustomerType"`
-	TransactionID int64   `json:"TransactionID"`
+	TotalAmount   float64 `json:"total_amount" validate:"required"`
+	AmountPaid    float64 `json:"amount_paid"`
+	AmountDue     float64 `json:"amount_due"`
+	Reference     string  `json:"reference"`
+	StoreID       uint64  `json:"store_id" validate:"required"`
+	SaleType      string  `json:"sale_type" validate:"required"`
+	CustomerID    uint64  `json:"customer_id"`
+	CustomerType  string  `json:"customer_type"`
+	TransactionID int64   `json:"transaction_id"`
 }
 
 type UpdateStoreSaleRequest struct {
-	TotalAmount   float64 `json:"TotalAmount" validate:"required"`
-	AmountPaid    float64 `json:"AmountPaid"`
-	AmountDue     float64 `json:"AmountDue"`
-	Reference     string  `json:"Reference"`
-	StoreID       uint64  `json:"StoreID" validate:"required"`
-	SaleType      string  `json:"SaleType" validate:"required"`
-	CustomerID    uint64  `json:"CustomerID"`
-	CustomerType  string  `json:"CustomerType"`
-	TransactionID int64   `json:"TransactionID"`
+	TotalAmount   float64 `json:"total_amount" validate:"required"`
+	AmountPaid    float64 `json:"amount_paid"`
+	AmountDue     float64 `json:"amount_due"`
+	Reference     string  `json:"reference"`
+	StoreID       uint64  `json:"store_id" validate:"required"`
+	SaleType      string  `json:"sale_type" validate:"required"`
+	CustomerID    uint64  `json:"customer_id"`
+	CustomerType  string  `json:"customer_type"`
+	TransactionID int64   `json:"transaction_id"`
 }
-
 type StoreSaleResponse struct {
-	ID            uint64    `json:"ID"`
-	TotalAmount   float64   `json:"TotalAmount"`
-	AmountPaid    float64   `json:"AmountPaid"`
-	AmountDue     float64   `json:"AmountDue"`
-	Reference     string    `json:"Reference"`
-	StoreID       uint64    `json:"StoreID"`
-	StoreName     string    `json:"StoreName"`
-	SaleType      string    `json:"SaleType"`
-	CustomerID    uint64    `json:"CustomerID"`
-	CustomerType  string    `json:"CustomerType"`
-	TransactionID int64     `json:"TransactionID"`
-	CreatedAt     time.Time `json:"CreatedAt"`
-	UpdatedAt     time.Time `json:"UpdatedAt"`
+	ID            uint64    `json:"id"`
+	TotalAmount   float64   `json:"total_amount"`
+	AmountPaid    float64   `json:"amount_paid"`
+	AmountDue     float64   `json:"amount_due"`
+	Reference     string    `json:"reference"`
+	StoreID       uint64    `json:"store_id"`
+	StoreName     string    `json:"store_name"`
+	SaleType      string    `json:"sale_type"`
+	CustomerID    uint64    `json:"customer_id"`
+	CustomerType  string    `json:"customer_type"`
+	TransactionID int64     `json:"transaction_id"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

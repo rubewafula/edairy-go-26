@@ -52,7 +52,7 @@ func (c *CanMovementController) GetMovements(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": movements, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": movements, "total": total})
 }
 
 func (c *CanMovementController) GetMovement(ctx *gin.Context) {

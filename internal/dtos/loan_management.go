@@ -4,27 +4,50 @@ import "time"
 
 // LoanAccount DTOs
 type CreateLoanAccountRequest struct {
-	MemberID      uint64  `json:"member_id" validate:"required"`
-	AccountNumber string  `json:"account_number" validate:"required"`
-	Balance       float64 `json:"balance"`
-	Status        string  `json:"status"`
+	CustomerID     uint64                 `json:"customer_id" validate:"required"`
+	CustomerType   string                 `json:"customer_type" validate:"required,oneof=MEMBER TRANSPORTER EMPLOYEE VENDOR"`
+	ManuallyRatify bool                   `json:"manually_ratify"`
+	NextLevel      string                 `json:"next_level"`
+	Status         string                 `json:"status"`
+	AstraID        string                 `json:"astra_id"`
+	CreditLimit    uint64                 `json:"credit_limit"`
+	LinkStatus     string                 `json:"link_status"`
+	LivenessPassed bool                   `json:"liveness_passed"`
+	AstraRemarks   map[string]interface{} `json:"astra_remarks"`
+	AuthCreated    bool                   `json:"auth_created"`
+	Locale         string                 `json:"locale"`
 }
 
 type UpdateLoanAccountRequest struct {
-	MemberID      uint64  `json:"member_id"`
-	AccountNumber string  `json:"account_number"`
-	Balance       float64 `json:"balance"`
-	Status        string  `json:"status"`
+	ManuallyRatify *bool                  `json:"manually_ratify"`
+	NextLevel      string                 `json:"next_level"`
+	Status         string                 `json:"status"`
+	AstraID        string                 `json:"astra_id"`
+	CreditLimit    uint64                 `json:"credit_limit"`
+	LinkStatus     string                 `json:"link_status"`
+	LivenessPassed *bool                  `json:"liveness_passed"`
+	AstraRemarks   map[string]interface{} `json:"astra_remarks"`
+	AuthCreated    *bool                  `json:"auth_created"`
+	Locale         string                 `json:"locale"`
 }
 
 type LoanAccountResponse struct {
-	ID            uint64    `json:"ID"`
-	MemberID      uint64    `json:"MemberID"`
-	AccountNumber string    `json:"AccountNumber"`
-	Balance       float64   `json:"Balance"`
-	Status        string    `json:"Status"`
-	CreatedAt     time.Time `json:"CreatedAt"`
-	UpdatedAt     time.Time `json:"UpdatedAt"`
+	ID             uint64                 `json:"id"`
+	CustomerID     uint64                 `json:"customer_id"`
+	CustomerType   string                 `json:"customer_type"`
+	ManuallyRatify bool                   `json:"manually_ratify"`
+	NextLevel      string                 `json:"next_level"`
+	Status         string                 `json:"status"`
+	AstraID        *string                `json:"astra_id"`
+	CreditLimit    *uint64                `json:"credit_limit"`
+	LinkStatus     string                 `json:"link_status"`
+	LivenessPassed bool                   `json:"liveness_passed"`
+	AstraRemarks   map[string]interface{} `json:"astra_remarks"`
+	UUID           string                 `json:"uuid"`
+	AuthCreated    bool                   `json:"auth_created"`
+	Locale         string                 `json:"locale"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
 // LoanCallback DTOs
@@ -73,17 +96,17 @@ type UpdateLoanOrganizationProfileRequest struct {
 }
 
 type LoanOrganizationProfileResponse struct {
-	ID              uint64    `json:"ID"`
-	NextLevel       string    `json:"NextLevel"`
-	AstraID         string    `json:"AstraID"`
-	LinkStatus      string    `json:"LinkStatus"`
-	UUID            string    `json:"UUID"`
-	Version         string    `json:"Version"`
-	ProductID       string    `json:"ProductID"`
-	CompanyDetailID uint64    `json:"CompanyDetailID"`
-	ManuallyRatify  bool      `json:"ManuallyRatify"`
-	CreatedAt       time.Time `json:"CreatedAt"`
-	UpdatedAt       time.Time `json:"UpdatedAt"`
+	ID              uint64    `json:"id"`
+	NextLevel       string    `json:"next_level"`
+	AstraID         string    `json:"astra_id"`
+	LinkStatus      string    `json:"link_status"`
+	UUID            string    `json:"uuid"`
+	Version         string    `json:"version"`
+	ProductID       string    `json:"product_id"`
+	CompanyDetailID uint64    `json:"company_detail_id"`
+	ManuallyRatify  bool      `json:"manually_ratify"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // LoanOriginationCallbackLog DTOs
@@ -98,11 +121,11 @@ type UpdateLoanOriginationCallbackLogRequest struct {
 }
 
 type LoanOriginationCallbackLogResponse struct {
-	ID          uint64    `json:"ID"`
-	AstraDetail string    `json:"AstraDetail"`
-	SyncAttempt uint64    `json:"SyncAttempt"`
-	CreatedAt   time.Time `json:"CreatedAt"`
-	UpdatedAt   time.Time `json:"UpdatedAt"`
+	ID          uint64    `json:"id"`
+	AstraDetail string    `json:"astra_detail"`
+	SyncAttempt uint64    `json:"sync_attempt"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // LoanTransaction DTOs
@@ -125,15 +148,15 @@ type UpdateLoanTransactionRequest struct {
 }
 
 type LoanTransactionResponse struct {
-	ID          uint64    `json:"ID"`
-	LoanID      uint64    `json:"LoanID"`
-	Amount      float64   `json:"Amount"`
-	Type        string    `json:"Type"`
-	Reference   string    `json:"Reference"`
-	Description string    `json:"Description"`
-	Date        time.Time `json:"Date"`
-	CreatedAt   time.Time `json:"CreatedAt"`
-	UpdatedAt   time.Time `json:"UpdatedAt"`
+	ID          uint64    `json:"id"`
+	LoanID      uint64    `json:"loan_id"`
+	Amount      float64   `json:"amount"`
+	Type        string    `json:"type"`
+	Reference   string    `json:"reference"`
+	Description string    `json:"description"`
+	Date        time.Time `json:"date"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // MemberLoan DTOs
@@ -155,13 +178,13 @@ type UpdateMemberLoanRequest struct {
 }
 
 type MemberLoanResponse struct {
-	ID           uint64     `json:"ID"`
-	MemberID     uint64     `json:"MemberID"`
-	LoanType     string     `json:"LoanType"`
-	Amount       float64    `json:"Amount"`
-	InterestRate float64    `json:"InterestRate"`
-	Status       string     `json:"Status"`
-	DisbursedAt  *time.Time `json:"DisbursedAt"`
-	CreatedAt    time.Time  `json:"CreatedAt"`
-	UpdatedAt    time.Time  `json:"UpdatedAt"`
+	ID           uint64     `json:"id"`
+	MemberID     uint64     `json:"member_id"`
+	LoanType     string     `json:"loan_type"`
+	Amount       float64    `json:"amount"`
+	InterestRate float64    `json:"interest_rate"`
+	Status       string     `json:"status"`
+	DisbursedAt  *time.Time `json:"disbursed_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }

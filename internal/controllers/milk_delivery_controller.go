@@ -52,7 +52,7 @@ func (c *MilkDeliveryController) GetDeliveries(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": deliveries, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": deliveries, "total": total})
 }
 
 func (c *MilkDeliveryController) GetDelivery(ctx *gin.Context) {

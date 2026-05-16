@@ -3,32 +3,32 @@ package dtos
 import "time"
 
 type CreateMilkCanRequest struct {
-	CanID      string  `json:"CanID" validate:"required"`
-	CanType    string  `json:"CanType" validate:"required"`
-	CanSize    float64 `json:"CanSize" validate:"required"`
-	Units      string  `json:"Units"`
-	TareWeight float64 `json:"TareWeight"`
-	RouteID    uint64  `json:"RouteID" validate:"required"`
+	CanID      string  `json:"can_id" validate:"required"`
+	CanType    string  `json:"can_type" validate:"required"`
+	CanSize    float64 `json:"can_size" validate:"required"`
+	Units      string  `json:"units"`
+	TareWeight float64 `json:"tare_weight"`
+	RouteID    uint64  `json:"route_id" validate:"required"`
 }
 
 type UpdateMilkCanRequest struct {
-	CanID      string  `json:"CanID" validate:"required"`
-	CanType    string  `json:"CanType" validate:"required"`
-	CanSize    float64 `json:"CanSize" validate:"required"`
-	Units      string  `json:"Units"`
-	TareWeight float64 `json:"TareWeight"`
-	RouteID    uint64  `json:"RouteID" validate:"required"`
+	CanID      string  `json:"can_id" validate:"required"`
+	CanType    string  `json:"can_type" validate:"required"`
+	CanSize    float64 `json:"can_size" validate:"required"`
+	Units      string  `json:"units"`
+	TareWeight float64 `json:"tare_weight"`
+	RouteID    uint64  `json:"route_id" validate:"required"`
 }
 
 type MilkCanResponse struct {
-	ID         uint64    `json:"ID"`
-	CanID      string    `json:"CanID"`
-	CanType    string    `json:"CanType"`
-	CanSize    float64   `json:"CanSize"`
-	Units      string    `json:"Units"`
-	TareWeight float64   `json:"TareWeight"`
-	RouteID    uint64    `json:"RouteID"`
-	RouteName  string    `json:"RouteName"`
-	CreatedAt  time.Time `json:"CreatedAt"`
-	UpdatedAt  time.Time `json:"UpdatedAt"`
+	ID         uint64    `json:"id"`
+	CanID      string    `json:"can_id"`
+	CanType    string    `json:"can_type"`
+	CanSize    float64   `json:"can_size"`
+	Units      string    `json:"units"`
+	TareWeight float64   `json:"tare_weight"`
+	RouteID    uint64    `json:"route_id"`
+	RouteName  string    `json:"route_name"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }

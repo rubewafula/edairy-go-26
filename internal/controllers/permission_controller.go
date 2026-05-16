@@ -46,7 +46,7 @@ func (c *PermissionController) GetPermissions(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": permissions, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": permissions, "total": total})
 }
 
 func (c *PermissionController) GetPermission(ctx *gin.Context) {

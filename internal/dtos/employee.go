@@ -65,19 +65,21 @@ type UpdateEmployeeRequest struct {
 }
 
 type EmployeeResponse struct {
-	ID          uint64    `json:"ID"`
-	UserID      uint64    `json:"UserID"`
-	Surname     string    `json:"Surname"`
-	FirstName   string    `json:"FirstName"`
-	MiddleName  string    `json:"MiddleName"`
-	EmployeeNo  string    `json:"EmployeeNo"`
-	IDNo        string    `json:"IDNo"`
-	Gender      string    `json:"Gender"`
-	DateOfBirth time.Time `json:"DateOfBirth"`
-	Phone       string    `json:"Phone"`
-	Email       string    `json:"Email"`
-	Status      int       `json:"Status"`
-	CreatedAt   time.Time `json:"CreatedAt"`
+	ID              uint64    `json:"id"`
+	UserID          uint64    `json:"user_id"`
+	Surname         string    `json:"surname"`
+	FirstName       string    `json:"first_name"`
+	MiddleName      string    `json:"middle_name"`
+	EmployeeNo      string    `json:"employee_no"`
+	IDNo            string    `json:"id_no"`
+	Gender          string    `json:"gender"`
+	DateOfBirth     time.Time `json:"date_of_birth"`
+	Phone           string    `json:"phone"`
+	Email           string    `json:"email"`
+	Status          int       `json:"status"`
+	JobPositionName string    `json:"job_position_name"`
+	DepartmentName  string    `json:"department_name"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type CreateEmployeeSalaryRequest struct {
@@ -86,11 +88,42 @@ type CreateEmployeeSalaryRequest struct {
 	Status      string  `json:"status"`
 }
 
+type UpdateEmployeeSalaryRequest struct {
+	BasicSalary float64 `json:"basic_salary"`
+	Status      string  `json:"status"`
+}
+
+type EmployeeSalaryResponse struct {
+	ID          uint64    `json:"id"`
+	EmployeeID  uint64    `json:"employee_id"`
+	BasicSalary float64   `json:"basic_salary"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type CreateEmployeeBankAccountRequest struct {
 	EmployeeID    uint64 `json:"employee_id" validate:"required"`
 	BankID        uint64 `json:"bank_id" validate:"required"`
 	AccountNumber string `json:"account_number" validate:"required"`
 	AccountName   string `json:"account_name" validate:"required"`
+}
+
+type UpdateEmployeeBankAccountRequest struct {
+	BankID        uint64 `json:"bank_id"`
+	AccountNumber string `json:"account_number"`
+	AccountName   string `json:"account_name"`
+}
+
+type EmployeeBankAccountResponse struct {
+	ID            uint64    `json:"id"`
+	EmployeeID    uint64    `json:"employee_id"`
+	BankID        uint64    `json:"bank_id"`
+	BankName      string    `json:"bank_name"`
+	AccountNumber string    `json:"account_number"`
+	AccountName   string    `json:"account_name"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // EmployeeBenefit DTOs
@@ -108,14 +141,14 @@ type UpdateEmployeeBenefitRequest struct {
 }
 
 type EmployeeBenefitResponse struct {
-	ID          uint64    `json:"ID"`
-	EmployeeID  uint64    `json:"EmployeeID"`
-	BenefitID   uint64    `json:"BenefitID"`
-	BenefitName string    `json:"BenefitName"`
-	Amount      float64   `json:"Amount"`
-	Status      string    `json:"Status"`
-	CreatedAt   time.Time `json:"CreatedAt"`
-	UpdatedAt   time.Time `json:"UpdatedAt"`
+	ID          uint64    `json:"id"`
+	EmployeeID  uint64    `json:"employee_id"`
+	BenefitID   uint64    `json:"benefit_id"`
+	BenefitName string    `json:"benefit_name"`
+	Amount      float64   `json:"amount"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // EmployeeDocument DTOs
@@ -133,14 +166,91 @@ type UpdateEmployeeDocumentRequest struct {
 }
 
 type EmployeeDocumentResponse struct {
-	ID              uint64    `json:"ID"`
-	EmployeeID      uint64    `json:"EmployeeID"`
-	DocumentTypeID  uint64    `json:"DocumentTypeID"`
-	DocumentType    string    `json:"DocumentType"` // Assuming a DocumentType model exists
-	FileName        string    `json:"FileName"`
-	FileDescription string    `json:"FileDescription"`
-	CreatedAt       time.Time `json:"CreatedAt"`
-	UpdatedAt       time.Time `json:"UpdatedAt"`
+	ID              uint64    `json:"id"`
+	EmployeeID      uint64    `json:"employee_id"`
+	DocumentTypeID  uint64    `json:"document_type_id"`
+	DocumentType    string    `json:"document_type"` // Assuming a DocumentType model exists
+	FileName        string    `json:"file_name"`
+	FileDescription string    `json:"file_description"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// EmployeeDeductionType DTOs
+type CreateEmployeeDeductionTypeRequest struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+	IsStatutory bool   `json:"is_statutory"`
+}
+
+type UpdateEmployeeDeductionTypeRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	IsStatutory bool   `json:"is_statutory"`
+}
+
+type EmployeeDeductionTypeResponse struct {
+	ID          uint64    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	IsStatutory bool      `json:"is_statutory"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// EmployeeLeaveApplication DTOs
+type CreateEmployeeLeaveApplicationRequest struct {
+	EmployeeID  uint64  `json:"employee_id" validate:"required"`
+	LeaveTypeID uint64  `json:"leave_type_id" validate:"required"`
+	DaysApplied float64 `json:"days_applied" validate:"required,gt=0"`
+	StartDate   string  `json:"start_date" validate:"required,datetime"`
+	EndDate     string  `json:"end_date" validate:"required,datetime"`
+	ReturnDate  string  `json:"return_date" validate:"required,datetime"`
+}
+
+type UpdateEmployeeLeaveApplicationRequest struct {
+	ApproverID   uint64  `json:"approver_id"`
+	DaysApproved float64 `json:"days_approved"`
+	Status       string  `json:"status"`
+	Approved     bool    `json:"approved"`
+}
+
+type EmployeeLeaveApplicationResponse struct {
+	ID            uint64    `json:"id"`
+	ApplicationNo string    `json:"application_no"`
+	EmployeeID    uint64    `json:"employee_id"`
+	EmployeeName  string    `json:"employee_name"`
+	LeaveTypeID   uint64    `json:"leave_type_id"`
+	LeaveType     string    `json:"leave_type"`
+	DaysApplied   float64   `json:"days_applied"`
+	DaysApproved  float64   `json:"days_approved"`
+	StartDate     time.Time `json:"start_date"`
+	EndDate       time.Time `json:"end_date"`
+	ReturnDate    time.Time `json:"return_date"`
+	ApproverID    uint64    `json:"approver_id"`
+	ApproverName  string    `json:"approver_name"`
+	Status        string    `json:"status"`
+	Approved      bool      `json:"approved"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// EmployeeDependant DTOs
+type CreateEmployeeDependantRequest struct {
+	EmployeeID   uint64 `json:"employee_id" validate:"required"`
+	Name         string `json:"name" validate:"required"`
+	Relationship string `json:"relationship" validate:"required"`
+}
+
+type UpdateEmployeeDependantRequest struct {
+	Name         string `json:"name" validate:"required"`
+	Relationship string `json:"relationship" validate:"required"`
+}
+
+type EmployeeDependantResponse struct {
+	ID           uint64 `json:"id"`
+	EmployeeID   uint64 `json:"employee_id"`
+	Name         string `json:"name"`
+	Relationship string `json:"relationship"`
 }
 
 // EmployeeLeaveType DTOs
@@ -159,13 +269,13 @@ type UpdateEmployeeLeaveTypeRequest struct {
 }
 
 type EmployeeLeaveTypeResponse struct {
-	ID          uint64    `json:"ID"`
-	Code        string    `json:"Code"`
-	Description string    `json:"Description"`
-	Days        float64   `json:"Days"`
-	Gender      string    `json:"Gender"`
-	CreatedAt   time.Time `json:"CreatedAt"`
-	UpdatedAt   time.Time `json:"UpdatedAt"`
+	ID          uint64    `json:"id"`
+	Code        string    `json:"code"`
+	Description string    `json:"description"`
+	Days        float64   `json:"days"`
+	Gender      string    `json:"gender"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // EmployeePayroll DTOs
@@ -187,27 +297,40 @@ type CreateEmployeePayrollRequest struct {
 }
 
 type UpdateEmployeePayrollRequest struct {
-	PayrollMonth string `json:"payroll_month"`
-	PayrollYear  string `json:"payroll_year"`
-	// ... other fields that can be updated
+	PayrollMonth    string  `json:"payroll_month"`
+	PayrollYear     string  `json:"payroll_year"`
+	DateOpened      string  `json:"date_opened" validate:"omitempty,datetime"`
+	TotalDeductions float64 `json:"total_deductions"`
+	GrossPay        float64 `json:"gross_pay"`
+	NetPay          float64 `json:"net_pay"`
+	Complete        string  `json:"complete"`
+	Confirmed       string  `json:"confirmed"`
+	Approved        string  `json:"approved"`
+	TotalBenefits   float64 `json:"total_benefits"`
+	TotalTax        float64 `json:"total_tax"`
+	TotalRelief     float64 `json:"total_relief"`
+	Period          string  `json:"period"`
+	PaidAt          string  `json:"paid_at" validate:"omitempty,datetime"`
 }
 
 type EmployeePayrollResponse struct {
-	ID              uint64    `json:"ID"`
-	PayrollMonth    string    `json:"PayrollMonth"`
-	PayrollYear     string    `json:"PayrollYear"`
-	DateOpened      time.Time `json:"DateOpened"`
-	TotalDeductions float64   `json:"TotalDeductions"`
-	GrossPay        float64   `json:"GrossPay"`
-	NetPay          float64   `json:"NetPay"`
-	Complete        string    `json:"Complete"`
-	Confirmed       string    `json:"Confirmed"`
-	Approved        string    `json:"Approved"`
-	TotalBenefits   float64   `json:"TotalBenefits"`
-	TotalTax        float64   `json:"TotalTax"`
-	TotalRelief     float64   `json:"TotalRelief"`
-	Period          string    `json:"Period"`
-	PaidAt          time.Time `json:"PaidAt"`
-	CreatedAt       time.Time `json:"CreatedAt"`
-	UpdatedAt       time.Time `json:"UpdatedAt"`
+	ID              uint64    `json:"id"`
+	PayrollMonth    string    `json:"payroll_month"`
+	PayrollYear     string    `json:"payroll_year"`
+	DateOpened      time.Time `json:"date_opened"`
+	TotalDeductions float64   `json:"total_deductions"`
+	GrossPay        float64   `json:"gross_pay"`
+	NetPay          float64   `json:"net_pay"`
+	Complete        string    `json:"complete"`
+	Confirmed       string    `json:"confirmed"`
+	Approved        string    `json:"approved"`
+	TotalBenefits   float64   `json:"total_benefits"`
+	TotalTax        float64   `json:"total_tax"`
+	TotalRelief     float64   `json:"total_relief"`
+	Period          string    `json:"period"`
+	PaidAt          time.Time `json:"paid_at"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	CreatedBy       uint64    `json:"created_by"`
+	UpdatedBy       uint64    `json:"updated_by"`
 }

@@ -42,8 +42,8 @@ func (c *EmployeePayrollController) CreateEmployeePayroll(ctx *gin.Context) {
 }
 
 func (c *EmployeePayrollController) GetEmployeePayrolls(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
-	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 	results, total, err := c.service.GetEmployeePayrolls(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

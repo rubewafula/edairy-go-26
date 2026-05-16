@@ -58,7 +58,7 @@ func (c *UserController) GetUsers(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": users, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": users, "total": total})
 }
 
 func (c *UserController) GetUser(ctx *gin.Context) {

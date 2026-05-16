@@ -52,7 +52,7 @@ func (c *DefaultMilkRateController) GetRates(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": rates, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": rates, "total": total})
 }
 
 func (c *DefaultMilkRateController) GetRate(ctx *gin.Context) {

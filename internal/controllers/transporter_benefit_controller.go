@@ -48,7 +48,7 @@ func (c *TransporterBenefitController) GetBenefits(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": benefits, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": benefits, "total": total})
 }
 
 func (c *TransporterBenefitController) GetBenefit(ctx *gin.Context) {

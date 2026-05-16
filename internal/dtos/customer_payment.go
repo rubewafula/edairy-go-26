@@ -13,28 +13,28 @@ type CreateCustomerPaymentRequest struct {
 }
 
 type CustomerPaymentResponse struct {
-	ID            uint64    `json:"ID"`
-	ReceiptNumber string    `json:"ReceiptNumber"`
-	CustomerID    uint64    `json:"CustomerID"`
-	CustomerName  string    `json:"CustomerName"`
-	InvoiceID     *uint64   `json:"InvoiceID"`
-	InvoiceNo     string    `json:"InvoiceNo"`
-	PaymentDate   time.Time `json:"PaymentDate"`
-	Amount        float64   `json:"Amount"`
-	PaymentMethod string    `json:"PaymentMethod"`
-	ReferenceNo   string    `json:"ReferenceNo"`
-	Notes         string    `json:"Notes"`
-	CreatedBy     uint64    `json:"CreatedBy"`
-	CreatedAt     time.Time `json:"CreatedAt"`
+	ID            uint64    `json:"id"`
+	ReceiptNumber string    `json:"receipt_number"`
+	CustomerID    uint64    `json:"customer_id"`
+	CustomerName  string    `json:"customer_name"`
+	InvoiceID     *uint64   `json:"invoice_id"`
+	InvoiceNo     string    `json:"invoice_no"`
+	PaymentDate   time.Time `json:"payment_date"`
+	Amount        float64   `json:"amount"`
+	PaymentMethod string    `json:"payment_method"`
+	ReferenceNo   string    `json:"reference_no"`
+	Notes         string    `json:"notes"`
+	CreatedBy     uint64    `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type CustomerPaymentAllocationResponse struct {
-	ID                uint64    `json:"ID"`
-	InvoiceID         uint64    `json:"InvoiceID"`
-	InvoiceNo         string    `json:"InvoiceNo"`
-	CustomerPaymentID uint64    `json:"CustomerPaymentID"`
-	ReceiptNumber     string    `json:"ReceiptNumber"`
-	AllocatedAmount   float64   `json:"AllocatedAmount"`
-	CreatedAt         time.Time `json:"CreatedAt"`
-	CreatedBy         uint64    `json:"CreatedBy"`
+	ID                uint64    `json:"id"`
+	InvoiceID         uint64    `json:"invoice_id"`
+	InvoiceNo         string    `json:"invoice_no"`
+	CustomerPaymentID uint64    `json:"customer_payment_id"`
+	ReceiptNumber     string    `json:"receipt_number"`
+	AllocatedAmount   float64   `json:"allocated_amount"`
+	CreatedAt         time.Time `json:"created_at"`
+	CreatedBy         uint64    `json:"created_by"`
 }

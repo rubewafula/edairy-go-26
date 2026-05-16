@@ -50,7 +50,7 @@ func (c *CoolerMilkCollectionController) GetCollections(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Data": collections, "Total": total})
+	ctx.JSON(http.StatusOK, gin.H{"data": collections, "total": total})
 }
 
 func (c *CoolerMilkCollectionController) GetCollection(ctx *gin.Context) {

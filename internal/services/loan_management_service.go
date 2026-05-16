@@ -16,15 +16,26 @@ func NewLoanManagementService() *LoanManagementService {
 // --- LoanAccount CRUD ---
 func (s *LoanManagementService) CreateLoanAccount(req dtos.CreateLoanAccountRequest, userID uint64) (*models.LoanAccount, error) {
 	account := &models.LoanAccount{
-		BaseModel:     models.BaseModel{CreatedBy: userID},
-		MemberID:      req.MemberID,
-		AccountNumber: req.AccountNumber,
-		Balance:       req.Balance,
-		Status:        req.Status,
+		BaseModel:      models.BaseModel{CreatedBy: userID},
+		CustomerID:     req.CustomerID,
+		CustomerType:   req.CustomerType,
+		ManuallyRatify: req.ManuallyRatify,
+		NextLevel:      req.NextLevel,
+		Status:         req.Status,
+		LinkStatus:     req.LinkStatus,
+		LivenessPassed: req.LivenessPassed,
+		AstraRemarks:   req.AstraRemarks,
+		AuthCreated:    req.AuthCreated,
+		Locale:         req.Locale,
 	}
-	if account.Status == "" {
-		account.Status = "ACTIVE"
+
+	if req.AstraID != "" {
+		account.AstraID = &req.AstraID
 	}
+	if req.CreditLimit != 0 {
+		account.CreditLimit = &req.CreditLimit
+	}
+
 	if err := db.DB.Create(account).Error; err != nil {
 		return nil, err
 	}
@@ -53,22 +64,15 @@ func (s *LoanManagementService) UpdateLoanAccount(id string, req dtos.UpdateLoan
 	if err := db.DB.First(&account, id).Error; err != nil {
 		return err
 	}
+
 	updates := map[string]interface{}{
-		"member_id":      req.MemberID,
-		"account_number": req.AccountNumber,
-		"balance":        req.Balance,
-		"status":         req.Status,
-		"updated_by":     userID,
+		"updated_by": userID,
 	}
-	return db.DB.Model(&account).Updates(updates).Error
+	return db.DB.Model(&account).Updates(req).Updates(updates).Error
 }
 
 func (s *LoanManagementService) DeleteLoanAccount(id string, userID uint64) error {
-	var account models.LoanAccount
-	if err := db.DB.First(&account, id).Error; err != nil {
-		return err
-	}
-	return db.DB.Model(&account).Update("updated_by", userID).Delete(&account).Error
+	return db.DB.Model(&models.LoanAccount{}).Where("id = ?", id).Update("updated_by", userID).Delete(&models.LoanAccount{}).Error
 }
 
 // --- LoanCallback CRUD ---
@@ -301,71 +305,4 @@ func (s *LoanManagementService) DeleteLoanTransaction(id string, userID uint64) 
 		return err
 	}
 	return db.DB.Model(&transaction).Update("updated_by", userID).Delete(&transaction).Error
-}
-
-// --- MemberLoan CRUD ---
-func (s *LoanManagementService) CreateMemberLoan(req dtos.CreateMemberLoanRequest, userID uint64) (*models.MemberLoan, error) {
-	loan := &models.MemberLoan{
-		BaseModel:    models.BaseModel{CreatedBy: userID},
-		MemberID:     req.MemberID,
-		LoanType:     req.LoanType,
-		Amount:       req.Amount,
-		InterestRate: req.InterestRate,
-		Status:       req.Status,
-	}
-	if req.DisbursedAt != "" {
-		disbursedAt := utils.ParseDate(req.DisbursedAt)
-		loan.DisbursedAt = &disbursedAt
-	}
-	if loan.Status == "" {
-		loan.Status = "PENDING"
-	}
-	if err := db.DB.Create(loan).Error; err != nil {
-		return nil, err
-	}
-	return loan, nil
-}
-
-func (s *LoanManagementService) GetMemberLoans(page, limit int) ([]models.MemberLoan, int64, error) {
-	var loans []models.MemberLoan
-	var total int64
-	db.DB.Model(&models.MemberLoan{}).Count(&total)
-	offset := (page - 1) * limit
-	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&loans).Error
-	return loans, total, err
-}
-
-func (s *LoanManagementService) GetMemberLoan(id string) (*models.MemberLoan, error) {
-	var loan models.MemberLoan
-	if err := db.DB.First(&loan, id).Error; err != nil {
-		return nil, err
-	}
-	return &loan, nil
-}
-
-func (s *LoanManagementService) UpdateMemberLoan(id string, req dtos.UpdateMemberLoanRequest, userID uint64) error {
-	var loan models.MemberLoan
-	if err := db.DB.First(&loan, id).Error; err != nil {
-		return err
-	}
-	updates := map[string]interface{}{
-		"loan_type":     req.LoanType,
-		"amount":        req.Amount,
-		"interest_rate": req.InterestRate,
-		"status":        req.Status,
-		"updated_by":    userID,
-	}
-	if req.DisbursedAt != "" {
-		disbursedAt := utils.ParseDate(req.DisbursedAt)
-		updates["disbursed_at"] = &disbursedAt
-	}
-	return db.DB.Model(&loan).Updates(updates).Error
-}
-
-func (s *LoanManagementService) DeleteMemberLoan(id string, userID uint64) error {
-	var loan models.MemberLoan
-	if err := db.DB.First(&loan, id).Error; err != nil {
-		return err
-	}
-	return db.DB.Model(&loan).Update("updated_by", userID).Delete(&loan).Error
 }

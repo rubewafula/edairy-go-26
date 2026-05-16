@@ -40,23 +40,23 @@ type UpdatePurchaseRequisitionRequest struct {
 }
 
 type PurchaseOrderResponse struct {
-	ID           uint64    `json:"ID"`
-	PoNumber     string    `json:"PoNumber"`
-	PoDate       time.Time `json:"PoDate"`
-	SupplierName string    `json:"SupplierName"`
-	Status       string    `json:"Status"`
-	TotalAmount  float64   `json:"TotalAmount"`
-	CreatedAt    time.Time `json:"CreatedAt"`
+	ID           uint64    `json:"id"`
+	PoNumber     string    `json:"po_number"`
+	PoDate       time.Time `json:"po_date"`
+	SupplierName string    `json:"supplier_name"`
+	Status       string    `json:"status"`
+	TotalAmount  float64   `json:"total_amount"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type PurchaseRequisitionResponse struct {
-	ID              uint64    `json:"ID"`
-	RequisitionNo   string    `json:"RequisitionNo"`
-	RequisitionDate time.Time `json:"RequisitionDate"`
-	Description     string    `json:"Description"`
-	Status          string    `json:"Status"`
-	CreatedBy       uint64    `json:"CreatedBy"`
-	CreatedAt       time.Time `json:"CreatedAt"`
+	ID              uint64    `json:"id"`
+	RequisitionNo   string    `json:"requisition_no"`
+	RequisitionDate time.Time `json:"requisition_date"`
+	Description     string    `json:"description"`
+	Status          string    `json:"status"`
+	CreatedBy       uint64    `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type CreatePurchaseRequisitionItemRequest struct {
@@ -66,11 +66,11 @@ type CreatePurchaseRequisitionItemRequest struct {
 }
 
 type PurchaseRequisitionItemResponse struct {
-	ID        uint64    `json:"ID"`
-	ItemName  string    `json:"ItemName"`
-	Quantity  float64   `json:"Quantity"`
-	Status    string    `json:"Status"`
-	CreatedAt time.Time `json:"CreatedAt"`
+	ID        uint64    `json:"id"`
+	ItemName  string    `json:"item_name"`
+	Quantity  float64   `json:"quantity"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type UpdatePurchaseRequisitionItemRequest struct {
@@ -87,14 +87,14 @@ type UpdatePurchaseOrderItemRequest struct {
 }
 
 type PurchaseOrderItemResponse struct {
-	ID              uint64    `json:"ID"`
-	PurchaseOrderID uint64    `json:"PurchaseOrderID"`
-	ItemID          uint64    `json:"ItemID"`
-	ItemName        string    `json:"ItemName"`
-	Description     string    `json:"Description"`
-	Quantity        float64   `json:"Quantity"`
-	UnitPrice       float64   `json:"UnitPrice"`
-	TotalPrice      float64   `json:"TotalPrice"`
-	CreatedAt       time.Time `json:"CreatedAt"`
-	UpdatedAt       time.Time `json:"UpdatedAt"`
+	ID              uint64    `json:"id"`
+	PurchaseOrderID uint64    `json:"purchase_order_id"`
+	ItemID          uint64    `json:"item_id"`
+	ItemName        string    `json:"item_name"`
+	Description     string    `json:"description"`
+	Quantity        float64   `json:"quantity"`
+	UnitPrice       float64   `json:"unit_price"`
+	TotalPrice      float64   `json:"total_price"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
