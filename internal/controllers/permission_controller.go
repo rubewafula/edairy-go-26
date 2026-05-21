@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rubewafula/edairy-go-26/internal/apperrors"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
@@ -34,19 +37,46 @@ func (c *PermissionController) CreatePermission(ctx *gin.Context) {
 
 	permission, err := c.service.CreatePermission(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+
+		if errors.Is(err, apperrors.ErrPermissionExists) {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrInternal.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, permission)
+	ctx.JSON(http.StatusCreated, gin.H{"data": permission})
 }
 
 func (c *PermissionController) GetPermissions(ctx *gin.Context) {
-	permissions, total, err := c.service.GetPermissions()
+	// read query params
+	page, err := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	perPage, err := strconv.Atoi(ctx.DefaultQuery("per_page", "50"))
+	if err != nil || perPage <= 0 {
+		perPage = 10
+	}
+
+	// call service
+	permissions, total, err := c.service.GetPermissions(page, perPage)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"data": permissions, "total": total})
+
+	// response
+	ctx.JSON(http.StatusOK, gin.H{
+		"data":    permissions,
+		"total":   total,
+		"page":    page,
+		"perPage": perPage,
+	})
 }
 
 func (c *PermissionController) GetPermission(ctx *gin.Context) {
@@ -74,7 +104,7 @@ func (c *PermissionController) UpdatePermission(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Permission updated successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Permission updated successfully"})
 }
 
 func (c *PermissionController) DeletePermission(ctx *gin.Context) {
@@ -82,5 +112,5 @@ func (c *PermissionController) DeletePermission(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Permission deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Permission deleted successfully"})
 }

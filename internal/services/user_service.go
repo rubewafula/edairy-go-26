@@ -29,9 +29,37 @@ func (s *UserService) CreateUser(req dtos.CreateUserRequest) (*models.User, erro
 		VerificationToken: uuid.NewString(),
 	}
 
-	if err := db.DB.Create(user).Error; err != nil {
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
+
+		if len(req.RoleIDs) > 0 {
+			var roles []models.Role
+			if err := tx.Where("id IN ?", req.RoleIDs).Find(&roles).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(user).Association("Roles").Append(roles); err != nil {
+				return err
+			}
+		}
+
+		if len(req.PermissionIDs) > 0 {
+			var permissions []models.Permission
+			if err := tx.Where("id IN ?", req.PermissionIDs).Find(&permissions).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(user).Association("Permissions").Append(permissions); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -138,10 +166,40 @@ func (s *UserService) UpdateUser(id string, req dtos.UpdateUserRequest) error {
 	if err := db.DB.First(&user, id).Error; err != nil {
 		return err
 	}
-	user.Name = req.Name
-	user.Email = req.Email
-	user.IsVerified = req.IsVerified
-	return db.DB.Save(&user).Error
+
+	return db.DB.Transaction(func(tx *gorm.DB) error {
+		user.Name = req.Name
+		user.Email = req.Email
+		user.IsVerified = req.IsVerified
+
+		if err := tx.Save(&user).Error; err != nil {
+			return err
+		}
+
+		// Sync Roles: Strip current and assign new list
+		var roles []models.Role
+		if len(req.RoleIDs) > 0 {
+			if err := tx.Where("id IN ?", req.RoleIDs).Find(&roles).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&user).Association("Roles").Replace(roles); err != nil {
+			return err
+		}
+
+		// Sync Permissions: Strip current and assign new list
+		var permissions []models.Permission
+		if len(req.PermissionIDs) > 0 {
+			if err := tx.Where("id IN ?", req.PermissionIDs).Find(&permissions).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&user).Association("Permissions").Replace(permissions); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (s *UserService) DeleteUser(id string) error {

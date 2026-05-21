@@ -5,7 +5,7 @@ type CreateTrainingRequest struct {
 	Description    string `json:"description"`
 	Venue          string `json:"venue" validate:"required"`
 	TrainingUserID uint64 `json:"training_user_id" validate:"required"`
-	TrainingDate   string `json:"training_date" validate:"required,datetime"`
+	TrainingDate   string `json:"training_date" validate:"required"`
 	Status         string `json:"status" validate:"omitempty,oneof=SCHEDULED COMPLETED CANCELLED"`
 }
 
@@ -14,6 +14,6 @@ type UpdateTrainingRequest struct {
 	Description    string `json:"description"`
 	Venue          string `json:"venue" validate:"required"`
 	TrainingUserID uint64 `json:"training_user_id" validate:"required"`
-	TrainingDate   string `json:"training_date" validate:"required,datetime"`
+	TrainingDate   string `json:"training_date" validate:"required"`
 	Status         string `json:"status" validate:"required,oneof=SCHEDULED COMPLETED CANCELLED"`
 }

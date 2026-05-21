@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Asset struct {
@@ -35,12 +33,9 @@ func (Asset) TableName() string {
 }
 
 type AssetCategory struct {
-	ID          uint64         `gorm:"primaryKey;autoIncrement;column:ud" json:"ID"`
-	Name        string         `gorm:"column:name" json:"Name"`
-	Description string         `gorm:"column:description" json:"Description"`
-	CreatedAt   time.Time      `gorm:"column:created_at" json:"CreatedAt"`
-	UpdatedAt   time.Time      `gorm:"column:updated_at" json:"UpdatedAt"`
-	DeletedAt   gorm.DeletedAt `gorm:"index;column:deleted_at" json:"-"`
+	BaseModel
+	Name        string `gorm:"column:name" json:"Name"`
+	Description string `gorm:"column:description" json:"Description"`
 }
 
 func (AssetCategory) TableName() string {
@@ -49,12 +44,12 @@ func (AssetCategory) TableName() string {
 
 type AssetAssignment struct {
 	BaseModel
-	AssetID        uint64    `gorm:"column:asset_id"`
-	AssignedToID   uint64    `gorm:"column:assigned_to_id"`
-	AssignedAt     time.Time `gorm:"column:assigned_at"`
-	ReturnedAt     time.Time `gorm:"column:returned_at"`
-	ConditionNotes string    `gorm:"column:condition_notes"`
-	Status         string    `gorm:"column:status;default:ASSIGNED"`
+	AssetID        uint64     `gorm:"column:asset_id"`
+	AssignedToID   uint64     `gorm:"column:assigned_to_id"`
+	AssignedAt     time.Time  `gorm:"column:assigned_at"`
+	ReturnedAt     *time.Time `gorm:"column:returned_at"`
+	ConditionNotes string     `gorm:"column:condition_notes"`
+	Status         string     `gorm:"column:status;default:ASSIGNED"`
 }
 
 func (AssetAssignment) TableName() string {
@@ -62,13 +57,12 @@ func (AssetAssignment) TableName() string {
 }
 
 type AssetDepreciationEntry struct {
-	ID                      uint64         `gorm:"primaryKey;autoIncrement;column:id"`
-	AssetID                 uint64         `gorm:"column:asset_id"`
-	DepreciationDate        time.Time      `gorm:"column:depreciation_date"`
-	DepreciationAmount      float64        `gorm:"column:depreciation_amount"`
-	AccumulatedDepreciation float64        `gorm:"column:accumulated_depreciation"`
-	BookValue               float64        `gorm:"column:book_value"`
-	TransactionID           uint64         `gorm:"column:transaction_id"`
-	CreatedAt               time.Time      `gorm:"column:created_at"`
-	DeletedAt               gorm.DeletedAt `gorm:"index;column:deleted_at"`
+	BaseModel
+	AssetID                 uint64    `gorm:"column:asset_id"`
+	DepreciationDate        time.Time `gorm:"column:depreciation_date"`
+	DepreciationAmount      float64   `gorm:"column:depreciation_amount"`
+	AccumulatedDepreciation float64   `gorm:"column:accumulated_depreciation"`
+	BookValue               float64   `gorm:"column:book_value"`
+	TransactionID           uint64    `gorm:"column:transaction_id"`
+	Notes                   string    `gorm:"column:notes"`
 }

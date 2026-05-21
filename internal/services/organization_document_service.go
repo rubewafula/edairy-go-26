@@ -4,6 +4,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -15,12 +16,24 @@ func NewOrganizationDocumentService() *OrganizationDocumentService {
 
 func (s *OrganizationDocumentService) CreateDocument(req dtos.CreateOrganizationDocumentRequest, userID uint64) (*models.OrganizationDocument, error) {
 	document := &models.OrganizationDocument{
-		BaseModel:    models.BaseModel{CreatedBy: userID},
-		AstraID:      req.AstraID,
-		DocumentType: req.DocumentType,
-		Document:     req.Document,
-		Submitted:    req.Submitted,
+		BaseModel:      models.BaseModel{CreatedBy: userID},
+		AstraID:        req.AstraID,
+		DocumentTypeID: req.DocumentTypeID,
+		DocumentName:   req.DocumentName,
+		Submitted:      req.Submitted,
 	}
+
+	// Handle file upload if base64 content is provided
+	if req.DocumentContentBase64 != "" {
+		// Define upload directory (e.g., relative to your application root)
+		uploadDir := "uploads/organization_documents"
+		documentURL, err := utils.SaveBase64ToFile(req.DocumentContentBase64, req.DocumentName, uploadDir)
+		if err != nil {
+			return nil, err
+		}
+		document.Document = documentURL // Save the URL/path to the document field
+	}
+
 	if err := db.DB.Create(document).Error; err != nil {
 		return nil, err
 	}
@@ -33,14 +46,37 @@ func (s *OrganizationDocumentService) GetDocuments(page, limit int) ([]dtos.Orga
 	db.DB.Model(&models.OrganizationDocument{}).Count(&total)
 	offset := (page - 1) * limit
 
-	err := db.DB.Model(&models.OrganizationDocument{}).
-		Limit(limit).Offset(offset).Order("id DESC").Scan(&results).Error
+	// Join with document_types to get the document type name
+	query := `
+		SELECT 
+			od.id, od.astra_id, od.document_type_id, dt.document_type as document_type_name,
+			od.document_name, od.document as document_url, od.submitted,
+			od.created_at, od.updated_at
+		FROM organization_documents od
+		LEFT JOIN document_types dt ON od.document_type_id = dt.id
+		WHERE od.deleted_at IS NULL
+		ORDER BY od.id DESC
+		LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
 	return results, total, err
 }
 
 func (s *OrganizationDocumentService) GetDocument(id string) (*dtos.OrganizationDocumentResponse, error) {
 	var result dtos.OrganizationDocumentResponse
-	err := db.DB.Model(&models.OrganizationDocument{}).First(&result, id).Error
+	// Join with document_types to get the document type name
+	query := `
+		SELECT 
+			od.id, od.astra_id, od.document_type_id, dt.document_type as document_type_name,
+			od.document_name, od.document as document_url, od.submitted,
+			od.created_at, od.updated_at
+		FROM organization_documents od
+		LEFT JOIN document_types dt ON od.document_type_id = dt.id
+		WHERE od.id = ? AND od.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&result).Error
+
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +92,28 @@ func (s *OrganizationDocumentService) UpdateDocument(id string, req dtos.UpdateO
 		return err
 	}
 
+	// Handle file upload if new base64 content is provided
+	if req.DocumentContentBase64 != "" {
+		// Optionally, delete the old file first
+		if document.Document != "" {
+			utils.DeleteFile(document.Document) // Assuming DeleteFile handles relative paths
+		}
+		uploadDir := "uploads/organization_documents"
+		documentURL, err := utils.SaveBase64ToFile(req.DocumentContentBase64, req.DocumentName, uploadDir)
+		if err != nil {
+			return err
+		}
+		document.Document = documentURL
+	}
+
 	updates := map[string]interface{}{
-		"astra_id":      req.AstraID,
-		"document_type": req.DocumentType,
-		"document":      req.Document,
-		"submitted":     req.Submitted,
-		"updated_by":    userID,
+		"astra_id":         req.AstraID,
+		"document_type_id": req.DocumentTypeID,
+		"document_name":    req.DocumentName,
+		"submitted":        req.Submitted,
+		"updated_by":       userID,
+		// Only update document URL if a new file was uploaded
+		"document": document.Document,
 	}
 
 	return db.DB.Model(&document).Updates(updates).Error
@@ -71,6 +123,10 @@ func (s *OrganizationDocumentService) DeleteDocument(id string, userID uint64) e
 	var document models.OrganizationDocument
 	if err := db.DB.First(&document, id).Error; err != nil {
 		return err
+	}
+	// Delete the actual file from disk
+	if document.Document != "" {
+		utils.DeleteFile(document.Document)
 	}
 	return db.DB.Model(&document).Update("updated_by", userID).Delete(&document).Error
 }

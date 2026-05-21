@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -34,21 +36,56 @@ func (s *TrainingService) CreateTraining(req dtos.CreateTrainingRequest) (*model
 	return training, nil
 }
 
-func (s *TrainingService) GetTrainings() ([]dtos.TrainingResponse, int64, error) {
+func (s *TrainingService) GetTrainings(page, limit int, venue, topic, facilitator string) ([]dtos.TrainingResponse, int64, error) {
 	var results []dtos.TrainingResponse
 	var total int64
-	db.DB.Model(&models.Training{}).Count(&total)
 
-	query := `
+	offset := (page - 1) * limit
+
+	baseQuery := `
 		SELECT 
 			t.id, t.topic, t.description, t.venue, u.name AS facilitator, 
 			t.training_date, t.status, t.created_at, t.updated_at
 		FROM trainings t
 		LEFT JOIN users u ON t.training_user_id = u.id
-		WHERE t.deleted_at IS NULL
 	`
-	err := db.DB.Raw(query).Scan(&results).Error
-	return results, total, err
+
+	baseCountQuery := `
+		SELECT COUNT(*)
+		FROM trainings t
+		LEFT JOIN users u ON t.training_user_id = u.id
+	`
+
+	var args []interface{}
+	whereClauses := []string{"t.deleted_at IS NULL"}
+
+	if venue != "" {
+		whereClauses = append(whereClauses, "t.venue LIKE ?")
+		args = append(args, "%"+venue+"%")
+	}
+	if topic != "" {
+		whereClauses = append(whereClauses, "t.topic LIKE ?")
+		args = append(args, "%"+topic+"%")
+	}
+	if facilitator != "" {
+		whereClauses = append(whereClauses, "u.name LIKE ?")
+		args = append(args, "%"+facilitator+"%")
+	}
+
+	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	// Execute count query first to get filtered total
+	if err := db.DB.Raw(baseCountQuery+whereSql, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Execute main data query
+	fullQuery := baseQuery + whereSql + " ORDER BY t.training_date DESC LIMIT ? OFFSET ?"
+	if err := db.DB.Raw(fullQuery, append(args, limit, offset)...).Scan(&results).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return results, total, nil
 }
 
 func (s *TrainingService) GetTraining(id string) (*dtos.TrainingResponse, error) {

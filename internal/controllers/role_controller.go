@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rubewafula/edairy-go-26/internal/apperrors"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
@@ -34,6 +36,10 @@ func (c *RoleController) CreateRole(ctx *gin.Context) {
 
 	role, err := c.service.CreateRole(req)
 	if err != nil {
+		if errors.Is(err, apperrors.ErrRoleExists) {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

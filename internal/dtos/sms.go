@@ -96,6 +96,17 @@ type SMSCampaignResponse struct {
 	CreatedAt       time.Time  `json:"created_at"`
 }
 
+type UpdateSMSCampaignRequest struct {
+	CampaignCode string `json:"campaign_code"`
+	CampaignName string `json:"campaign_name"`
+	Description  string `json:"description"`
+	Message      string `json:"message"`
+	SMSGroupID   uint64 `json:"sms_group_id"`
+	ScheduledAt  string `json:"scheduled_at" validate:"omitempty,datetime"`
+	Status       string `json:"status" validate:"omitempty,oneof=draft pending approved sent failed"`
+	SiteID       uint64 `json:"site_id"`
+}
+
 type SMSCampaignRecipientResponse struct {
 	ID              uint64     `json:"id"`
 	RecipientName   string     `json:"recipient_name"`
@@ -112,4 +123,17 @@ type SMSQueueResponse struct {
 	Processed          string     `json:"processed"`
 	ProcessingAttempts int        `json:"processing_attempts"`
 	LastAttemptAt      *time.Time `json:"last_attempt_at"`
+}
+
+type CreateSMSCampaignRecipientRequest struct {
+	SMSCampaignID uint64 `json:"sms_campaign_id" binding:"required"`
+	RecipientName string `json:"recipient_name" binding:"required"`
+	PhoneNo       string `json:"phone_no" binding:"required"`
+	Status        string `json:"status"`
+}
+
+type UpdateSMSCampaignRecipientRequest struct {
+	RecipientName string `json:"recipient_name"`
+	PhoneNo       string `json:"phone_no"`
+	Status        string `json:"status"`
 }

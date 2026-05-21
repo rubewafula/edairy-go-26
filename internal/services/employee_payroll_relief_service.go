@@ -46,12 +46,12 @@ func (s *EmployeePayrollReliefService) GetPayrollReliefs(employeeID string, payr
 	query := `
 		SELECT 
 			epr.id, epr.employee_id, CONCAT(e.first_name, ' ', e.surname) as employee_name,
-			epr.relief_id, tr.name as relief_name,
+			epr.relief_id, tr.relief as relief_name,
 			epr.amount, epr.payroll_id,
 			epr.created_at, epr.updated_at, epr.created_by, epr.updated_by
 		FROM employee_payroll_reliefs epr
 		LEFT JOIN employees e ON epr.employee_id = e.id
-		LEFT JOIN tax_reliefs tr ON epr.relief_id = tr.id
+		LEFT JOIN payroll_reliefs tr ON epr.relief_id = tr.id
 		WHERE epr.deleted_at IS NULL 
 		AND (? = '' OR epr.employee_id = ?)
 		AND (? = '' OR epr.payroll_id = ?)
@@ -67,12 +67,12 @@ func (s *EmployeePayrollReliefService) GetPayrollRelief(id string) (*dtos.Employ
 	query := `
 		SELECT 
 			epr.id, epr.employee_id, CONCAT(e.first_name, ' ', e.surname) as employee_name,
-			epr.relief_id, tr.name as relief_name,
+			epr.relief_id, tr.relief as relief_name,
 			epr.amount, epr.payroll_id,
 			epr.created_at, epr.updated_at, epr.created_by, epr.updated_by
 		FROM employee_payroll_reliefs epr
 		LEFT JOIN employees e ON epr.employee_id = e.id
-		LEFT JOIN tax_reliefs tr ON epr.relief_id = tr.id
+		LEFT JOIN payroll_reliefs tr ON epr.relief_id = tr.id
 		WHERE epr.id = ? AND epr.deleted_at IS NULL
 		LIMIT 1
 	`

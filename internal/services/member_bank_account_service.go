@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -34,12 +36,13 @@ func (s *MemberBankAccountService) CreateAccount(req dtos.CreateMemberBankAccoun
 	return account, nil
 }
 
-func (s *MemberBankAccountService) GetAccounts() ([]dtos.MemberBankAccountResponse, int64, error) {
+func (s *MemberBankAccountService) GetAccounts(page, limit int, memberNo, firstName, lastName, bankName, accountNo string) ([]dtos.MemberBankAccountResponse, int64, error) {
 	var accounts []dtos.MemberBankAccountResponse
 	var total int64
-	db.DB.Model(&models.MemberBankAccount{}).Count(&total)
 
-	query := `
+	offset := (page - 1) * limit
+
+	baseQuery := `
 		SELECT 
 			mba.id, mba.member_id, m.member_no, m.first_name, m.last_name,
 			mba.bank_id, b.bank_name, mba.bank_branch_id,
@@ -48,10 +51,51 @@ func (s *MemberBankAccountService) GetAccounts() ([]dtos.MemberBankAccountRespon
 		FROM member_bank_accounts mba
 		LEFT JOIN member_registrations m ON mba.member_id = m.id
 		LEFT JOIN banks b ON mba.bank_id = b.id
-		WHERE mba.deleted_at IS NULL
 	`
-	err := db.DB.Raw(query).Scan(&accounts).Error
-	return accounts, total, err
+
+	baseCountQuery := `
+		SELECT COUNT(*)
+		FROM member_bank_accounts mba
+		LEFT JOIN member_registrations m ON mba.member_id = m.id
+		LEFT JOIN banks b ON mba.bank_id = b.id
+	`
+
+	var args []interface{}
+	whereClauses := []string{"mba.deleted_at IS NULL"}
+
+	if memberNo != "" {
+		whereClauses = append(whereClauses, "m.member_no LIKE ?")
+		args = append(args, "%"+memberNo+"%")
+	}
+	if firstName != "" {
+		whereClauses = append(whereClauses, "m.first_name LIKE ?")
+		args = append(args, "%"+firstName+"%")
+	}
+	if lastName != "" {
+		whereClauses = append(whereClauses, "m.last_name LIKE ?")
+		args = append(args, "%"+lastName+"%")
+	}
+	if bankName != "" {
+		whereClauses = append(whereClauses, "b.bank_name LIKE ?")
+		args = append(args, "%"+bankName+"%")
+	}
+	if accountNo != "" {
+		whereClauses = append(whereClauses, "mba.account_number LIKE ?")
+		args = append(args, "%"+accountNo+"%")
+	}
+
+	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	if err := db.DB.Raw(baseCountQuery+whereSql, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	fullQuery := baseQuery + whereSql + " ORDER BY mba.id DESC LIMIT ? OFFSET ?"
+	if err := db.DB.Raw(fullQuery, append(args, limit, offset)...).Scan(&accounts).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return accounts, total, nil
 }
 
 func (s *MemberBankAccountService) GetAccount(id string) (*dtos.MemberBankAccountResponse, error) {

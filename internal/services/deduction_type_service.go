@@ -37,12 +37,23 @@ func (s *DeductionTypeService) GetDeductionTypes(page, limit int) ([]dtos.Deduct
 	return results, total, err
 }
 
-func (s *DeductionTypeService) GetDeductionType(id string) (*models.DeductionType, error) {
-	var deductionType models.DeductionType
-	if err := db.DB.First(&deductionType, id).Error; err != nil {
-		return nil, err
+func (s *DeductionTypeService) GetDeductionType(id string) (*dtos.DeductionTypeResponse, error) {
+	var deductionTypeModel models.DeductionType
+	if err := db.DB.First(&deductionTypeModel, id).Error; err != nil {
+		return nil, err // gorm.ErrRecordNotFound will be returned here if not found
 	}
-	return &deductionType, nil
+
+	// Map model to DTO for snake_case JSON output
+	response := &dtos.DeductionTypeResponse{
+		ID:          deductionTypeModel.ID,
+		Code:        deductionTypeModel.Code,
+		Description: deductionTypeModel.Description,
+		Status:      deductionTypeModel.Status,
+		IsStatutory: deductionTypeModel.IsStatutory,
+		CreatedAt:   deductionTypeModel.CreatedAt,
+		UpdatedAt:   deductionTypeModel.UpdatedAt,
+	}
+	return response, nil
 }
 
 func (s *DeductionTypeService) UpdateDeductionType(id string, req dtos.UpdateDeductionTypeRequest) error {

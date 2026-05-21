@@ -10,7 +10,7 @@ type CreateSharePaymentRequest struct {
 	ReferenceNo     string  `json:"reference_no"`
 	Description     string  `json:"description"`
 	Status          string  `json:"status" validate:"omitempty,oneof=PENDING CONFIRMED FAILED REVERSED"`
-	TransactionDate string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate string  `json:"transaction_date" validate:"required"`
 	ApprovedBy      uint64  `json:"approved_by"`
 	DateApproved    string  `json:"date_approved"`
 }

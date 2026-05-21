@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -13,12 +14,12 @@ import (
 */
 
 type BaseModel struct {
-	ID        uint64         `gorm:"primaryKey;autoIncrement;column:id"`
-	CreatedAt time.Time      `gorm:"column:created_at"`
-	UpdatedAt time.Time      `gorm:"column:updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index;column:deleted_at"`
-	CreatedBy uint64         `gorm:"column:created_by"`
-	UpdatedBy uint64         `gorm:"column:updated_by"`
+	ID        uint64         `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	CreatedAt time.Time      `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index;column:deleted_at" json:"deleted_at,omitempty"`
+	CreatedBy uint64         `gorm:"column:created_by" json:"created_by,omitempty"`
+	UpdatedBy uint64         `gorm:"column:updated_by" json:"updated_by,omitempty"`
 }
 
 // System Models
@@ -26,19 +27,6 @@ type Installation struct {
 	BaseModel
 	InstallationDate time.Time `gorm:"column:installation_date"`
 	ExpiryDate       time.Time `gorm:"column:expiry_date"`
-}
-
-type ActivityLog struct {
-	BaseModel
-	LogName     string                 `gorm:"column:log_name"`
-	Description string                 `gorm:"column:description"`
-	SubjectType string                 `gorm:"index;column:subject_type"`
-	BatchUUID   string                 `gorm:"column:batch_uuid"`
-	SubjectID   uint64                 `gorm:"column:subject_id"`
-	CauserType  string                 `gorm:"column:causer_type"`
-	CauserID    uint64                 `gorm:"column:causer_id"`
-	Properties  map[string]interface{} `gorm:"column:properties;serializer:json"`
-	Event       string                 `gorm:"column:event"`
 }
 
 type License struct {
@@ -362,17 +350,17 @@ type OrganizationAddress struct {
 
 type OrganizationDocument struct {
 	BaseModel
-	AstraID      uint64 `gorm:"index;column:astra_id"`
-	DocumentType string `gorm:"column:document_type"`
-	Document     string `gorm:"type:text;column:document"`
-	Submitted    bool   `gorm:"column:submitted"`
+	AstraID        uint64 `gorm:"index;column:astra_id"`
+	DocumentTypeID uint64 `gorm:"column:document_type_id"`   // Corrected column name to match schema
+	DocumentName   string `gorm:"column:document_name"`      // New field for original file name
+	Document       string `gorm:"type:text;column:document"` // This will store the URL/path
+	Submitted      bool   `gorm:"column:submitted"`
 }
 
 type Bank struct {
 	BaseModel
-	Name        string `gorm:"column:name"`
-	SwiftCode   string `gorm:"column:swift_code"`
-	Description string `gorm:"column:description"`
+	BankName string `gorm:"column:bank_name"`
+	BankCode string `gorm:"column:bank_code"`
 }
 
 type BankBranch struct {
@@ -513,10 +501,21 @@ type Training struct {
 
 type TrainingSession struct {
 	BaseModel
-	TrainingID uint64 `gorm:"column:training_id"`
-	MemberID   uint64 `gorm:"column:member_id"`
-	Status     string `gorm:"column:status"`
-	Remarks    string `gorm:"column:remarks"`
+	TrainingID uint64 `gorm:"column:training_id" json:"training_id"`
+	Partner    string `gorm:"column:partner;not null" json:"partner"`
+
+	SessionStartTime time.Time `gorm:"column:session_start_time;not null" json:"session_start_time"`
+	SessionEndTime   time.Time `gorm:"column:session_end_time;not null" json:"session_end_time"`
+
+	Topic       string `gorm:"column:topic;not null" json:"topic"`
+	Description string `gorm:"column:description;not null" json:"description"`
+	Trainers    string `gorm:"column:trainers;not null" json:"trainers"`
+
+	Status string `gorm:"column:status" json:"status"`
+}
+
+func (TrainingSession) TableName() string {
+	return "training_sessions"
 }
 
 type TrainingAttendee struct {
@@ -542,4 +541,24 @@ type RouteCenter struct {
 
 func (RouteCenter) TableName() string {
 	return "route_centers"
+}
+
+type ActivityLog struct {
+	ID          uint64         `gorm:"column:id;primaryKey"`
+	LogName     *string        `gorm:"column:log_name"`
+	Description string         `gorm:"column:description"`
+	SubjectType *string        `gorm:"column:subject_type"`
+	BatchUUID   *string        `gorm:"column:batch_uuid"`
+	SubjectID   *uint64        `gorm:"column:subject_id"`
+	CauserType  *string        `gorm:"column:causer_type"`
+	CauserID    *uint64        `gorm:"column:causer_id"`
+	Properties  datatypes.JSON `gorm:"column:properties"`
+	CreatedAt   *time.Time     `gorm:"column:created_at"`
+	UpdatedAt   *time.Time     `gorm:"column:updated_at"`
+	Event       *string        `gorm:"column:event"`
+	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (ActivityLog) TableName() string {
+	return "activity_log"
 }

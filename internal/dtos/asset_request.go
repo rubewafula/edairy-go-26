@@ -10,13 +10,13 @@ type CreateAssetRequest struct {
 	VendorID                uint64  `json:"vendor_id"`
 	PurchaseCost            float64 `json:"purchase_cost" validate:"required,min=0"`
 	SalvageValue            float64 `json:"salvage_value"`
-	AcquisitionDate         string  `json:"acquisition_date" validate:"required,datetime"`
+	AcquisitionDate         string  `json:"acquisition_date" validate:"required"`
 	UsefulLifeYears         int     `json:"useful_life_years"`
 	DepreciationMethod      string  `json:"depreciation_method" validate:"omitempty,oneof=STRAIGHT_LINE DECLINING_BALANCE UNITS_OF_PRODUCTION"`
 	DepreciationRate        float64 `json:"depreciation_rate"`
 	AccumulatedDepreciation float64 `json:"accumulated_depreciation"`
 	BookValue               float64 `json:"book_value"`
-	WarrantyEndDate         string  `json:"warranty_end_date" validate:"omitempty,datetime"`
+	WarrantyEndDate         string  `json:"warranty_end_date" validate:"required"`
 	CurrentLocation         string  `json:"current_location" validate:"max=255"`
 	Status                  string  `json:"status" validate:"omitempty,oneof=ACTIVE MAINTENANCE DISPOSED WRITTEN_OFF"`
 	Loanable                bool    `json:"loanable"`
@@ -39,7 +39,7 @@ type UpdateAssetRequest struct {
 	DepreciationRate        float64 `json:"depreciation_rate"`
 	AccumulatedDepreciation float64 `json:"accumulated_depreciation"`
 	BookValue               float64 `json:"book_value"`
-	WarrantyEndDate         string  `json:"warranty_end_date" validate:"omitempty,datetime"`
+	WarrantyEndDate         string  `json:"warranty_end_date" validate:"required"`
 	CurrentLocation         string  `json:"current_location" validate:"max=255"`
 	Status                  string  `json:"status" validate:"omitempty,oneof=ACTIVE MAINTENANCE DISPOSED WRITTEN_OFF"`
 	Loanable                bool    `json:"loanable"`

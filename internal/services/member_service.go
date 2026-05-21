@@ -3,12 +3,14 @@ package services
 import (
 	"context"
 	"mime/multipart"
+	"strings"
 	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	models "github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"gorm.io/gorm"
 )
 
 type MemberService struct{}
@@ -20,28 +22,24 @@ func NewMemberService() *MemberService {
 // Create user
 func (s *MemberService) CreateMember(
 	ctx context.Context,
-	req dtos.CreateMemberRequest,
-	idFront *multipart.FileHeader,
-	idBack *multipart.FileHeader,
-	passport *multipart.FileHeader,
-) (*models.Member, error) {
+	req dtos.CreateMemberRequest) (*models.Member, error) {
 
 	memberNo := req.MemberNo
 	if memberNo == "" {
 		memberNo = utils.GenerateMemberNo()
 	}
 
-	idFrontPath, err := utils.SaveFile(idFront, "members")
+	idFrontPath, err := utils.SaveFile(req.IDFrontPhoto, "members")
 	if err != nil {
 		return nil, err
 	}
 
-	idBackPath, err := utils.SaveFile(idBack, "members")
+	idBackPath, err := utils.SaveFile(req.IDBackPhoto, "members")
 	if err != nil {
 		return nil, err
 	}
 
-	passportPath, err := utils.SaveFile(passport, "members")
+	passportPath, err := utils.SaveFile(req.PassportPhoto, "members")
 	if err != nil {
 		return nil, err
 	}
@@ -83,19 +81,100 @@ func (s *MemberService) CreateMember(
 }
 
 // Get all users
-func (s *MemberService) GetMembers() ([]models.Member, int64, error) {
-	var members []models.Member
+func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memberTypeID, routeID string) ([]dtos.MemberResponse, int64, error) {
+	var results []dtos.MemberResponse
 	var total int64
-	db.DB.Model(&models.Member{}).Count(&total)
-	err := db.DB.Find(&members).Error
-	return members, total, err
+
+	// Calculate offset for pagination
+	offset := (page - 1) * limit
+
+	// Base query for data
+	baseQuery := `
+		SELECT 
+			m.id, m.member_no, m.member_type_id, mt.name AS member_type_name,
+			m.first_name, m.last_name, m.other_names, m.route_id, r.route_name,
+			m.date_of_birth, m.id_no, m.gender, m.birth_city,
+			m.primary_phone, m.secondary_phone, m.email, m.number_of_cows,
+			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
+			m.tax_number, m.marital_status, m.title,
+			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.created_at, m.updated_at
+		FROM member_registrations m
+		LEFT JOIN member_types mt ON m.member_type_id = mt.id
+		LEFT JOIN routes r ON m.route_id = r.id
+	`
+	// Base query for count
+	baseCountQuery := `
+		SELECT COUNT(*)
+		FROM member_registrations m
+		LEFT JOIN member_types mt ON m.member_type_id = mt.id
+		LEFT JOIN routes r ON m.route_id = r.id
+	`
+
+	var args []interface{}
+
+	whereClauses := []string{"m.deleted_at IS NULL"}
+
+	if memberNo != "" {
+		whereClauses = append(whereClauses, "m.member_no LIKE ?")
+		args = append(args, "%"+memberNo+"%")
+	}
+	if primaryPhone != "" {
+		primaryPhone = utils.NormalizePhone(primaryPhone)
+		whereClauses = append(whereClauses, "m.primary_phone LIKE ?")
+		args = append(args, "%"+primaryPhone+"%")
+	}
+	if memberTypeID != "" {
+		whereClauses = append(whereClauses, "m.member_type_id = ?")
+		args = append(args, memberTypeID)
+	}
+	if routeID != "" {
+		whereClauses = append(whereClauses, "m.route_id = ?")
+		args = append(args, routeID)
+	}
+
+	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	// Execute count query first to get filtered total
+	if err := db.DB.Raw(baseCountQuery+whereSql, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Execute main data query
+	fullQuery := baseQuery + whereSql + " ORDER BY m.id DESC LIMIT ? OFFSET ?"
+	if err := db.DB.Raw(fullQuery, append(args, limit, offset)...).Scan(&results).Error; err != nil {
+		return nil, 0, err
+	}
+	return results, total, nil
 }
 
 // Get single user
-func (s *MemberService) GetMember(id string) (models.Member, error) {
-	var member models.Member
-	err := db.DB.First(&member, id).Error
-	return member, err
+func (s *MemberService) GetMember(id string) (*dtos.MemberResponse, error) {
+	var result dtos.MemberResponse
+	query := `
+		SELECT 
+			m.id, m.member_no, m.member_type_id, mt.name AS member_type_name,
+			m.first_name, m.last_name, m.other_names, m.route_id, r.route_name,
+			m.date_of_birth, m.id_no, m.gender, m.birth_city,
+			m.primary_phone, m.secondary_phone, m.email, m.number_of_cows,
+			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
+			m.tax_number, m.marital_status, m.title,
+			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.created_at, m.updated_at
+		FROM member_registrations m
+		LEFT JOIN member_types mt ON m.member_type_id = mt.id
+		LEFT JOIN routes r ON m.route_id = r.id
+		WHERE m.id = ? AND m.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	if result.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &result, nil
 }
 
 func (s *MemberService) UpdateMember(

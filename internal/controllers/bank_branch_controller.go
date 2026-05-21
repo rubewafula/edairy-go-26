@@ -37,7 +37,8 @@ func (c *BankBranchController) CreateBankBranch(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, branch)
+	response, _ := c.service.GetBankBranch(utils.Uint64ToString(branch.ID))
+	ctx.JSON(http.StatusCreated, response)
 }
 
 func (c *BankBranchController) GetBankBranches(ctx *gin.Context) {

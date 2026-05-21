@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -37,11 +38,30 @@ func (c *MemberBankAccountController) CreateAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, account)
+	response, _ := c.service.GetAccount(utils.Uint64ToString(account.ID))
+	ctx.JSON(http.StatusCreated, response)
 }
 
 func (c *MemberBankAccountController) GetAccounts(ctx *gin.Context) {
-	accounts, total, err := c.service.GetAccounts()
+
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	memberNo := ctx.Query("member_no")
+	firstName := ctx.Query("first_name")
+	lastName := ctx.Query("last_name")
+	bankName := ctx.Query("bank_name")
+	accountNo := ctx.Query("account_number")
+
+	accounts, total, err := c.service.GetAccounts(
+		page,
+		limit,
+		memberNo,
+		firstName,
+		lastName,
+		bankName,
+		accountNo,
+	)
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

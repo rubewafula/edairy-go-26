@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -19,10 +21,21 @@ func (s *AssetAssignmentService) CreateAssignment(req dtos.CreateAssetAssignment
 	if status == "" {
 		status = "ASSIGNED"
 	}
+
+	var returnedAt *time.Time
+
+	if req.ReturnedAt != "" {
+		t := utils.ParseDate(req.ReturnedAt)
+		returnedAt = &t
+	} else {
+		returnedAt = nil
+	}
+
 	assignment := &models.AssetAssignment{
 		AssetID:        req.AssetID,
 		AssignedToID:   req.AssignedToID,
 		AssignedAt:     utils.ParseDate(req.AssignedAt),
+		ReturnedAt:     returnedAt,
 		ConditionNotes: req.ConditionNotes,
 		Status:         status,
 	}
@@ -33,10 +46,12 @@ func (s *AssetAssignmentService) CreateAssignment(req dtos.CreateAssetAssignment
 	return assignment, nil
 }
 
-func (s *AssetAssignmentService) GetAssignments() ([]dtos.AssetAssignmentResponse, int64, error) {
+func (s *AssetAssignmentService) GetAssignments(page, limit int) ([]dtos.AssetAssignmentResponse, int64, error) {
 	var results []dtos.AssetAssignmentResponse
 	var total int64
 	db.DB.Model(&models.AssetAssignment{}).Count(&total)
+
+	offset := (page - 1) * limit
 
 	query := `
 		SELECT 
@@ -48,8 +63,10 @@ func (s *AssetAssignmentService) GetAssignments() ([]dtos.AssetAssignmentRespons
 		LEFT JOIN fixed_assets fa ON aa.asset_id = fa.id
 		LEFT JOIN employees e ON aa.assigned_to_id = e.id
 		WHERE aa.deleted_at IS NULL
+		ORDER BY aa.id DESC
+		LIMIT ? OFFSET ?
 	`
-	err := db.DB.Raw(query).Scan(&results).Error
+	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
 	return results, total, err
 }
 
@@ -87,7 +104,8 @@ func (s *AssetAssignmentService) UpdateAssignment(id string, req dtos.UpdateAsse
 	assignment.AssignedToID = req.AssignedToID
 	assignment.AssignedAt = utils.ParseDate(req.AssignedAt)
 	if req.ReturnedAt != "" {
-		assignment.ReturnedAt = utils.ParseDate(req.ReturnedAt)
+		t := utils.ParseDate(req.ReturnedAt)
+		assignment.ReturnedAt = &t
 	}
 	assignment.ConditionNotes = req.ConditionNotes
 	assignment.Status = req.Status

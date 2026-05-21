@@ -5,18 +5,21 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/controllers"
 )
 
+// registerMemberRoutes registers the API routes for member-related functionalities.
 func registerMemberRoutes(api *gin.RouterGroup) {
 	memberController := controllers.NewMemberController()
 	memberBankAccountController := controllers.NewMemberBankAccountController()
 	memberDependantController := controllers.NewMemberDependantController()
 	memberTypeController := controllers.NewMemberTypeController()
 
-	api.POST("/member/create", memberController.CreateMember)
+	// Member Registration Routes
+	api.POST("/members", memberController.CreateMember)
 	api.GET("/members", memberController.GetMembers)
-	api.GET("/member/:id", memberController.GetMember)
-	api.PUT("/member/:id", memberController.UpdateMember)
-	api.DELETE("/member/:id", memberController.DeleteMember)
+	api.GET("/members/:id", memberController.GetMember)
+	api.PUT("/members/:id", memberController.UpdateMember)
+	api.DELETE("/members/:id", memberController.DeleteMember)
 
+	// Member Type Routes
 	api.POST("/member-types", memberTypeController.CreateMemberType)
 	api.GET("/member-types", memberTypeController.GetMemberTypes)
 	api.GET("/member-types/:id", memberTypeController.GetMemberType)
@@ -34,4 +37,5 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/member-dependants/:id", memberDependantController.GetDependant)
 	api.PUT("/member-dependants/:id", memberDependantController.UpdateDependant)
 	api.DELETE("/member-dependants/:id", memberDependantController.DeleteDependant)
+
 }

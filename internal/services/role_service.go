@@ -1,6 +1,9 @@
 package services
 
 import (
+	"log"
+
+	"github.com/rubewafula/edairy-go-26/internal/apperrors"
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -14,14 +17,47 @@ func NewRoleService() *RoleService {
 }
 
 func (s *RoleService) CreateRole(req dtos.CreateRoleRequest) (*models.Role, error) {
+	var count int64
+	err := db.DB.Model(&models.Role{}).
+		Where("name = ? AND guard_name = ? AND deleted_at IS NULL", req.Name, req.GuardName).
+		Count(&count).Error
+
+	if err != nil {
+		log.Printf("[RoleService] Found error trying to query duplicate role: %s", err.Error())
+		return nil, err
+	}
+
+	if count > 0 {
+		return nil, apperrors.ErrRoleExists
+	}
+
 	role := &models.Role{
 		Name:      req.Name,
 		GuardName: req.GuardName,
 	}
 
-	if err := db.DB.Create(role).Error; err != nil {
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(role).Error; err != nil {
+			return err
+		}
+
+		if len(req.PermissionIDs) > 0 {
+			var permissions []models.Permission
+			if err := tx.Where("id IN ?", req.PermissionIDs).Find(&permissions).Error; err != nil {
+				return err
+			}
+
+			if err := tx.Model(role).Association("Permissions").Append(permissions); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
 		return nil, err
 	}
+
 	return role, nil
 }
 
@@ -113,10 +149,38 @@ func (s *RoleService) UpdateRole(id string, req dtos.UpdateRoleRequest) error {
 		return err
 	}
 
-	role.Name = req.Name
-	role.GuardName = req.GuardName
+	// Check for duplicate role name/guard (excluding the current role)
+	var count int64
+	err := db.DB.Model(&models.Role{}).
+		Where("name = ? AND guard_name = ? AND id != ? AND deleted_at IS NULL", req.Name, req.GuardName, id).
+		Count(&count).Error
 
-	return db.DB.Save(&role).Error
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return apperrors.ErrRoleExists
+	}
+
+	return db.DB.Transaction(func(tx *gorm.DB) error {
+		role.Name = req.Name
+		role.GuardName = req.GuardName
+
+		if err := tx.Save(&role).Error; err != nil {
+			return err
+		}
+
+		var permissions []models.Permission
+		if len(req.PermissionIDs) > 0 {
+			if err := tx.Where("id IN ?", req.PermissionIDs).Find(&permissions).Error; err != nil {
+				return err
+			}
+		}
+
+		// Replace clears existing permission associations and assigns the new list
+		return tx.Model(&role).Association("Permissions").Replace(permissions)
+	})
 }
 
 func (s *RoleService) DeleteRole(id string) error {

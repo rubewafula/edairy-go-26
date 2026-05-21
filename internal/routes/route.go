@@ -70,6 +70,7 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	registerOrgRoutes(api)
 	registerAssetRoutes(api)
 	registerTrainingRoutes(api)
+	registerLivestockRoutes(api)
 	registerSMSRoutes(api)
 	registerMasterDataRoutes(api)
 

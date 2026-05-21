@@ -11,6 +11,8 @@ func registerMasterDataRoutes(api *gin.RouterGroup) {
 	deductionPricingRuleController := controllers.NewDeductionPricingRuleController()
 	paymentModeController := controllers.NewPaymentModeController()
 
+	activityLogController := controllers.NewActivityLogController()
+
 	// Cattle Breed Routes
 	api.POST("/cattle-breeds", cattleBreedController.CreateCattleBreed)
 	api.GET("/cattle-breeds", cattleBreedController.GetCattleBreeds)
@@ -38,4 +40,9 @@ func registerMasterDataRoutes(api *gin.RouterGroup) {
 	api.GET("/payment-modes/:id", paymentModeController.GetPaymentMode)
 	api.PUT("/payment-modes/:id", paymentModeController.UpdatePaymentMode)
 	api.DELETE("/payment-modes/:id", paymentModeController.DeletePaymentMode)
+
+	// Activity Log Routes
+	api.GET("/activity-logs", activityLogController.GetLogs)
+	api.GET("/activity-logs/:id", activityLogController.GetLog)
+
 }

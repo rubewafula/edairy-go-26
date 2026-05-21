@@ -4,6 +4,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -14,15 +15,16 @@ func NewTrainingSessionService() *TrainingSessionService {
 }
 
 func (s *TrainingSessionService) CreateSession(req dtos.CreateTrainingSessionRequest) (*models.TrainingSession, error) {
-	status := req.Status
-	if status == "" {
-		status = "INVITED"
-	}
+
 	session := &models.TrainingSession{
-		TrainingID: req.TrainingID,
-		MemberID:   req.MemberID,
-		Status:     status,
-		Remarks:    req.Remarks,
+		TrainingID:       req.TrainingID,
+		Partner:          req.Partner,
+		SessionStartTime: utils.ParseDate(req.SessionStartTime),
+		SessionEndTime:   utils.ParseDate(req.SessionEndTime),
+		Topic:            req.Topic,
+		Description:      req.Description,
+		Trainers:         req.Trainers,
+		Status:           "ACTIVE",
 	}
 
 	if err := db.DB.Create(session).Error; err != nil {
@@ -88,9 +90,13 @@ func (s *TrainingSessionService) UpdateSession(id string, req dtos.UpdateTrainin
 	}
 
 	session.TrainingID = req.TrainingID
-	session.MemberID = req.MemberID
-	session.Status = req.Status
-	session.Remarks = req.Remarks
+	session.Partner = req.Partner
+	session.SessionStartTime = utils.ParseDate(req.SessionStartTime)
+	session.SessionEndTime = utils.ParseDate(req.SessionEndTime)
+	session.Topic = req.Topic
+	session.Description = req.Description
+	session.Trainers = req.Trainers
+	session.Status = "ACTIVE"
 
 	return db.DB.Save(&session).Error
 }

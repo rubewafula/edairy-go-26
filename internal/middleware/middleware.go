@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log"
 	"strconv"
 	"strings"
@@ -8,6 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+type contextKey string
+
+const UserContextKey contextKey = "auth_user"
+
+type AuthUser struct {
+	UserID      uint64
+	Permissions []string
+	Roles       []string
+}
 
 func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -64,6 +75,15 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 			}
 		}
 		c.Set("roles", roles)
+
+		authUser := AuthUser{
+			UserID:      uint64(userID),
+			Permissions: permissions,
+			Roles:       roles,
+		}
+
+		ctx := context.WithValue(c.Request.Context(), UserContextKey, authUser)
+		c.Request = c.Request.WithContext(ctx)
 
 		c.Next()
 	}

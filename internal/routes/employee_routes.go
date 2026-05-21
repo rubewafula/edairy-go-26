@@ -13,6 +13,8 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	employeeLeaveApplicationController := controllers.NewEmployeeLeaveApplicationController()
 	employeeLeaveAssignmentController := controllers.NewEmployeeLeaveAssignmentController()
 	employeePayrollController := controllers.NewEmployeePayrollController()
+	documentTypeController := controllers.NewDocumentTypeController()
+	employeeReliefController := controllers.NewEmployeeReliefController()
 	deductionTypeController := controllers.NewEmployeeDeductionTypeController()
 	employeeQualificationController := controllers.NewEmployeeQualificationController()
 	employeeBankAccountController := controllers.NewEmployeeBankAccountController()
@@ -62,6 +64,13 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.PUT("/employee-documents/:id", employeeDocumentController.UpdateEmployeeDocument)
 	api.DELETE("/employee-documents/:id", employeeDocumentController.DeleteEmployeeDocument)
 
+	// Document Types
+	api.POST("/document-types", documentTypeController.Create)
+	api.GET("/document-types", documentTypeController.List)
+	api.GET("/document-types/:id", documentTypeController.Get)
+	api.PUT("/document-types/:id", documentTypeController.Update)
+	api.DELETE("/document-types/:id", documentTypeController.Delete)
+
 	// Employee Leave Types
 	api.POST("/employee-leave-types", employeeLeaveTypeController.CreateEmployeeLeaveType)
 	api.GET("/employee-leave-types", employeeLeaveTypeController.GetEmployeeLeaveTypes)
@@ -89,6 +98,13 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.GET("/employee-payrolls/:id", employeePayrollController.GetEmployeePayroll)
 	api.PUT("/employee-payrolls/:id", employeePayrollController.UpdateEmployeePayroll)
 	api.DELETE("/employee-payrolls/:id", employeePayrollController.DeleteEmployeePayroll)
+
+	// Employee Reliefs
+	api.POST("/employee-reliefs", employeeReliefController.Create)
+	api.GET("/employee-reliefs", employeeReliefController.List)
+	api.GET("/employee-reliefs/:id", employeeReliefController.Get)
+	api.PUT("/employee-reliefs/:id", employeeReliefController.Update)
+	api.DELETE("/employee-reliefs/:id", employeeReliefController.Delete)
 
 	// Employee Deduction Types
 	api.POST("/employee-deduction-types", deductionTypeController.CreateDeductionType)

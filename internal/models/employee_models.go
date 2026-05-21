@@ -12,37 +12,37 @@ import (
 
 type Employee struct {
 	BaseModel
-	UserID            uint64    `gorm:"column:user_id"`
-	Surname           string    `gorm:"column:surname"`
-	FirstName         string    `gorm:"column:first_name"`
-	MiddleName        string    `gorm:"column:middle_name"`
-	EmployeeNo        string    `gorm:"uniqueIndex;column:employee_no"`
-	IDNo              string    `gorm:"uniqueIndex;column:id_no"`
-	KraPin            string    `gorm:"column:kra_pin"`
-	NssfNo            string    `gorm:"column:nssf_no"`
-	NhifNo            string    `gorm:"column:nhif_no"`
-	Gender            string    `gorm:"column:gender"`
-	DateOfBirth       time.Time `gorm:"column:date_of_birth"`
-	Phone             string    `gorm:"column:phone_number"`
-	Email             string    `gorm:"column:email_address"`
-	JobPositionID     uint64    `gorm:"column:job_position_id"`
-	Status            int       `gorm:"column:status"`
-	Title             string    `gorm:"column:title"`
-	PassportNo        string    `gorm:"column:passport_no"`
-	Town              string    `gorm:"column:town"`
-	SiteID            uint64    `gorm:"column:site_id"`
-	SalesSummary      string    `gorm:"column:sales_summary"`
-	MaritalStatus     string    `gorm:"column:marital_status"`
-	Religion          string    `gorm:"column:religion"`
-	Disabled          bool      `gorm:"column:disabled"`
-	StoreID           uint64    `gorm:"column:store_id"`
-	PostalAddress     string    `gorm:"column:postal_address"`
-	PostalCode        string    `gorm:"column:postal_code"`
-	BirthCity         string    `gorm:"column:birth_city"`
-	NextOfKinFullName string    `gorm:"column:next_of_kin_full_name"`
-	NextOfKinPhone    string    `gorm:"column:next_of_kin_phone"`
-	PassportPhoto     string    `gorm:"column:passport_photo"`
-	IdFrontPhoto      string    `gorm:"column:id_front_photo"`
+	UserID            uint64    `gorm:"column:user_id" json:"user_id"`
+	Surname           string    `gorm:"column:surname" json:"surname"`
+	FirstName         string    `gorm:"column:first_name" json:"first_name"`
+	MiddleName        string    `gorm:"column:middle_name" json:"middle_name"`
+	EmployeeNo        string    `gorm:"uniqueIndex;column:employee_no" json:"employee_no"`
+	IDNo              string    `gorm:"uniqueIndex;column:id_no" json:"id_no"`
+	KraPin            string    `gorm:"column:kra_pin" json:"kra_pin"`
+	NssfNo            string    `gorm:"column:nssf_no" json:"nssf_no"`
+	NhifNo            string    `gorm:"column:nhif_no" json:"nhif_no"`
+	Gender            string    `gorm:"column:gender" json:"gender"`
+	DateOfBirth       time.Time `gorm:"column:date_of_birth" json:"date_of_birth"`
+	Phone             string    `gorm:"column:phone_number" json:"phone"`
+	Email             string    `gorm:"column:email_address" json:"email"`
+	JobPositionID     uint64    `gorm:"column:job_position_id" json:"job_position_id"`
+	Status            int       `gorm:"column:status" json:"status"`
+	Title             string    `gorm:"column:title" json:"title"`
+	PassportNo        string    `gorm:"column:passport_no" json:"passport_no"`
+	Town              string    `gorm:"column:town" json:"town"`
+	SiteID            uint64    `gorm:"column:site_id" json:"site_id"`
+	SalesSummary      string    `gorm:"column:sales_summary" json:"sales_summary"`
+	MaritalStatus     string    `gorm:"column:marital_status" json:"marital_status"`
+	Religion          string    `gorm:"column:religion" json:"religion"`
+	Disabled          bool      `gorm:"column:disabled" json:"disabled"`
+	StoreID           uint64    `gorm:"column:store_id" json:"store_id"`
+	PostalAddress     string    `gorm:"column:postal_address" json:"postal_address"`
+	PostalCode        string    `gorm:"column:postal_code" json:"postal_code"`
+	BirthCity         string    `gorm:"column:birth_city" json:"birth_city"`
+	NextOfKinFullName string    `gorm:"column:next_of_kin_full_name" json:"next_of_kin_full_name"`
+	NextOfKinPhone    string    `gorm:"column:next_of_kin_phone" json:"next_of_kin_phone"`
+	PassportPhoto     string    `gorm:"column:passport_photo" json:"passport_photo"`
+	IdFrontPhoto      string    `gorm:"column:id_front_photo" json:"id_front_photo"`
 }
 
 type EmployeeDetail struct {
@@ -68,9 +68,9 @@ type EmployeeBenefit struct {
 
 type EmployeeDeductionType struct {
 	BaseModel
-	Name        string `gorm:"column:name"`
-	Description string `gorm:"column:description"`
-	IsStatutory bool   `gorm:"column:is_statutory"`
+	Name        string `gorm:"column:name" json:"name"`
+	Description string `gorm:"column:description" json:"description"`
+	IsStatutory bool   `gorm:"column:is_statutory" json:"is_statutory"`
 }
 
 type EmployeePayrollBenefit struct {
@@ -196,9 +196,9 @@ type EmployeeLeaveApplication struct {
 
 type EmployeeLeaveAssignment struct {
 	BaseModel
-	EmployeeID         uint64 `gorm:"index;column:employee_id"`
-	LeaveApplicationID uint64 `gorm:"index;column:leave_application_id"`
-	RelieverID         uint64 `gorm:"column:reliever_id"`
+	EmployeeID         uint64 `gorm:"index;column:employee_id" json:"employee_id"`
+	LeaveApplicationID uint64 `gorm:"index;column:leave_application_id" json:"leave_application_id"`
+	RelieverID         uint64 `gorm:"column:reliever_id" json:"reliever_id"`
 }
 
 type EmployeeLeaveType struct {
@@ -211,9 +211,9 @@ type EmployeeLeaveType struct {
 
 type EmployeeRelief struct {
 	BaseModel
-	EmployeeID uint64 `gorm:"index;column:employee_id"`
-	ReliefID   uint64 `gorm:"index;column:relief_id"`
-	Status     string `gorm:"column:status"`
+	EmployeeID uint64 `gorm:"index;column:employee_id" json:"employee_id"`
+	ReliefID   uint64 `gorm:"index;column:relief_id" json:"relief_id"`
+	Status     string `gorm:"column:status" json:"status"`
 }
 
 type EmployeePayroll struct { // Renamed from Payroll to avoid conflict and represent the header
@@ -341,4 +341,14 @@ type TaxRelief struct {
 	Code        string `gorm:"uniqueIndex;column:code"`
 	Name        string `gorm:"column:name"`
 	Description string `gorm:"type:text;column:description"`
+}
+
+type DocumentType struct {
+	BaseModel
+	DocumentType string `gorm:"column:document_type" json:"document_type"`
+	Description  string `gorm:"column:description" json:"description"`
+}
+
+func (DocumentType) TableName() string {
+	return "document_types"
 }

@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
 	validator "github.com/rubewafula/edairy-go-26/internal/validators"
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,31 +27,25 @@ func NewMemberController() *MemberController {
 // POST /users
 func (c *MemberController) CreateMember(ctx *gin.Context) {
 
+	log.Printf("Received Content-Type: %s", ctx.ContentType())
 	var req dtos.CreateMemberRequest
 
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBind(&req); err != nil {
+		log.Printf("Create Member Binding error: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+
+		log.Printf("Create member, Validation error: %s", err.Error())
 		ctx.JSON(422, gin.H{
 			"error": utils.FormatValidationError(err),
 		})
 		return
 	}
 
-	idFront, _ := ctx.FormFile("id_front_photo")
-	idBack, _ := ctx.FormFile("id_back_photo")
-	passport, _ := ctx.FormFile("passport_photo")
-
-	member, err := c.service.CreateMember(
-		ctx.Request.Context(),
-		req,
-		idFront,
-		idBack,
-		passport,
-	)
+	member, err := c.service.CreateMember(ctx.Request.Context(), req)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -58,8 +55,24 @@ func (c *MemberController) CreateMember(ctx *gin.Context) {
 }
 
 // GET /users
+// GET /members
 func (c *MemberController) GetMembers(ctx *gin.Context) {
-	members, total, err := c.service.GetMembers()
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	memberNo := ctx.Query("member_no")
+	primaryPhone := ctx.Query("primary_phone")
+	memberTypeID := ctx.Query("member_type_id")
+	routeID := ctx.Query("route_id")
+
+	members, total, err := c.service.GetMembers(
+		page,
+		limit,
+		memberNo,
+		primaryPhone,
+		memberTypeID,
+		routeID)
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -68,11 +81,15 @@ func (c *MemberController) GetMembers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": members, "total": total})
 }
 
-// GET /users/:id
+// GET /members/:id
 func (c *MemberController) GetMember(ctx *gin.Context) {
 	member, err := c.service.GetMember(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -82,7 +99,7 @@ func (c *MemberController) GetMember(ctx *gin.Context) {
 func (c *MemberController) UpdateMember(ctx *gin.Context) {
 	var req dtos.UpdateMemberRequest
 
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

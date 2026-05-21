@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,11 +24,13 @@ func NewAssetController() *AssetController {
 func (c *AssetController) CreateAsset(ctx *gin.Context) {
 	var req dtos.CreateAssetRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Println("Found error trying to validate asset: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Println("Found error trying to validate Struct: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}

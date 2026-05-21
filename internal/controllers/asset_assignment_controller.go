@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -37,11 +38,16 @@ func (c *AssetAssignmentController) CreateAssignment(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, assignment)
+
+	response, _ := c.service.GetAssignment(utils.Uint64ToString(assignment.ID))
+	ctx.JSON(http.StatusCreated, response)
 }
 
 func (c *AssetAssignmentController) GetAssignments(ctx *gin.Context) {
-	assignments, total, err := c.service.GetAssignments()
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	assignments, total, err := c.service.GetAssignments(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

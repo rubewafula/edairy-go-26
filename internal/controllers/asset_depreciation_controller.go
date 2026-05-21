@@ -40,6 +40,26 @@ func (c *AssetDepreciationController) CreateEntry(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, entry)
 }
 
+func (c *AssetDepreciationController) UpdateEntry(ctx *gin.Context) {
+	var req dtos.UpdateAssetDepreciationRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := validator.Validate.Struct(req); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
+		return
+	}
+
+	entry, err := c.service.UpdateEntry(ctx.Param("id"), req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, entry)
+}
+
 func (c *AssetDepreciationController) GetEntries(ctx *gin.Context) {
 	entries, total, err := c.service.GetEntries()
 	if err != nil {

@@ -1,6 +1,8 @@
 package services
 
 import (
+	"log"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -39,6 +41,7 @@ func (s *AssetService) CreateAsset(req dtos.CreateAssetRequest) (*models.Asset, 
 	}
 
 	if err := db.DB.Create(asset).Error; err != nil {
+		log.Println("Found error trying to created asset: %s", err.Error())
 		return nil, err
 	}
 	return asset, nil

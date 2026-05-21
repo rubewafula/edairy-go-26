@@ -37,12 +37,12 @@ type AccountSubAccount struct {
 
 type Transaction struct {
 	BaseModel
-	AccountID   uint64    `gorm:"index;column:account_id"`
-	Amount      float64   `gorm:"column:amount"`
-	Type        string    `gorm:"column:type"` // debit/credit
-	Reference   string    `gorm:"uniqueIndex;column:reference"`
-	Description string    `gorm:"column:description"`
-	Date        time.Time `gorm:"index;column:date"`
+	Reference       string    `gorm:"index;column:reference"`
+	TransactionName string    `gorm:"column:transaction_name"`
+	TransactionType string    `gorm:"column:transaction_type"`
+	TransactionDate time.Time `gorm:"index;column:transaction_date"`
+	Description     string    `gorm:"column:description"`
+	Status          string    `gorm:"index;column:status"`
 }
 
 type LedgerEntry struct {
@@ -101,4 +101,33 @@ type WalletWithdrawal struct {
 	Status         string `gorm:"column:status"`
 	LoanID         uint64 `gorm:"index;column:loan_id"`
 	MemberID       uint64 `gorm:"index;column:member_id"`
+}
+
+type TransactionPostingRule struct {
+	BaseModel
+	TransactionType    string  `gorm:"column:transaction_type;not null"`
+	DebitAccountID     uint64  `gorm:"column:debit_account_id;not null"`
+	DebitSubAccountID  *uint64 `gorm:"column:debit_sub_account_id"`
+	CreditAccountID    uint64  `gorm:"column:credit_account_id;not null"`
+	CreditSubAccountID *uint64 `gorm:"column:credit_sub_account_id"`
+	Description        string  `gorm:"column:description"`
+}
+
+func (TransactionPostingRule) TableName() string {
+	return "transaction_posting_rules"
+}
+
+type GeneralLedgerEntry struct {
+	BaseModel
+	TransactionID   uint64    `gorm:"column:transaction_id;not null;index"`
+	AccountID       uint64    `gorm:"column:account_id;not null;index"`
+	SubAccountID    *uint64   `gorm:"column:sub_account_id;index"`
+	Debit           float64   `gorm:"column:debit;type:decimal(10,2);not null;default:0.00"`
+	Credit          float64   `gorm:"column:credit;type:decimal(10,2);not null;default:0.00"`
+	TransactionDate time.Time `gorm:"column:transaction_date;not null"`
+	Description     string    `gorm:"column:description"`
+}
+
+func (GeneralLedgerEntry) TableName() string {
+	return "general_ledger_entries"
 }

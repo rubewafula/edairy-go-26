@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -32,12 +34,13 @@ func (s *TransportRateService) CreateTransportRate(req dtos.CreateTransportRateR
 	return rate, nil
 }
 
-func (s *TransportRateService) GetTransportRates() ([]dtos.TransportRateResponse, int64, error) {
+func (s *TransportRateService) GetTransportRates(page, limit int, transporterNo, routeID, memberNo string) ([]dtos.TransportRateResponse, int64, error) {
 	var results []dtos.TransportRateResponse
 	var total int64
-	db.DB.Model(&models.TransportRate{}).Count(&total)
 
-	query := `
+	offset := (page - 1) * limit
+
+	baseQuery := `
 		SELECT 
 			tr.id, m.member_no, m.first_name AS member_first_name, m.last_name AS member_last_name,
 			r.route_name,
@@ -48,10 +51,44 @@ func (s *TransportRateService) GetTransportRates() ([]dtos.TransportRateResponse
 		LEFT JOIN member_registrations m ON tr.member_id = m.id
 		LEFT JOIN transporters t ON tr.transporter_id = t.id
 		LEFT JOIN routes r ON tr.route_id = r.id
-		WHERE tr.deleted_at IS NULL
 	`
-	err := db.DB.Raw(query).Scan(&results).Error
-	return results, total, err
+
+	baseCountQuery := `
+		SELECT COUNT(*)
+		FROM transport_rates tr
+		LEFT JOIN member_registrations m ON tr.member_id = m.id
+		LEFT JOIN transporters t ON tr.transporter_id = t.id
+		LEFT JOIN routes r ON tr.route_id = r.id
+	`
+
+	var args []interface{}
+	whereClauses := []string{"tr.deleted_at IS NULL"}
+
+	if transporterNo != "" {
+		whereClauses = append(whereClauses, "t.transporter_no LIKE ?")
+		args = append(args, "%"+transporterNo+"%")
+	}
+	if routeID != "" {
+		whereClauses = append(whereClauses, "tr.route_id = ?")
+		args = append(args, routeID)
+	}
+	if memberNo != "" {
+		whereClauses = append(whereClauses, "m.member_no LIKE ?")
+		args = append(args, "%"+memberNo+"%")
+	}
+
+	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	if err := db.DB.Raw(baseCountQuery+whereSql, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	fullQuery := baseQuery + whereSql + " ORDER BY tr.id DESC LIMIT ? OFFSET ?"
+	if err := db.DB.Raw(fullQuery, append(args, limit, offset)...).Scan(&results).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return results, total, nil
 }
 
 func (s *TransportRateService) GetTransportRate(id string) (*dtos.TransportRateResponse, error) {

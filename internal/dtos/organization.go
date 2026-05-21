@@ -39,45 +39,32 @@ type OrganizationAddressResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// OrganizationBank DTOs
-type CreateOrganizationBankRequest struct {
-	Name string `json:"name" validate:"required"`
-}
-
-type UpdateOrganizationBankRequest struct {
-	Name string `json:"name" validate:"required"`
-}
-
-type OrganizationBankResponse struct {
-	ID        uint64    `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
 // OrganizationDocument DTOs
 type CreateOrganizationDocumentRequest struct {
-	AstraID      uint64 `json:"astra_id"`
-	DocumentType string `json:"document_type" validate:"required"`
-	Document     string `json:"document" validate:"required"`
-	Submitted    bool   `json:"submitted"`
+	AstraID               uint64 `json:"astra_id"`
+	DocumentTypeID        uint64 `json:"document_type_id" validate:"required"`        // This is the ID of the document type
+	DocumentName          string `json:"document_name" validate:"required"`           // Original file name
+	DocumentContentBase64 string `json:"document_content_base64" validate:"required"` // Base64 encoded file content
+	Submitted             bool   `json:"submitted"`
 }
 
 type UpdateOrganizationDocumentRequest struct {
-	AstraID      uint64 `json:"astra_id"`
-	DocumentType string `json:"document_type"`
-	Document     string `json:"document"`
-	Submitted    bool   `json:"submitted"`
+	AstraID               uint64 `json:"astra_id"`
+	DocumentTypeID        uint64 `json:"document_type_id"` // Corrected typo
+	DocumentName          string `json:"document_name"`
+	DocumentContentBase64 string `json:"document_content_base64"`
+	Submitted             bool   `json:"submitted"`
 }
 
 type OrganizationDocumentResponse struct {
-	ID           uint64    `json:"id"`
-	AstraID      uint64    `json:"astra_id"`
-	DocumentType string    `json:"document_type"`
-	Document     string    `json:"document"`
-	Submitted    bool      `json:"submitted"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID               uint64    `json:"id"`
+	AstraID          uint64    `json:"astra_id"`
+	DocumentTypeID   uint64    `json:"document_type_id"`   // Changed to ID
+	DocumentTypeName string    `json:"document_type_name"` // Added for display
+	DocumentURL      string    `json:"document_url"`       // The URL to the stored document
+	Submitted        bool      `json:"submitted"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // OrganizationKybComment DTOs

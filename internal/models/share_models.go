@@ -41,17 +41,17 @@ func (ShareDividend) TableName() string {
 
 type SharePayment struct {
 	BaseModel
-	TransactionID   uint64    `gorm:"column:transaction_id"`
-	MemberID        uint64    `gorm:"column:member_id"`
-	ShareAccountID  uint64    `gorm:"column:share_account_id"`
-	AmountPaid      float64   `gorm:"column:amount_paid"`
-	ShareUnits      float64   `gorm:"column:share_units"`
-	PaymentModeID   uint64    `gorm:"column:payment_mode_id"`
-	Description     string    `gorm:"column:description"`
-	Status          string    `gorm:"column:status;default:PENDING"`
-	TransactionDate time.Time `gorm:"column:transaction_date"`
-	ApprovedBy      uint64    `gorm:"column:approved_by"`
-	DateApproved    time.Time `gorm:"column:date_approved"`
+	TransactionID   uint64     `gorm:"column:transaction_id"`
+	MemberID        uint64     `gorm:"column:member_id"`
+	ShareAccountID  uint64     `gorm:"column:share_account_id"`
+	AmountPaid      float64    `gorm:"column:amount_paid"`
+	ShareUnits      float64    `gorm:"column:share_units"`
+	PaymentModeID   uint64     `gorm:"column:payment_mode_id"`
+	Description     string     `gorm:"column:description"`
+	Status          string     `gorm:"column:status;default:PENDING"`
+	TransactionDate time.Time  `gorm:"column:transaction_date"`
+	ApprovedBy      uint64     `gorm:"column:approved_by"`
+	DateApproved    *time.Time `gorm:"column:date_approved"`
 }
 
 func (SharePayment) TableName() string {

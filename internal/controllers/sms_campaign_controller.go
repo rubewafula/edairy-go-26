@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
+	"gorm.io/gorm"
 )
 
 type SMSCampaignController struct {
@@ -43,11 +44,114 @@ func (c *SMSCampaignController) GetCampaigns(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
 }
 
-func (c *SMSCampaignController) GetRecipients(ctx *gin.Context) {
-	results, err := c.service.GetRecipients(ctx.Param("id"))
+func (c *SMSCampaignController) GetCampaign(ctx *gin.Context) {
+	result, err := c.service.GetCampaign(ctx.Param("id"))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (c *SMSCampaignController) UpdateCampaign(ctx *gin.Context) {
+	var req dtos.UpdateSMSCampaignRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.UpdateCampaign(ctx.Param("id"), req, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "SMS campaign updated successfully"})
+}
+
+func (c *SMSCampaignController) DeleteCampaign(ctx *gin.Context) {
+	if err := c.service.DeleteCampaign(ctx.Param("id")); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "SMS campaign deleted successfully"})
+}
+
+func (c *SMSCampaignController) GetRecipientsByCampaign(ctx *gin.Context) {
+	results, err := c.service.GetSMSCampaignRecipientsByCampaign(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results})
+}
+
+func (c *SMSCampaignController) CreateRecipient(ctx *gin.Context) {
+	var req dtos.CreateSMSCampaignRecipientRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	recipient, err := c.service.CreateSMSCampaignRecipient(req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusCreated, recipient)
+}
+
+func (c *SMSCampaignController) GetAllRecipients(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
+	results, total, err := c.service.GetAllSMSCampaignRecipients(page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
+}
+
+func (c *SMSCampaignController) GetRecipient(ctx *gin.Context) {
+	id := ctx.Param("id")
+	recipient, err := c.service.GetSMSCampaignRecipient(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign recipient not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, recipient)
+}
+
+func (c *SMSCampaignController) UpdateRecipient(ctx *gin.Context) {
+	var req dtos.UpdateSMSCampaignRecipientRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := c.service.UpdateSMSCampaignRecipient(ctx.Param("id"), req); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign recipient not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "SMS campaign recipient updated successfully"})
+}
+
+func (c *SMSCampaignController) DeleteRecipient(ctx *gin.Context) {
+	if err := c.service.DeleteSMSCampaignRecipient(ctx.Param("id")); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign recipient not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "SMS campaign recipient deleted successfully"})
 }

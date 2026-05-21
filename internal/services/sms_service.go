@@ -43,10 +43,41 @@ func (s *SMSService) CreateContact(req dtos.CreateSMSContactRequest) (*models.SM
 	return contact, err
 }
 
+func (s *SMSService) GetContacts(page, limit int) ([]models.SMSContact, int64, error) {
+	var results []models.SMSContact
+	var total int64
+	db.DB.Model(&models.SMSContact{}).Count(&total)
+	offset := (page - 1) * limit
+	err := db.DB.Limit(limit).Offset(offset).Order("id DESC").Find(&results).Error
+	return results, total, err
+}
+
 func (s *SMSService) GetContactsByGroup(groupID string) ([]models.SMSContact, error) {
 	var contacts []models.SMSContact
 	err := db.DB.Where("sms_group_id = ?", groupID).Find(&contacts).Error
 	return contacts, err
+}
+
+func (s *SMSService) GetContact(id string) (*models.SMSContact, error) {
+	var contact models.SMSContact
+	err := db.DB.First(&contact, id).Error
+	return &contact, err
+}
+
+func (s *SMSService) UpdateContact(id string, req dtos.CreateSMSContactRequest) error {
+	var contact models.SMSContact
+	if err := db.DB.First(&contact, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&contact).Updates(map[string]interface{}{
+		"sms_group_id": req.SMSGroupID,
+		"name":         req.Name,
+		"phone_number": req.PhoneNumber,
+	}).Error
+}
+
+func (s *SMSService) DeleteContact(id string) error {
+	return db.DB.Delete(&models.SMSContact{}, id).Error
 }
 
 // Providers
@@ -140,4 +171,36 @@ func (s *SMSService) GetMessages(page, limit int) ([]dtos.SMSMessageResponse, in
 	offset := (page - 1) * limit
 	err := db.DB.Model(&models.SMSMessage{}).Limit(limit).Offset(offset).Order("id DESC").Scan(&results).Error
 	return results, total, err
+}
+
+func (s *SMSService) GetMessage(id string) (*dtos.SMSMessageResponse, error) {
+	var result dtos.SMSMessageResponse
+	err := db.DB.Model(&models.SMSMessage{}).Where("id = ?", id).First(&result).Error
+	return &result, err
+}
+
+func (s *SMSService) CreateMessage(req dtos.SendSMSRequest) (*models.SMSMessage, error) {
+	// Leveraging SendSMS to handle both record creation and queuing
+	return s.SendSMS(req)
+}
+
+func (s *SMSService) UpdateMessage(id string, req dtos.SendSMSRequest) error {
+	var message models.SMSMessage
+	if err := db.DB.First(&message, id).Error; err != nil {
+		return err
+	}
+
+	updates := map[string]interface{}{
+		"recipient": req.Recipient,
+		"message":   req.Message,
+	}
+	if req.GroupID != 0 {
+		updates["sms_group_id"] = req.GroupID
+	}
+
+	return db.DB.Model(&message).Updates(updates).Error
+}
+
+func (s *SMSService) DeleteMessage(id string) error {
+	return db.DB.Delete(&models.SMSMessage{}, id).Error
 }
