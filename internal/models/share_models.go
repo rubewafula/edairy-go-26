@@ -78,15 +78,16 @@ func (ShareTransaction) TableName() string {
 
 type ShareTransfer struct {
 	BaseModel
-	TransactionID   uint64    `gorm:"column:transaction_id"`
-	FromMemberID    uint64    `gorm:"column:from_member_id"`
-	ToMemberID      uint64    `gorm:"column:to_member_id"`
-	ShareUnits      float64   `gorm:"column:share_units"`
-	TransferAmount  float64   `gorm:"column:transfer_amount"`
-	Status          string    `gorm:"column:status;default:PENDING"`
-	TransactionDate time.Time `gorm:"column:transaction_date"`
-	ApprovedBy      uint64    `gorm:"column:approved_by"`
-	DateApproved    time.Time `gorm:"column:date_approved"`
+	TransactionID   uint64     `gorm:"column:transaction_id"`
+	FromMemberID    uint64     `gorm:"column:from_member_id"`
+	ToMemberID      uint64     `gorm:"column:to_member_id"`
+	ShareTypeID     uint64     `gorm:"column:share_type_id"`
+	ShareUnits      float64    `gorm:"column:share_units"`
+	TransferAmount  float64    `gorm:"column:transfer_amount"`
+	Status          string     `gorm:"column:status;default:PENDING"`
+	TransactionDate time.Time  `gorm:"column:transaction_date"`
+	ApprovedBy      uint64     `gorm:"column:approved_by"`
+	DateApproved    *time.Time `gorm:"column:date_approved"`
 }
 
 func (ShareTransfer) TableName() string {
@@ -98,6 +99,8 @@ type ShareAccount struct {
 	MemberID    uint64    `gorm:"column:member_id"`
 	ShareTypeID uint64    `gorm:"column:share_type_id"`
 	Status      string    `gorm:"column:status;default:ACTIVE"`
+	ShareUnits  float64   `gorm:"column:share_units;default:0.0000"`
+	ShareAmount float64   `gorm:"column:share_amount;default:0.00"`
 	OpenedAt    time.Time `gorm:"column:opened_at;default:CURRENT_TIMESTAMP"`
 }
 
@@ -107,14 +110,14 @@ func (ShareAccount) TableName() string {
 
 type DividendDeclaration struct {
 	BaseModel
-	FiscalYear      int       `gorm:"column:fiscal_year"`
-	Period          int       `gorm:"column:period"`
-	TotalPool       float64   `gorm:"column:total_pool"`
-	RatePerShare    float64   `gorm:"column:rate_per_share"`
-	CalculationType string    `gorm:"column:calculation_type"`
-	Status          string    `gorm:"column:status;default:DRAFT"`
-	ApprovedBy      uint64    `gorm:"column:approved_by"`
-	ApprovedAt      time.Time `gorm:"column:approved_at"`
+	FiscalYear      int        `gorm:"column:fiscal_year"`
+	Period          int        `gorm:"column:period"`
+	TotalPool       float64    `gorm:"column:total_pool"`
+	RatePerShare    float64    `gorm:"column:rate_per_share"`
+	CalculationType string     `gorm:"column:calculation_type"`
+	Status          string     `gorm:"column:status;default:DRAFT"`
+	ApprovedBy      uint64     `gorm:"column:approved_by"`
+	ApprovedAt      *time.Time `gorm:"column:approved_at"`
 }
 
 func (DividendDeclaration) TableName() string {

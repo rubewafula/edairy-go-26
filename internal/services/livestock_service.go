@@ -16,6 +16,69 @@ func NewLivestockService() *LivestockService {
 	return &LivestockService{}
 }
 
+// Livestock CRUD
+func (s *LivestockService) CreateLivestock(req dtos.CreateLivestockRequest, userID uint64) (*models.Livestock, error) {
+	livestock := &models.Livestock{
+		BaseModel:   models.BaseModel{CreatedBy: userID},
+		TagNo:       req.TagNo,
+		BreedID:     req.BreedID,
+		Gender:      req.Gender,
+		DateOfBirth: utils.ParseDate(req.DateOfBirth),
+		Description: req.Description,
+		Status:      "ACTIVE",
+	}
+	if err := db.DB.Create(livestock).Error; err != nil {
+		return nil, err
+	}
+	return livestock, nil
+}
+
+func (s *LivestockService) GetLivestocks(page, limit int) ([]dtos.LivestockResponse, int64, error) {
+	var results []dtos.LivestockResponse
+	var total int64
+	db.DB.Model(&models.Livestock{}).Count(&total)
+	offset := (page - 1) * limit
+
+	query := `
+		SELECT l.*, lb.breed_name, lc.category_name
+		FROM livestock l
+		LEFT JOIN livestock_breeds lb ON l.breed_id = lb.id
+		LEFT JOIN livestock_categories lc ON lb.livestock_category_id = lc.id
+		WHERE l.deleted_at IS NULL
+		ORDER BY l.id DESC LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
+	return results, total, err
+}
+
+func (s *LivestockService) GetLivestock(id string) (*dtos.LivestockResponse, error) {
+	var result dtos.LivestockResponse
+	query := `
+		SELECT l.*, lb.breed_name, lc.category_name
+		FROM livestock l
+		LEFT JOIN livestock_breeds lb ON l.breed_id = lb.id
+		LEFT JOIN livestock_categories lc ON lb.livestock_category_id = lc.id
+		WHERE l.id = ? AND l.deleted_at IS NULL LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&result).Error
+	if err != nil || result.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &result, nil
+}
+
+func (s *LivestockService) UpdateLivestock(id string, req dtos.UpdateLivestockRequest, userID uint64) error {
+	return db.DB.Model(&models.Livestock{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"tag_no": req.TagNo, "breed_id": req.BreedID, "gender": req.Gender,
+		"date_of_birth": utils.ParseDate(req.DateOfBirth), "status": req.Status,
+		"description": req.Description, "updated_by": userID,
+	}).Error
+}
+
+func (s *LivestockService) DeleteLivestock(id string, userID uint64) error {
+	return db.DB.Model(&models.Livestock{}).Where("id = ?", id).Update("updated_by", userID).Delete(&models.Livestock{}).Error
+}
+
 // Category CRUD
 func (s *LivestockService) CreateCategory(req dtos.CreateLivestockCategoryRequest) (*models.LivestockCategory, error) {
 	category := &models.LivestockCategory{

@@ -4,11 +4,14 @@ import (
 	"time"
 )
 
-// Placeholder for Livestock model, assuming it exists or will be created
 type Livestock struct {
 	BaseModel
-	TagNo string `gorm:"column:tag_no;uniqueIndex;not null"`
-	// Add other relevant fields for Livestock here
+	TagNo       string    `gorm:"column:tag_no;uniqueIndex;not null" json:"tag_no"`
+	BreedID     uint64    `gorm:"column:breed_id" json:"breed_id"`
+	Gender      string    `gorm:"column:gender" json:"gender"`
+	DateOfBirth time.Time `gorm:"column:date_of_birth" json:"date_of_birth"`
+	Status      string    `gorm:"column:status;default:ACTIVE" json:"status"`
+	Description string    `gorm:"column:description" json:"description"`
 }
 
 func (Livestock) TableName() string {

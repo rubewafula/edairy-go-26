@@ -34,6 +34,7 @@ func registerAssetRoutes(api *gin.RouterGroup) {
 
 	// Asset Depreciation Routes
 	api.POST("/asset-depreciation-entries", assetDepreciationController.CreateEntry)
+	api.PUT("/asset-depreciation-entries/:id", assetDepreciationController.UpdateEntry)
 	api.GET("/asset-depreciation-entries", assetDepreciationController.GetEntries)
 	api.GET("/asset-depreciation-entries/:id", assetDepreciationController.GetEntry)
 	api.DELETE("/asset-depreciation-entries/:id", assetDepreciationController.DeleteEntry)

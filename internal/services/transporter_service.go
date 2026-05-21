@@ -1,6 +1,8 @@
 package services
 
 import (
+	"log"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -14,21 +16,19 @@ func NewTransporterService() *TransporterService {
 	return &TransporterService{}
 }
 
-func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest) (*models.Transporter, error) {
+func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest) (*dtos.TransporterResponse, error) {
 	status := req.Status
 	if status == "" {
 		status = "ACTIVE"
 	}
 
 	transporter := &models.Transporter{
-		TransporterNo:     req.TransporterNo,
-		Category:          req.Category,
-		TransporterTypeID: req.TransporterTypeID,
-		PrimaryPhone:      req.PrimaryPhone,
-		EmailAddress:      req.EmailAddress,
-		RouteID:           req.RouteID,
-		Status:            status,
-		Restricted:        req.Restricted,
+		TransporterNo: req.TransporterNo,
+		Category:      req.Category,
+		PrimaryPhone:  req.PrimaryPhone,
+		EmailAddress:  req.EmailAddress,
+		Status:        status,
+		Restricted:    req.Restricted,
 	}
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
@@ -37,24 +37,38 @@ func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest
 		}
 
 		if req.Category == "INDIVIDUAL" {
+			passportPath, _ := utils.SaveFile(req.PassportPhoto, "transporters")
+			idFrontPath, _ := utils.SaveFile(req.IDFrontPhoto, "transporters")
+			idBackPath, _ := utils.SaveFile(req.IDBackPhoto, "transporters")
+
 			individual := &models.IndividualTransporter{
 				TransporterID:     transporter.ID,
 				FirstName:         req.FirstName,
 				LastName:          req.LastName,
 				OtherNames:        req.OtherNames,
 				Gender:            req.Gender,
-				DateOfBirth:       utils.ParseDate(req.DateOfBirth),
 				NationalIDNo:      req.NationalIDNo,
 				KraPin:            req.KraPin,
 				MaritalStatus:     req.MaritalStatus,
 				NextOfKinFullName: req.NextOfKinFullName,
 				NextOfKinPhone:    req.NextOfKinPhone,
-				PassportPhoto:     req.PassportPhoto,
-				IDFrontPhoto:      req.IDFrontPhoto,
-				IDBackPhoto:       req.IDBackPhoto,
+				PassportPhoto:     passportPath,
+				IDFrontPhoto:      idFrontPath,
+				IDBackPhoto:       idBackPath,
 			}
+
+			if req.DateOfBirth != "" {
+				t := utils.ParseDate(req.DateOfBirth)
+				individual.DateOfBirth = &t
+			}
+
 			return tx.Create(individual).Error
 		} else {
+			certificatePath := ""
+			if req.CertificateOfIncorporation != nil {
+				certificatePath, _ = utils.SaveFile(req.CertificateOfIncorporation, "transporters")
+			}
+
 			company := &models.CompanyTransporter{
 				TransporterID:              transporter.ID,
 				CompanyName:                req.CompanyName,
@@ -65,13 +79,23 @@ func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest
 				PostalAddress:              req.PostalAddress,
 				PostalCode:                 req.PostalCode,
 				Town:                       req.Town,
-				CertificateOfIncorporation: req.CertificateOfIncorporation,
+				CertificateOfIncorporation: certificatePath,
 			}
 			return tx.Create(company).Error
 		}
 	})
 
-	return transporter, err
+	if err != nil {
+		log.Printf("Transporter: Error creating: %s", err.Error())
+		return nil, err
+	}
+
+	var created models.Transporter
+	if err := db.DB.Preload("Individual").Preload("Company").First(&created, transporter.ID).Error; err != nil {
+		return nil, err
+	}
+	res := s.toTransporterResponse(created)
+	return &res, nil
 }
 
 func (s *TransporterService) GetTransporters() ([]dtos.TransporterResponse, int64, error) {
@@ -101,27 +125,25 @@ func (s *TransporterService) GetTransporter(id string) (*dtos.TransporterRespons
 
 func (s *TransporterService) toTransporterResponse(t models.Transporter) dtos.TransporterResponse {
 	response := dtos.TransporterResponse{
-		ID:                t.ID,
-		TransporterNo:     t.TransporterNo,
-		Category:          t.Category,
-		TransporterTypeID: t.TransporterTypeID,
-		PrimaryPhone:      t.PrimaryPhone,
-		EmailAddress:      t.EmailAddress,
-		RouteID:           t.RouteID,
-		Status:            t.Status,
-		Restricted:        t.Restricted,
-		CreatedAt:         t.CreatedAt,
-		UpdatedAt:         t.UpdatedAt,
+		ID:            t.ID,
+		TransporterNo: t.TransporterNo,
+		Category:      t.Category,
+		PrimaryPhone:  t.PrimaryPhone,
+		EmailAddress:  t.EmailAddress,
+		Status:        t.Status,
+		Restricted:    t.Restricted,
+		CreatedAt:     t.CreatedAt,
+		UpdatedAt:     t.UpdatedAt,
 	}
 
 	if t.Individual != nil {
 		response.Individual = &dtos.IndividualTransporterResponse{
-			ID: t.Individual.ID, TransporterID: t.Individual.TransporterID, RouteID: t.RouteID, FirstName: t.Individual.FirstName, LastName: t.Individual.LastName, OtherNames: t.Individual.OtherNames, Gender: t.Individual.Gender, DateOfBirth: t.Individual.DateOfBirth, NationalIDNo: t.Individual.NationalIDNo, KraPin: t.Individual.KraPin, MaritalStatus: t.Individual.MaritalStatus, NextOfKinFullName: t.Individual.NextOfKinFullName, NextOfKinPhone: t.Individual.NextOfKinPhone, PassportPhoto: t.Individual.PassportPhoto, IDFrontPhoto: t.Individual.IDFrontPhoto, IDBackPhoto: t.Individual.IDBackPhoto,
+			ID: t.Individual.ID, TransporterID: t.Individual.TransporterID, FirstName: t.Individual.FirstName, LastName: t.Individual.LastName, OtherNames: t.Individual.OtherNames, Gender: t.Individual.Gender, DateOfBirth: t.Individual.DateOfBirth, NationalIDNo: t.Individual.NationalIDNo, KraPin: t.Individual.KraPin, MaritalStatus: t.Individual.MaritalStatus, NextOfKinFullName: t.Individual.NextOfKinFullName, NextOfKinPhone: t.Individual.NextOfKinPhone, PassportPhoto: t.Individual.PassportPhoto, IDFrontPhoto: t.Individual.IDFrontPhoto, IDBackPhoto: t.Individual.IDBackPhoto,
 		}
 	}
 	if t.Company != nil {
 		response.Company = &dtos.CompanyTransporterResponse{
-			ID: t.Company.ID, TransporterID: t.Company.TransporterID, RouteID: t.RouteID, CompanyName: t.Company.CompanyName, RegistrationNo: t.Company.RegistrationNo, KraPin: t.Company.KraPin, ContactPersonName: t.Company.ContactPersonName, ContactPersonPhone: t.Company.ContactPersonPhone, PostalAddress: t.Company.PostalAddress, PostalCode: t.Company.PostalCode, Town: t.Company.Town, CertificateOfIncorporation: t.Company.CertificateOfIncorporation,
+			ID: t.Company.ID, TransporterID: t.Company.TransporterID, CompanyName: t.Company.CompanyName, RegistrationNo: t.Company.RegistrationNo, KraPin: t.Company.KraPin, ContactPersonName: t.Company.ContactPersonName, ContactPersonPhone: t.Company.ContactPersonPhone, PostalAddress: t.Company.PostalAddress, PostalCode: t.Company.PostalCode, Town: t.Company.Town, CertificateOfIncorporation: t.Company.CertificateOfIncorporation,
 		}
 	}
 	return response
@@ -133,10 +155,8 @@ func (s *TransporterService) UpdateTransporter(id string, req dtos.UpdateTranspo
 		return err
 	}
 
-	transporter.TransporterTypeID = req.TransporterTypeID
 	transporter.PrimaryPhone = req.PrimaryPhone
 	transporter.EmailAddress = req.EmailAddress
-	transporter.RouteID = req.RouteID
 	transporter.Status = req.Status
 	transporter.Restricted = req.Restricted
 

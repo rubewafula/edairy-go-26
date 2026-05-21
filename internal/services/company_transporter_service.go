@@ -63,15 +63,10 @@ func (s *CompanyTransporterService) UpdateCompanyTransporter(id string, req dtos
 }
 
 func (s *CompanyTransporterService) toResponse(c models.CompanyTransporter) dtos.CompanyTransporterResponse {
-	routeID := uint64(0)
-	if c.Transporter != nil {
-		routeID = c.Transporter.RouteID
-	}
 
 	return dtos.CompanyTransporterResponse{
 		ID:                         c.ID,
 		TransporterID:              c.TransporterID,
-		RouteID:                    routeID,
 		CompanyName:                c.CompanyName,
 		RegistrationNo:             c.RegistrationNo,
 		KraPin:                     c.KraPin,

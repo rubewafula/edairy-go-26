@@ -6,14 +6,12 @@ import (
 
 type Transporter struct {
 	BaseModel
-	TransporterNo     string `gorm:"unique;not null" json:"transporter_no"`
-	Category          string `gorm:"type:enum('INDIVIDUAL','COMPANY');not null" json:"transporter_category"`
-	TransporterTypeID uint64 `json:"transporter_type_id"`
-	PrimaryPhone      string `json:"primary_phone"`
-	EmailAddress      string `json:"email_address"`
-	RouteID           uint64 `json:"route_id"`
-	Status            string `gorm:"type:enum('ACTIVE','INACTIVE','SUSPENDED','BLACKLISTED');default:'ACTIVE'" json:"status"`
-	Restricted        bool   `gorm:"not null;default:false" json:"restricted"`
+	TransporterNo string `gorm:"unique;not null" json:"transporter_no"`
+	Category      string `gorm:"type:enum('INDIVIDUAL','COMPANY');not null" json:"transporter_category"`
+	PrimaryPhone  string `json:"primary_phone"`
+	EmailAddress  string `json:"email_address"`
+	Status        string `gorm:"type:enum('ACTIVE','INACTIVE','SUSPENDED','BLACKLISTED');default:'ACTIVE'" json:"status"`
+	Restricted    bool   `gorm:"not null;default:false" json:"restricted"`
 
 	// Relationships
 	Individual *IndividualTransporter `gorm:"foreignKey:TransporterID" json:"individual,omitempty"`
@@ -28,7 +26,7 @@ type IndividualTransporter struct {
 	LastName          string       `json:"last_name"`
 	OtherNames        string       `json:"other_names"`
 	Gender            string       `gorm:"type:enum('MALE','FEMALE','OTHER')" json:"gender"`
-	DateOfBirth       time.Time    `json:"date_of_birth"`
+	DateOfBirth       *time.Time   `json:"date_of_birth"`
 	NationalIDNo      string       `gorm:"unique" json:"national_id_no"`
 	KraPin            string       `json:"kra_pin"`
 	MaritalStatus     string       `gorm:"type:enum('SINGLE','MARRIED','DIVORCED','WIDOWED')" json:"marital_status"`
@@ -75,35 +73,35 @@ type TransporterRouteAssignment struct {
 
 type TransporterDriver struct {
 	BaseModel
-	TransporterID            uint64    `gorm:"not null;index" json:"transporter_id"`
-	DriverNo                 string    `gorm:"unique;not null" json:"driver_no"`
-	FirstName                string    `gorm:"not null" json:"first_name"`
-	LastName                 string    `gorm:"not null" json:"last_name"`
-	OtherNames               string    `json:"other_names"`
-	Gender                   string    `gorm:"type:enum('MALE','FEMALE','OTHER')" json:"gender"`
-	DateOfBirth              time.Time `json:"date_of_birth"`
-	NationalIDNo             string    `gorm:"unique;not null" json:"national_id_no"`
-	KraPin                   string    `json:"kra_pin"`
-	PrimaryPhone             string    `gorm:"not null" json:"primary_phone"`
-	SecondaryPhone           string    `json:"secondary_phone"`
-	EmailAddress             string    `json:"email_address"`
-	DrivingLicenseNo         string    `gorm:"unique;not null" json:"driving_license_no"`
-	DrivingLicenseClass      string    `json:"driving_license_class"`
-	DrivingLicenseExpiry     time.Time `gorm:"index" json:"driving_license_expiry"`
-	EmploymentDate           time.Time `json:"employment_date"`
-	Status                   string    `gorm:"type:enum('ACTIVE','INACTIVE','SUSPENDED','TERMINATED');default:'ACTIVE';index" json:"status"`
-	PassportPhoto            string    `json:"passport_photo"`
-	DrivingLicenseFrontPhoto string    `json:"driving_license_front_photo"`
-	DrivingLicenseBackPhoto  string    `json:"driving_license_back_photo"`
-	NextOfKinFullName        string    `json:"next_of_kin_full_name"`
-	NextOfKinPhone           string    `json:"next_of_kin_phone"`
+	TransporterID            uint64     `gorm:"not null;index" json:"transporter_id"`
+	DriverNo                 string     `gorm:"unique;not null" json:"driver_no"`
+	FirstName                string     `gorm:"not null" json:"first_name"`
+	LastName                 string     `gorm:"not null" json:"last_name"`
+	OtherNames               string     `json:"other_names"`
+	Gender                   string     `gorm:"type:enum('MALE','FEMALE','OTHER')" json:"gender"`
+	DateOfBirth              *time.Time `json:"date_of_birth"`
+	NationalIDNo             string     `gorm:"unique;not null" json:"national_id_no"`
+	KraPin                   string     `json:"kra_pin"`
+	PrimaryPhone             string     `gorm:"not null" json:"primary_phone"`
+	SecondaryPhone           string     `json:"secondary_phone"`
+	EmailAddress             string     `json:"email_address"`
+	DrivingLicenseNo         string     `gorm:"unique;not null" json:"driving_license_no"`
+	DrivingLicenseClass      string     `json:"driving_license_class"`
+	DrivingLicenseExpiry     *time.Time `gorm:"index" json:"driving_license_expiry"`
+	EmploymentDate           *time.Time `json:"employment_date"`
+	Status                   string     `gorm:"type:enum('ACTIVE','INACTIVE','SUSPENDED','TERMINATED');default:'ACTIVE';index" json:"status"`
+	PassportPhoto            string     `json:"passport_photo"`
+	DrivingLicenseFrontPhoto string     `json:"driving_license_front_photo"`
+	DrivingLicenseBackPhoto  string     `json:"driving_license_back_photo"`
+	NextOfKinFullName        string     `json:"next_of_kin_full_name"`
+	NextOfKinPhone           string     `json:"next_of_kin_phone"`
 }
 
 type TransporterDriverAssignment struct {
 	BaseModel
 	TransporterDriverID  uint64     `gorm:"not null;index" json:"transporter_driver_id"`
 	TransporterVehicleID uint64     `gorm:"not null;index" json:"transporter_vehicle_id"`
-	AssignedFrom         time.Time  `gorm:"not null" json:"assigned_from"`
+	AssignedFrom         *time.Time `json:"assigned_from"`
 	AssignedTo           *time.Time `json:"assigned_to"`
 	AssignmentType       string     `gorm:"type:enum('PRIMARY','TEMPORARY','RELIEF','EMERGENCY');default:'PRIMARY'" json:"assignment_type"`
 	Active               bool       `gorm:"not null;default:true;index" json:"active"`
@@ -122,15 +120,15 @@ type TransporterBankAccount struct {
 
 type TransporterBenefit struct {
 	BaseModel
-	Name        string    `json:"name"`
-	MinQuantity string    `json:"min_quantity"`
-	Rate        string    `json:"rate"`
-	RouteID     uint64    `json:"route_id"`
-	Status      string    `json:"status"`
-	StartDate   time.Time `json:"start_date"`
-	EndDate     time.Time `json:"end_date"`
-	CreatedBy   uint64    `json:"created_by"`
-	UpdatedBy   uint64    `json:"updated_by"`
+	Name        string     `json:"name"`
+	MinQuantity uint64     `json:"min_quantity"`
+	Rate        float64    `json:"rate"`
+	RouteID     uint64     `json:"route_id"`
+	Status      string     `json:"status"`
+	StartDate   *time.Time `json:"start_date"`
+	EndDate     *time.Time `json:"end_date"`
+	CreatedBy   uint64     `json:"created_by"`
+	UpdatedBy   uint64     `json:"updated_by"`
 }
 
 type TransportRate struct {

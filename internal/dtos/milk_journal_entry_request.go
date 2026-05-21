@@ -19,6 +19,8 @@ type CreateMilkJournalEntryRequest struct {
 type MilkJournalEntryResponse struct {
 	ID                  uint64    `json:"id"`
 	MemberID            uint64    `json:"member_id"`
+	Journal             string    `json:"journal"`
+	BatchNo             string    `json:"batch_no"`
 	MemberNo            string    `json:"member_no"`
 	MemberName          string    `json:"member_name"`
 	MilkJournalID       uint64    `json:"milk_journal_id"`
@@ -28,7 +30,7 @@ type MilkJournalEntryResponse struct {
 	MilkDeliveryShiftID uint64    `json:"milk_delivery_shift_id"`
 	MilkDeliveryShift   string    `json:"milk_delivery_shift"`
 	Status              string    `json:"status"`
-	JournalDate         time.Time `json:"journal_date"`
+	JournalDate         string    `json:"journal_date"`
 	Quantity            float64   `json:"quantity"`
 	TransporterID       uint64    `json:"transporter_id"`
 	RouteCenterID       uint64    `json:"route_center_id"`

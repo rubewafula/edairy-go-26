@@ -6,6 +6,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -16,10 +17,15 @@ func NewTransporterDriverAssignmentService() *TransporterDriverAssignmentService
 }
 
 func (s *TransporterDriverAssignmentService) CreateAssignment(req dtos.CreateTransporterDriverAssignmentRequest) (*models.TransporterDriverAssignment, error) {
-	assignedFrom, _ := time.Parse(time.RFC3339, req.AssignedFrom)
+	var assignedFrom *time.Time
+	if req.AssignedFrom != "" {
+		t := utils.ParseDate(req.AssignedFrom)
+		assignedFrom = &t
+	}
+
 	var assignedTo *time.Time
 	if req.AssignedTo != "" {
-		t, _ := time.Parse(time.RFC3339, req.AssignedTo)
+		t := utils.ParseDate(req.AssignedTo)
 		assignedTo = &t
 	}
 
@@ -94,7 +100,7 @@ func (s *TransporterDriverAssignmentService) UpdateAssignment(id string, req dto
 	}
 
 	if req.AssignedTo != "" {
-		t, _ := time.Parse(time.RFC3339, req.AssignedTo)
+		t := utils.ParseDate(req.AssignedTo)
 		assignment.AssignedTo = &t
 	}
 	assignment.AssignmentType = req.AssignmentType

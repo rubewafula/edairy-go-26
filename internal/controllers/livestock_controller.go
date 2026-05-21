@@ -19,6 +19,68 @@ func NewLivestockController() *LivestockController {
 	return &LivestockController{service: services.NewLivestockService()}
 }
 
+func (c *LivestockController) CreateLivestocks(ctx *gin.Context) {
+	var req dtos.CreateLivestockRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.Validate.Struct(req); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	res, err := c.service.CreateLivestock(req, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusCreated, res)
+}
+
+func (c *LivestockController) GetLivestocks(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	res, total, err := c.service.GetLivestocks(page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
+}
+
+func (c *LivestockController) GetLivestock(ctx *gin.Context) {
+	res, err := c.service.GetLivestock(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Livestock not found"})
+		return
+	}
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (c *LivestockController) UpdateLivestocks(ctx *gin.Context) {
+	var req dtos.UpdateLivestockRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.UpdateLivestock(ctx.Param("id"), req, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Livestock updated successfully"})
+}
+
+func (c *LivestockController) DeleteLivestocks(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.DeleteLivestock(ctx.Param("id"), userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Livestock deleted successfully"})
+}
+
 func (c *LivestockController) CreateCategory(ctx *gin.Context) {
 	var req dtos.CreateLivestockCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

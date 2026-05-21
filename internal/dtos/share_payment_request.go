@@ -3,9 +3,9 @@ package dtos
 type CreateSharePaymentRequest struct {
 	TransactionID   uint64  `json:"transaction_id"`
 	MemberID        uint64  `json:"member_id" validate:"required"`
-	ShareAccountID  uint64  `json:"share_account_id"`
+	ShareAccountID  uint64  `json:"share_account_id" validate:"required"`
 	AmountPaid      float64 `json:"amount_paid" validate:"required,min=0"`
-	ShareUnits      float64 `json:"share_units"`
+	ShareUnits      float64 `json:"share_units" validate:"required,min=0"`
 	PaymentModeID   uint64  `json:"payment_mode_id"`
 	ReferenceNo     string  `json:"reference_no"`
 	Description     string  `json:"description"`
@@ -17,9 +17,9 @@ type CreateSharePaymentRequest struct {
 
 type UpdateSharePaymentRequest struct {
 	TransactionID   uint64  `json:"transaction_id"`
-	ShareAccountID  uint64  `json:"share_account_id"`
+	ShareAccountID  uint64  `json:"share_account_id" validate:"required"`
 	AmountPaid      float64 `json:"amount_paid" validate:"required,min=0"`
-	ShareUnits      float64 `json:"share_units"`
+	ShareUnits      float64 `json:"share_units" validate:"required,min=0"`
 	PaymentModeID   uint64  `json:"payment_mode_id"`
 	ReferenceNo     string  `json:"reference_no"`
 	Description     string  `json:"description"`

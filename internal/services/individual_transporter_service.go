@@ -49,7 +49,12 @@ func (s *IndividualTransporterService) UpdateIndividualTransporter(id string, re
 	individual.LastName = req.LastName
 	individual.OtherNames = req.OtherNames
 	individual.Gender = req.Gender
-	individual.DateOfBirth = utils.ParseDate(req.DateOfBirth)
+
+	if req.DateOfBirth != "" {
+		t := utils.ParseDate(req.DateOfBirth)
+		individual.DateOfBirth = &t
+	}
+
 	individual.NationalIDNo = req.NationalIDNo
 	individual.KraPin = req.KraPin
 	individual.MaritalStatus = req.MaritalStatus
@@ -69,15 +74,10 @@ func (s *IndividualTransporterService) UpdateIndividualTransporter(id string, re
 }
 
 func (s *IndividualTransporterService) toResponse(i models.IndividualTransporter) dtos.IndividualTransporterResponse {
-	routeID := uint64(0)
-	if i.Transporter != nil {
-		routeID = i.Transporter.RouteID
-	}
 
 	return dtos.IndividualTransporterResponse{
 		ID:                i.ID,
 		TransporterID:     i.TransporterID,
-		RouteID:           routeID,
 		FirstName:         i.FirstName,
 		LastName:          i.LastName,
 		OtherNames:        i.OtherNames,

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
@@ -40,22 +41,42 @@ func (s *ShareAccountService) CreateAccount(req dtos.CreateShareAccountRequest) 
 	return account, nil
 }
 
-func (s *ShareAccountService) GetShareAccounts() ([]dtos.ShareAccountResponse, int64, error) {
+func (s *ShareAccountService) GetShareAccounts(memberID, shareTypeID string) ([]dtos.ShareAccountResponse, int64, error) {
 	var results []dtos.ShareAccountResponse
 	var total int64
-	db.DB.Model(&models.ShareAccount{}).Count(&total)
 
-	query := `
+	countQuery := db.DB.Model(&models.ShareAccount{})
+	if memberID != "" {
+		countQuery = countQuery.Where("member_id = ?", memberID)
+	}
+	if shareTypeID != "" {
+		countQuery = countQuery.Where("share_type_id = ?", shareTypeID)
+	}
+	countQuery.Count(&total)
+
+	whereClause := "sa.deleted_at IS NULL"
+	var args []interface{}
+	if memberID != "" {
+		whereClause += " AND sa.member_id = ?"
+		args = append(args, memberID)
+	}
+	if shareTypeID != "" {
+		whereClause += " AND sa.share_type_id = ?"
+		args = append(args, shareTypeID)
+	}
+
+	query := fmt.Sprintf(`
 		SELECT 
 			sa.id, sa.member_id, m.member_no, m.first_name, m.last_name,
 			sa.share_type_id, st.share_code, st.share_type AS share_type_name, st.description,
-			sa.status, sa.opened_at, sa.created_at, sa.updated_at
+			sa.status, sa.share_units, sa.share_amount, sa.opened_at, sa.created_at, sa.updated_at
 		FROM share_accounts sa
 		LEFT JOIN member_registrations m ON sa.member_id = m.id
 		LEFT JOIN share_types st ON sa.share_type_id = st.id
-		WHERE sa.deleted_at IS NULL
-	`
-	err := db.DB.Raw(query).Scan(&results).Error
+		WHERE %s
+	`, whereClause)
+
+	err := db.DB.Raw(query, args...).Scan(&results).Error
 	return results, total, err
 }
 
@@ -65,7 +86,7 @@ func (s *ShareAccountService) GetShareAccount(id string) (*dtos.ShareAccountResp
 		SELECT 
 			sa.id, sa.member_id, m.member_no, m.first_name, m.last_name,
 			sa.share_type_id, st.share_code, st.share_type AS share_type_name, st.description,
-			sa.status, sa.opened_at, sa.created_at, sa.updated_at
+			sa.status, sa.share_units, sa.share_amount, sa.opened_at, sa.created_at, sa.updated_at
 		FROM share_accounts sa
 		LEFT JOIN member_registrations m ON sa.member_id = m.id
 		LEFT JOIN share_types st ON sa.share_type_id = st.id

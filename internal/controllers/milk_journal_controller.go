@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,17 +25,20 @@ func NewMilkJournalController() *MilkJournalController {
 func (c *MilkJournalController) CreateMilkJournal(ctx *gin.Context) {
 	var req dtos.CreateMilkJournalRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("MilkJournal controller failed to bind: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("MilkJournal controller failed to Validate: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	journal, err := c.service.CreateMilkJournal(req)
 	if err != nil {
+		log.Printf("MilkJournal controller failed to create hournal : %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -87,4 +91,14 @@ func (c *MilkJournalController) DeleteMilkJournal(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Milk Journal deleted successfully"})
+}
+
+func (c *MilkJournalController) GetDailyJournals(ctx *gin.Context) {
+	journals, err := c.service.GetDailyJournals()
+	if err != nil {
+		log.Printf("MilkJournal controller failed to get daily journals: %s", err.Error())
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": journals})
 }

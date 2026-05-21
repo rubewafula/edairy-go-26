@@ -41,7 +41,10 @@ func (c *ShareAccountController) CreateAccount(ctx *gin.Context) {
 }
 
 func (c *ShareAccountController) GetAccounts(ctx *gin.Context) {
-	accounts, total, err := c.service.GetShareAccounts()
+	memberID := ctx.Query("member_id")
+	shareTypeID := ctx.Query("share_type_id")
+	accounts, total, err := c.service.GetShareAccounts(memberID, shareTypeID)
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -4,7 +4,6 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
-	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -16,17 +15,13 @@ func NewMilkJournalEntryService() *MilkJournalEntryService {
 
 func (s *MilkJournalEntryService) CreateEntry(req dtos.CreateMilkJournalEntryRequest) (*models.MilkJournalEntry, error) {
 	entry := &models.MilkJournalEntry{
-		MemberID:            req.MemberID,
-		MilkJournalID:       req.MilkJournalID,
-		MilkJournalBatchID:  req.MilkJournalBatchID,
-		RouteID:             req.RouteID,
-		MilkDeliveryShiftID: req.MilkDeliveryShiftID,
-		Status:              req.Status,
-		JournalDate:         utils.ParseDate(req.JournalDate),
-		Quantity:            req.Quantity,
-		TransporterID:       req.TransporterID,
-		RouteCenterID:       req.RouteCenterID,
-		CanID:               req.CanID,
+		MemberID:           req.MemberID,
+		MilkJournalID:      req.MilkJournalID,
+		MilkJournalBatchID: req.MilkJournalBatchID,
+		Status:             req.Status,
+		Quantity:           req.Quantity,
+		RouteCenterID:      req.RouteCenterID,
+		CanID:              req.CanID,
 	}
 
 	if err := db.DB.Create(entry).Error; err != nil {
@@ -44,14 +39,19 @@ func (s *MilkJournalEntryService) GetEntries(page, limit int) ([]dtos.MilkJourna
 	query := `
 		SELECT 
 			mje.*, 
+			mj.journal_date,
+			mj.journal,
+			mjb.batch_no, 
 			m.member_no,
 			CONCAT(m.first_name, ' ', m.last_name) AS member_name,
 			r.route_name, 
 			mds.name AS milk_delivery_shift
 		FROM milk_journal_entries mje
+		LEFT JOIN milk_journals mj on mj.id = mje.milk_journal_id
+		LEFT JOIN milk_journal_batches mjb on mj.id = mjb.milk_journal_id
 		LEFT JOIN member_registrations m ON mje.member_id = m.id
-		LEFT JOIN routes r ON mje.route_id = r.id
-		LEFT JOIN milk_delivery_shifts mds ON mje.milk_delivery_shift_id = mds.id
+		LEFT JOIN routes r ON mj.route_id = r.id
+		LEFT JOIN milk_delivery_shifts mds ON mj.milk_delivery_shift_id = mds.id
 		WHERE mje.deleted_at IS NULL
 		LIMIT ? OFFSET ?
 	`
@@ -64,14 +64,19 @@ func (s *MilkJournalEntryService) GetEntry(id string) (*dtos.MilkJournalEntryRes
 	query := `
 		SELECT 
 			mje.*, 
+			mj.journal_date,
+			mj.journal,
+			mjb.batch_no, 
 			m.member_no,
 			CONCAT(m.first_name, ' ', m.last_name) AS member_name,
 			r.route_name, 
 			mds.name AS milk_delivery_shift
 		FROM milk_journal_entries mje
+		LEFT JOIN milk_journals mj on mj.id = mje.milk_journal_id
+		LEFT JOIN milk_journal_batches mjb on mj.id = mjb.milk_journal_id
 		LEFT JOIN member_registrations m ON mje.member_id = m.id
-		LEFT JOIN routes r ON mje.route_id = r.id
-		LEFT JOIN milk_delivery_shifts mds ON mje.milk_delivery_shift_id = mds.id
+		LEFT JOIN routes r ON mj.route_id = r.id
+		LEFT JOIN milk_delivery_shifts mds ON mj.milk_delivery_shift_id = mds.id
 		WHERE mje.id = ? AND mje.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -94,12 +99,8 @@ func (s *MilkJournalEntryService) UpdateEntry(id string, req dtos.UpdateMilkJour
 	entry.MemberID = req.MemberID
 	entry.MilkJournalID = req.MilkJournalID
 	entry.MilkJournalBatchID = req.MilkJournalBatchID
-	entry.RouteID = req.RouteID
-	entry.MilkDeliveryShiftID = req.MilkDeliveryShiftID
 	entry.Status = req.Status
-	entry.JournalDate = utils.ParseDate(req.JournalDate)
 	entry.Quantity = req.Quantity
-	entry.TransporterID = req.TransporterID
 	entry.RouteCenterID = req.RouteCenterID
 	entry.CanID = req.CanID
 

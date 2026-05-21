@@ -1,8 +1,6 @@
 package services
 
 import (
-	"time"
-
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -32,8 +30,13 @@ func (s *DividendDeclarationService) CreateDeclaration(req dtos.CreateDividendDe
 		ApprovedBy:      req.ApprovedBy,
 	}
 
+	// Assuming 'declaration' is your models.DividendDeclaration instance
+	// ...
 	if req.ApprovedAt != "" {
-		declaration.ApprovedAt = utils.ParseDate(req.ApprovedAt)
+		t := utils.ParseDate(req.ApprovedAt)
+		declaration.ApprovedAt = &t // Assign a pointer to the time.Time value
+	} else {
+		declaration.ApprovedAt = nil // Set to nil for a NULL value in the database
 	}
 
 	if err := db.DB.Create(declaration).Error; err != nil {
@@ -95,11 +98,13 @@ func (s *DividendDeclarationService) UpdateDeclaration(id string, req dtos.Updat
 	declaration.CalculationType = req.CalculationType
 	declaration.Status = req.Status
 	declaration.ApprovedBy = req.ApprovedBy
+	// Assuming 'declaration' is your models.DividendDeclaration instance
+
 	if req.ApprovedAt != "" {
-		declaration.ApprovedAt = utils.ParseDate(req.ApprovedAt)
+		t := utils.ParseDate(req.ApprovedAt)
+		declaration.ApprovedAt = &t // Corrected line 99
 	} else {
-		// Optionally set to zero time if approved_at is being cleared
-		declaration.ApprovedAt = time.Time{}
+		declaration.ApprovedAt = nil // Corrected line 102, explicitly setting to nil
 	}
 
 	return db.DB.Save(&declaration).Error

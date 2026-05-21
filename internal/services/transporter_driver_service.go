@@ -25,7 +25,6 @@ func (s *TransporterDriverService) CreateDriver(req dtos.CreateTransporterDriver
 		LastName:                 req.LastName,
 		OtherNames:               req.OtherNames,
 		Gender:                   req.Gender,
-		DateOfBirth:              utils.ParseDate(req.DateOfBirth),
 		NationalIDNo:             req.NationalIDNo,
 		KraPin:                   req.KraPin,
 		PrimaryPhone:             req.PrimaryPhone,
@@ -33,14 +32,25 @@ func (s *TransporterDriverService) CreateDriver(req dtos.CreateTransporterDriver
 		EmailAddress:             req.EmailAddress,
 		DrivingLicenseNo:         req.DrivingLicenseNo,
 		DrivingLicenseClass:      req.DrivingLicenseClass,
-		DrivingLicenseExpiry:     utils.ParseDate(req.DrivingLicenseExpiry),
-		EmploymentDate:           utils.ParseDate(req.EmploymentDate),
 		Status:                   status,
 		NextOfKinFullName:        req.NextOfKinFullName,
 		NextOfKinPhone:           req.NextOfKinPhone,
 		PassportPhoto:            req.PassportPhoto,
 		DrivingLicenseFrontPhoto: req.DrivingLicenseFrontPhoto,
 		DrivingLicenseBackPhoto:  req.DrivingLicenseBackPhoto,
+	}
+
+	if req.DateOfBirth != "" {
+		t := utils.ParseDate(req.DateOfBirth)
+		driver.DateOfBirth = &t
+	}
+	if req.DrivingLicenseExpiry != "" {
+		t := utils.ParseDate(req.DrivingLicenseExpiry)
+		driver.DrivingLicenseExpiry = &t
+	}
+	if req.EmploymentDate != "" {
+		t := utils.ParseDate(req.EmploymentDate)
+		driver.EmploymentDate = &t
 	}
 
 	if err := db.DB.Create(driver).Error; err != nil {
@@ -94,9 +104,15 @@ func (s *TransporterDriverService) UpdateDriver(id string, req dtos.UpdateTransp
 	driver.LastName = req.LastName
 	driver.OtherNames = req.OtherNames
 	driver.Gender = req.Gender
-	driver.DateOfBirth = utils.ParseDate(req.DateOfBirth)
+	if req.DateOfBirth != "" {
+		t := utils.ParseDate(req.DateOfBirth)
+		driver.DateOfBirth = &t
+	}
 	driver.PrimaryPhone = req.PrimaryPhone
-	driver.DrivingLicenseExpiry = utils.ParseDate(req.DrivingLicenseExpiry)
+	if req.DrivingLicenseExpiry != "" {
+		t := utils.ParseDate(req.DrivingLicenseExpiry)
+		driver.DrivingLicenseExpiry = &t
+	}
 	driver.Status = req.Status
 	driver.NextOfKinFullName = req.NextOfKinFullName
 	driver.NextOfKinPhone = req.NextOfKinPhone

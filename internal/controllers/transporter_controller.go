@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,15 +23,22 @@ func NewTransporterController() *TransporterController {
 
 func (c *TransporterController) CreateTransporter(ctx *gin.Context) {
 	var req dtos.CreateTransporterRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBind(&req); err != nil {
+		log.Printf("Create Transporter: ShouldBind: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("Create Transporter: Validation Error: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
+
+	req.PassportPhoto, _ = ctx.FormFile("passport_photo")
+	req.IDFrontPhoto, _ = ctx.FormFile("id_front_photo")
+	req.IDBackPhoto, _ = ctx.FormFile("id_back_photo")
+	req.CertificateOfIncorporation, _ = ctx.FormFile("certificate_of_incorporation")
 
 	transporter, err := c.service.CreateTransporter(req)
 	if err != nil {
@@ -38,9 +46,7 @@ func (c *TransporterController) CreateTransporter(ctx *gin.Context) {
 		return
 	}
 
-	// Convert to Response DTO for PascalCase
-	response, _ := c.service.GetTransporter(utils.Uint64ToString(transporter.ID))
-	ctx.JSON(http.StatusCreated, response)
+	ctx.JSON(http.StatusCreated, transporter)
 }
 
 func (c *TransporterController) GetTransporters(ctx *gin.Context) {

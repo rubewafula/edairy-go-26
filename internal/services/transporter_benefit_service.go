@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -20,14 +22,24 @@ func (s *TransporterBenefitService) CreateBenefit(req dtos.CreateTransporterBene
 		status = "1"
 	}
 
+	var startDate, endDate *time.Time
+	if req.StartDate != "" {
+		t := utils.ParseDate(req.StartDate)
+		startDate = &t
+	}
+	if req.EndDate != "" {
+		t := utils.ParseDate(req.EndDate)
+		endDate = &t
+	}
+
 	benefit := &models.TransporterBenefit{
 		Name:        req.Name,
 		MinQuantity: req.MinQuantity,
 		Rate:        req.Rate,
 		RouteID:     req.RouteID,
 		Status:      status,
-		StartDate:   utils.ParseDate(req.StartDate),
-		EndDate:     utils.ParseDate(req.EndDate),
+		StartDate:   startDate,
+		EndDate:     endDate,
 	}
 
 	if err := db.DB.Create(benefit).Error; err != nil {
@@ -79,15 +91,29 @@ func (s *TransporterBenefitService) GetBenefit(id string) (*dtos.TransporterBene
 }
 
 func (s *TransporterBenefitService) UpdateBenefit(id string, req dtos.UpdateTransporterBenefitRequest) error {
-	return db.DB.Model(&models.TransporterBenefit{}).Where("id = ?", id).Updates(map[string]interface{}{
+	updates := map[string]interface{}{
 		"name":         req.Name,
 		"min_quantity": req.MinQuantity,
 		"rate":         req.Rate,
 		"route_id":     req.RouteID,
 		"status":       req.Status,
-		"start_date":   utils.ParseDate(req.StartDate),
-		"end_date":     utils.ParseDate(req.EndDate),
-	}).Error
+	}
+
+	if req.StartDate != "" {
+		t := utils.ParseDate(req.StartDate)
+		updates["start_date"] = &t
+	} else {
+		updates["start_date"] = nil
+	}
+
+	if req.EndDate != "" {
+		t := utils.ParseDate(req.EndDate)
+		updates["end_date"] = &t
+	} else {
+		updates["end_date"] = nil
+	}
+
+	return db.DB.Model(&models.TransporterBenefit{}).Where("id = ?", id).Updates(updates).Error
 }
 
 func (s *TransporterBenefitService) DeleteBenefit(id string) error {

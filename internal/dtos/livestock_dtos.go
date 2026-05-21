@@ -6,6 +6,35 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/models"
 )
 
+// Livestock
+type CreateLivestockRequest struct {
+	TagNo       string `json:"tag_no" validate:"required"`
+	BreedID     uint64 `json:"breed_id" validate:"required"`
+	Gender      string `json:"gender" validate:"required,oneof=MALE FEMALE"`
+	DateOfBirth string `json:"date_of_birth" validate:"required"`
+	Description string `json:"description"`
+}
+
+type UpdateLivestockRequest struct {
+	TagNo       string `json:"tag_no"`
+	BreedID     uint64 `json:"breed_id"`
+	Gender      string `json:"gender" validate:"omitempty,oneof=MALE FEMALE"`
+	DateOfBirth string `json:"date_of_birth"`
+	Status      string `json:"status"`
+	Description string `json:"description"`
+}
+
+type LivestockResponse struct {
+	models.BaseModel
+	TagNo        string    `json:"tag_no"`
+	BreedName    string    `json:"breed_name"`
+	CategoryName string    `json:"category_name"`
+	Gender       string    `json:"gender"`
+	DateOfBirth  time.Time `json:"date_of_birth"`
+	Status       string    `json:"status"`
+	Description  string    `json:"description"`
+}
+
 // Category
 type CreateLivestockCategoryRequest struct {
 	CategoryName string `json:"category_name" validate:"required"`

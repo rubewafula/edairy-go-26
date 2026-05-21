@@ -24,6 +24,18 @@ func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequ
 		return nil, fmt.Errorf("posting rule for SHARES_CONTRIBUTION not found: %w", err)
 	}
 
+	// Get share account to determine share type and unit price
+	var shareAccount models.ShareAccount
+	if err := db.DB.First(&shareAccount, req.ShareAccountID).Error; err != nil {
+		return nil, fmt.Errorf("share account not found: %w", err)
+	}
+
+	// Get share type to determine unit price
+	var shareType models.ShareType
+	if err := db.DB.First(&shareType, shareAccount.ShareTypeID).Error; err != nil {
+		return nil, fmt.Errorf("share type not found for share account: %w", err)
+	}
+
 	transactionDate := utils.ParseDate(req.TransactionDate)
 	status := req.Status
 	if status == "" {
@@ -68,31 +80,61 @@ func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequ
 			return err
 		}
 
-		// 3. Create General Ledger Debit Entry (typically Bank or Cash)
+		// 3. Record Member Share Movement (PURCHASE)
+		var prevBalance float64
+		tx.Model(&models.ShareTransaction{}).
+			Where("share_account_id = ?", payment.ShareAccountID).
+			Select("COALESCE(SUM(debit - credit), 0)").Scan(&prevBalance)
+
+		shareMovement := &models.ShareTransaction{
+			TransactionID:   transaction.ID,
+			ShareAccountID:  payment.ShareAccountID,
+			MemberID:        payment.MemberID,
+			TransactionType: "PURCHASE",
+			ShareUnits:      payment.ShareUnits,
+			UnitPrice:       shareType.ShareValue,
+			Debit:           payment.AmountPaid,
+			Credit:          0.00,
+			BalanceAfter:    prevBalance + payment.AmountPaid,
+			TransactionDate: transactionDate,
+		}
+		if err := tx.Create(shareMovement).Error; err != nil {
+			return err
+		}
+
+		// 4. Create General Ledger Debit Entry (typically Bank or Cash)
 		debitGL := &models.GeneralLedgerEntry{
 			TransactionID:   transaction.ID,
 			AccountID:       rule.DebitAccountID,
 			SubAccountID:    rule.DebitSubAccountID,
 			Debit:           req.AmountPaid,
 			Credit:          0.00,
-			TransactionDate: time.Now(),
+			TransactionDate: transactionDate,
 			Description:     fmt.Sprintf("Share contribution - %s", req.Description),
 		}
 		if err := tx.Create(debitGL).Error; err != nil {
 			return err
 		}
 
-		// 4. Create General Ledger Credit Entry (typically Share Capital)
+		// 5. Create General Ledger Credit Entry (typically Share Capital)
 		creditGL := &models.GeneralLedgerEntry{
 			TransactionID:   transaction.ID,
 			AccountID:       rule.CreditAccountID,
 			SubAccountID:    rule.CreditSubAccountID,
 			Debit:           0.00,
 			Credit:          req.AmountPaid,
-			TransactionDate: time.Now(),
-			Description:     fmt.Sprintf("Share contribution - %s", req.Description),
+			TransactionDate: transactionDate,
+			Description:     fmt.Sprintf("Share contribution by member %d - %s", req.MemberID, req.Description),
 		}
 		if err := tx.Create(creditGL).Error; err != nil {
+			return err
+		}
+
+		// 6. Update Share Account Balance
+		if err := tx.Model(&models.ShareAccount{}).Where("id = ?", payment.ShareAccountID).Updates(map[string]interface{}{
+			"share_units":  gorm.Expr("share_units + ?", payment.ShareUnits),
+			"share_amount": gorm.Expr("share_amount + ?", payment.AmountPaid),
+		}).Error; err != nil {
 			return err
 		}
 
@@ -166,6 +208,22 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 		return fmt.Errorf("posting rule for SHARES_CONTRIBUTION not found: %w", err)
 	}
 
+	// Get share account to determine share type and unit price
+	var shareAccount models.ShareAccount
+	if err := db.DB.First(&shareAccount, payment.ShareAccountID).Error; err != nil {
+		return fmt.Errorf("share account not found: %w", err)
+	}
+
+	// Get share type to determine unit price
+	var shareType models.ShareType
+	if err := db.DB.First(&shareType, shareAccount.ShareTypeID).Error; err != nil {
+		return fmt.Errorf("share type not found for share account: %w", err)
+	}
+
+	oldUnits := payment.ShareUnits
+	oldAmount := payment.AmountPaid
+	oldAccountID := payment.ShareAccountID
+
 	transactionDate := utils.ParseDate(req.TransactionDate)
 
 	return db.DB.Transaction(func(tx *gorm.DB) error {
@@ -200,7 +258,29 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 			return err
 		}
 
-		// 3. Update General Ledger Debit Entry
+		// 3. Update Member Share Movement (PURCHASE)
+		var prevBalance float64
+		// Calculate previous balance for the share account, excluding the current transaction's effect
+		tx.Model(&models.ShareTransaction{}).
+			Where("share_account_id = ? AND transaction_id != ?", payment.ShareAccountID, payment.TransactionID).
+			Select("COALESCE(SUM(debit - credit), 0)").Scan(&prevBalance)
+
+		if err := tx.Model(&models.ShareTransaction{}).
+			Where("transaction_id = ? AND transaction_type = 'PURCHASE'", payment.TransactionID).
+			Updates(map[string]interface{}{
+				"share_account_id": payment.ShareAccountID,
+				"share_units":      req.ShareUnits,
+				"unit_price":       shareType.ShareValue,
+				"debit":            req.AmountPaid,
+				"credit":           0.00,
+				"balance_after":    prevBalance + req.AmountPaid,
+				"transaction_date": transactionDate,
+				"updated_at":       time.Now(),
+			}).Error; err != nil {
+			return err
+		}
+
+		// 4. Update General Ledger Debit Entry
 		if err := tx.Model(&models.GeneralLedgerEntry{}).
 			Where("transaction_id = ? AND debit > 0", payment.TransactionID).
 			Updates(map[string]interface{}{
@@ -208,13 +288,13 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 				"sub_account_id":   rule.DebitSubAccountID,
 				"debit":            payment.AmountPaid,
 				"transaction_date": transactionDate,
-				"description":      fmt.Sprintf("Share contribution (updated) - %s", payment.Description),
+				"description":      fmt.Sprintf("Share contribution by member %d (updated) - %s", payment.MemberID, req.Description),
 				"updated_at":       time.Now(),
 			}).Error; err != nil {
 			return err
 		}
 
-		// 4. Update General Ledger Credit Entry
+		// 5. Update General Ledger Credit Entry
 		if err := tx.Model(&models.GeneralLedgerEntry{}).
 			Where("transaction_id = ? AND credit > 0", payment.TransactionID).
 			Updates(map[string]interface{}{
@@ -222,10 +302,37 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 				"sub_account_id":   rule.CreditSubAccountID,
 				"credit":           payment.AmountPaid,
 				"transaction_date": transactionDate,
-				"description":      fmt.Sprintf("Share contribution (updated) - %s", payment.Description),
+				"description":      fmt.Sprintf("Share contribution by member %d (updated) - %s", payment.MemberID, req.Description),
 				"updated_at":       time.Now(),
 			}).Error; err != nil {
 			return err
+		}
+
+		// 6. Update Share Account Balance
+		if oldAccountID == req.ShareAccountID {
+			// Same account, just update difference
+			if err := tx.Model(&models.ShareAccount{}).Where("id = ?", oldAccountID).Updates(map[string]interface{}{
+				"share_units":  gorm.Expr("share_units + ?", req.ShareUnits-oldUnits),
+				"share_amount": gorm.Expr("share_amount + ?", req.AmountPaid-oldAmount),
+			}).Error; err != nil {
+				return err
+			}
+		} else {
+			// Account changed
+			// Subtract from old
+			if err := tx.Model(&models.ShareAccount{}).Where("id = ?", oldAccountID).Updates(map[string]interface{}{
+				"share_units":  gorm.Expr("share_units - ?", oldUnits),
+				"share_amount": gorm.Expr("share_amount - ?", oldAmount),
+			}).Error; err != nil {
+				return err
+			}
+			// Add to new
+			if err := tx.Model(&models.ShareAccount{}).Where("id = ?", req.ShareAccountID).Updates(map[string]interface{}{
+				"share_units":  gorm.Expr("share_units + ?", req.ShareUnits),
+				"share_amount": gorm.Expr("share_amount + ?", req.AmountPaid),
+			}).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil

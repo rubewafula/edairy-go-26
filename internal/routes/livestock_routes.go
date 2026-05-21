@@ -8,6 +8,12 @@ import (
 func registerLivestockRoutes(api *gin.RouterGroup) {
 	livestockController := controllers.NewLivestockController()
 
+	api.POST("/livestocks", livestockController.CreateLivestocks)
+	api.GET("/livestocks", livestockController.GetLivestocks) // Paginated list
+	api.GET("/livestocks/:id", livestockController.GetLivestock)
+	api.PUT("/livestocks/:id", livestockController.UpdateLivestocks)
+	api.DELETE("/livestocks/:id", livestockController.DeleteLivestocks)
+
 	api.POST("/livestock-categories", livestockController.CreateCategory)
 	api.GET("/livestock-categories", livestockController.GetCategories) // Paginated list
 	api.GET("/livestock-categories/:id", livestockController.GetCategory)

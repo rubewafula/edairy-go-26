@@ -125,7 +125,7 @@ func (s *AdminDashboardService) getLoanStats() dtos.AdminDashboardLoanStat {
 			count(if(status = 'pending', id, null)) as pending,
 			COALESCE(SUM(ifnull(amount, 0)), 0) as total_amount,
 			COALESCE(SUM(if(status = 'pending', ifnull(amount, 0), 0)), 0)as total_amount_pending
-		FROM member_loans
+		FROM loans
 		WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
 	`).Scan(&result)
 
@@ -138,7 +138,8 @@ func (s *AdminDashboardService) getTopRoutes() []dtos.AdminDashboardRouteStat {
 	db.DB.Raw(`
 		SELECT r.route_name AS route,  COALESCE(SUM(ifnull(m.quantity, 0)), 0) AS total
 		FROM milk_journal_entries m
-		INNER JOIN routes r ON r.id = m.route_id
+		INNER JOIN milk_journals mj ON mj.id = m.milk_journal_id
+		INNER JOIN routes r ON r.id = mj.route_id
 		WHERE DATE(m.created_at) = CURDATE()
 		GROUP BY r.id
 		ORDER BY total DESC

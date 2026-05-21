@@ -16,6 +16,7 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	dailyMilkVarianceController := controllers.NewDailyMilkVarianceController()
 	defaultMilkRateController := controllers.NewDefaultMilkRateController()
 	milkCanController := controllers.NewMilkCanController()
+	canMovementController := controllers.NewCanMovementController()
 
 	api.POST("/milk-delivery-shifts", milkDeliveryShiftController.CreateShift)
 	api.GET("/milk-delivery-shifts", milkDeliveryShiftController.GetShifts)
@@ -33,6 +34,7 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	api.GET("/milk-journals", milkJournalController.GetMilkJournals)
 	api.GET("/milk-journals/:id", milkJournalController.GetMilkJournal)
 	api.PUT("/milk-journals/:id", milkJournalController.UpdateMilkJournal)
+	api.GET("/milk-journals-today", milkJournalController.GetDailyJournals)
 	api.DELETE("/milk-journals/:id", milkJournalController.DeleteMilkJournal)
 
 	api.POST("/milk-journal-entries", milkJournalEntryController.CreateEntry)
@@ -73,4 +75,10 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	api.GET("/milk-cans/:id", milkCanController.GetMilkCan)
 	api.PUT("/milk-cans/:id", milkCanController.UpdateMilkCan)
 	api.DELETE("/milk-cans/:id", milkCanController.DeleteMilkCan)
+
+	api.POST("/can-movements", canMovementController.CreateMovement)
+	api.GET("/can-movements", canMovementController.GetMovements)
+	api.GET("/can-movements/:id", canMovementController.GetMovement)
+	api.PUT("/can-movements/:id", canMovementController.UpdateMovement)
+	api.DELETE("/can-movements/:id", canMovementController.DeleteMovement)
 }
