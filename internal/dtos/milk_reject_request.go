@@ -5,7 +5,7 @@ import "time"
 type CreateMilkRejectRequest struct {
 	RouteID             uint64  `json:"route_id" validate:"required"`
 	Quantity            float64 `json:"quantity" validate:"required"`
-	TransactionDate     string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate     string  `json:"transaction_date" validate:"required"`
 	Confirmed           int     `json:"confirmed"`
 	Reason              string  `json:"reason" validate:"required,max=255"`
 	Description         string  `json:"description" validate:"max=255"`
@@ -18,7 +18,7 @@ type CreateMilkRejectRequest struct {
 type UpdateMilkRejectRequest struct {
 	RouteID             uint64  `json:"route_id" validate:"required"`
 	Quantity            float64 `json:"quantity" validate:"required"`
-	TransactionDate     string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate     string  `json:"transaction_date" validate:"required"`
 	Confirmed           int     `json:"confirmed"`
 	Reason              string  `json:"reason" validate:"required,max=255"`
 	Description         string  `json:"description" validate:"max=255"`

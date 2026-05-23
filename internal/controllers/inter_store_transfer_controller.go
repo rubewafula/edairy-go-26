@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,15 @@ func NewInterStoreTransferController() *InterStoreTransferController {
 func (c *InterStoreTransferController) CreateTransfer(ctx *gin.Context) {
 	var req dtos.CreateInterStoreTransferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Println("Inter store transfer: Error unmarshalling data: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	log.Printf("Inter store transfer: Raw POST data: %+v\n", req)
+
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Println("Inter store transfer: Error validating data: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}

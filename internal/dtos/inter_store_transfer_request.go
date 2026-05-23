@@ -3,11 +3,11 @@ package dtos
 import "time"
 
 type CreateInterStoreTransferRequest struct {
-	FromStoreID  uint64 `json:"FromStoreID" validate:"required"`
-	ToStoreID    uint64 `json:"ToStoreID" validate:"required"`
-	Reference    string `json:"Reference" validate:"required,max=255"`
-	TransferDate string `json:"TransferDate" validate:"required,datetime"`
-	Status       string `json:"Status" validate:"required,max=255"`
+	FromStoreID  uint64 `json:"from_store_id" validate:"required"`
+	ToStoreID    uint64 `json:"to_store_id" validate:"required"`
+	Reference    string `json:"reference" validate:"required,max=255"`
+	TransferDate string `json:"transfer_date" validate:"required"`
+	Status       string `json:"status" validate:"required,max=255"`
 }
 
 type UpdateInterStoreTransferRequest struct {

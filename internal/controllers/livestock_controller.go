@@ -399,70 +399,6 @@ func (c *LivestockController) DeleteHealthRecord(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Health record deleted successfully"})
 }
 
-// Production CRUD
-func (c *LivestockController) CreateProduction(ctx *gin.Context) {
-	var req dtos.CreateLivestockProductionRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
-		return
-	}
-	userID := ctx.GetUint64("user_id")
-	res, err := c.service.CreateProduction(req, userID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusCreated, res)
-}
-
-func (c *LivestockController) GetProductionRecords(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
-	id := ctx.Query("livestock_id")
-	res, total, err := c.service.GetProductionRecords(id, page, limit)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
-}
-
-func (c *LivestockController) GetProductionRecord(ctx *gin.Context) {
-	res, err := c.service.GetProductionRecord(ctx.Param("id"))
-	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Production record not found"})
-		return
-	}
-	ctx.JSON(http.StatusOK, res)
-}
-
-func (c *LivestockController) UpdateProductionRecord(ctx *gin.Context) {
-	var req dtos.UpdateLivestockProductionRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userID := ctx.GetUint64("user_id")
-	if err := c.service.UpdateProductionRecord(ctx.Param("id"), req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Production record updated successfully"})
-}
-
-func (c *LivestockController) DeleteProductionRecord(ctx *gin.Context) {
-	userID := ctx.GetUint64("user_id")
-	if err := c.service.DeleteProductionRecord(ctx.Param("id"), userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Production record deleted successfully"})
-}
-
 // Deaths CRUD
 func (c *LivestockController) CreateDeath(ctx *gin.Context) {
 	var req dtos.CreateLivestockDeathRequest
@@ -701,4 +637,74 @@ func (c *LivestockController) DeleteWeightRecord(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Weight record deleted successfully"})
+}
+
+// Breeding Records
+func (c *LivestockController) CreateBreeding(ctx *gin.Context) {
+	var req dtos.CreateLivestockBreedingRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.Validate.Struct(req); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	res, err := c.service.CreateBreeding(req, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusCreated, res)
+}
+
+func (c *LivestockController) GetBreedingRecords(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	// Support 'size' parameter from client logs
+	if size := ctx.Query("size"); size != "" {
+		if s, err := strconv.Atoi(size); err == nil {
+			limit = s
+		}
+	}
+	id := ctx.Query("livestock_id")
+	res, total, err := c.service.GetBreedingRecords(id, page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
+}
+
+func (c *LivestockController) GetBreedingRecord(ctx *gin.Context) {
+	res, err := c.service.GetBreedingRecord(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Breeding record not found"})
+		return
+	}
+	ctx.JSON(http.StatusOK, res)
+}
+
+func (c *LivestockController) UpdateBreedingRecord(ctx *gin.Context) {
+	var req dtos.UpdateLivestockBreedingRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.UpdateBreedingRecord(ctx.Param("id"), req, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Breeding record updated successfully"})
+}
+
+func (c *LivestockController) DeleteBreedingRecord(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.DeleteBreedingRecord(ctx.Param("id"), userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Breeding record deleted successfully"})
 }

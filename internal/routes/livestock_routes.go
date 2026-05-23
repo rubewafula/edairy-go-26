@@ -7,6 +7,7 @@ import (
 
 func registerLivestockRoutes(api *gin.RouterGroup) {
 	livestockController := controllers.NewLivestockController()
+	productionController := controllers.NewLivestockProductionController()
 
 	api.POST("/livestocks", livestockController.CreateLivestocks)
 	api.GET("/livestocks", livestockController.GetLivestocks) // Paginated list
@@ -25,6 +26,12 @@ func registerLivestockRoutes(api *gin.RouterGroup) {
 	api.GET("/livestock-breeds/:id", livestockController.GetBreed)
 	api.PUT("/livestock-breeds/:id", livestockController.UpdateBreed)
 	api.DELETE("/livestock-breeds/:id", livestockController.DeleteBreed)
+
+	api.POST("/livestock-breeding-records", livestockController.CreateBreeding)
+	api.GET("/livestock-breeding-records", livestockController.GetBreedingRecords)
+	api.GET("/livestock-breeding-records/:id", livestockController.GetBreedingRecord)
+	api.PUT("/livestock-breeding-records/:id", livestockController.UpdateBreedingRecord)
+	api.DELETE("/livestock-breeding-records/:id", livestockController.DeleteBreedingRecord)
 
 	api.POST("/livestock-deaths", livestockController.CreateDeath)
 	api.GET("/livestock-deaths", livestockController.GetDeaths) // Paginated list
@@ -56,11 +63,12 @@ func registerLivestockRoutes(api *gin.RouterGroup) {
 	api.PUT("/livestock-photos/:id", livestockController.UpdatePhoto)
 	api.DELETE("/livestock-photos/:id", livestockController.DeletePhoto)
 
-	api.POST("/livestock-production", livestockController.CreateProduction)
-	api.GET("/livestock-production", livestockController.GetProductionRecords) // Paginated list
-	api.GET("/livestock-production/:id", livestockController.GetProductionRecord)
-	api.PUT("/livestock-production/:id", livestockController.UpdateProductionRecord)
-	api.DELETE("/livestock-production/:id", livestockController.DeleteProductionRecord)
+	api.POST("/livestock-production-records", productionController.Create)
+	api.GET("/livestock-production-records", productionController.List) // Paginated list
+	api.GET("/livestock-production-records/:id", productionController.Get)
+	api.PUT("/livestock-production-records/:id", productionController.Update)
+	api.DELETE("/livestock-production-records/:id", productionController.Delete)
+	api.GET("/livestock-production-records/stats/:livestock_id", productionController.Stats)
 
 	api.POST("/livestock-sales", livestockController.CreateSale)
 	api.GET("/livestock-sales", livestockController.GetSales) // Paginated list

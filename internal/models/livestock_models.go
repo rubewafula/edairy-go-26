@@ -15,7 +15,7 @@ type Livestock struct {
 }
 
 func (Livestock) TableName() string {
-	return "livestock"
+	return "livestocks"
 }
 
 type LivestockCategory struct {

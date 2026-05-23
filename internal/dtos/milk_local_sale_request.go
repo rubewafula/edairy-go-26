@@ -7,7 +7,7 @@ type CreateMilkLocalSaleRequest struct {
 	Rate            float64 `json:"rate" validate:"required"`
 	GradeID         uint64  `json:"grade_id" validate:"required"`
 	RefNumber       string  `json:"ref_number" validate:"required"`
-	TransactionDate string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate string  `json:"transaction_date" validate:"required"`
 	TransporterID   uint64  `json:"transporter_id"`
 	Amount          float64 `json:"amount" validate:"required"`
 }
@@ -17,7 +17,7 @@ type UpdateMilkLocalSaleRequest struct {
 	Rate            float64 `json:"rate" validate:"required"`
 	GradeID         uint64  `json:"grade_id" validate:"required"`
 	RefNumber       string  `json:"ref_number" validate:"required"`
-	TransactionDate string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate string  `json:"transaction_date" validate:"required"`
 	TransporterID   uint64  `json:"transporter_id"`
 	Amount          float64 `json:"amount" validate:"required"`
 }

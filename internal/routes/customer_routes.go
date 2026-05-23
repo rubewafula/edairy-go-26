@@ -7,7 +7,6 @@ import (
 
 func registerCustomerRoutes(api *gin.RouterGroup) {
 	customerController := controllers.NewCustomerController()
-	customerClassController := controllers.NewCustomerClassController()
 	customerTypeController := controllers.NewCustomerTypeController()
 	customerBillingController := controllers.NewCustomerBillingController()
 	customerInvoiceController := controllers.NewCustomerInvoiceController()
@@ -22,19 +21,12 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	api.PUT("/customers/:id", customerController.UpdateCustomer)
 	api.DELETE("/customers/:id", customerController.DeleteCustomer)
 
-	// Customer Class Routes
-	api.POST("/customer-classes", customerClassController.CreateClass)
-	api.GET("/customer-classes", customerClassController.GetClasses)
-	api.GET("/customer-classes/:id", customerClassController.GetClass)
-	api.PUT("/customer-classes/:id", customerClassController.UpdateClass)
-	api.DELETE("/customer-classes/:id", customerClassController.DeleteClass)
-
 	// Customer Type Routes
-	api.POST("/customer-types", customerTypeController.CreateCustomerType)
-	api.GET("/customer-types", customerTypeController.GetCustomerTypes)
-	api.GET("/customer-types/:id", customerTypeController.GetCustomerType)
-	api.PUT("/customer-types/:id", customerTypeController.UpdateCustomerType)
-	api.DELETE("/customer-types/:id", customerTypeController.DeleteCustomerType)
+	api.POST("/customer-types", customerTypeController.CreateType)
+	api.GET("/customer-types", customerTypeController.GetTypes)
+	api.GET("/customer-types/:id", customerTypeController.GetType)
+	api.PUT("/customer-types/:id", customerTypeController.UpdateType)
+	api.DELETE("/customer-types/:id", customerTypeController.DeleteType)
 
 	// Customer Billing Routes
 	api.GET("/customer-billings", customerBillingController.GetBillings)

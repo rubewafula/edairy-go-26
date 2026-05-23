@@ -8,7 +8,7 @@ type CreateMilkDeliveryRequest struct {
 	QuantityAccepted   float64 `json:"quantity_accepted" validate:"required"`
 	Cooler             string  `json:"cooler"`
 	Invoiced           int     `json:"invoiced"`
-	TransactionDate    string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate    string  `json:"transaction_date" validate:"required"`
 	Amount             float64 `json:"amount"`
 	AmountPaid         float64 `json:"amount_paid"`
 	RouteID            uint64  `json:"route_id"`
@@ -23,7 +23,7 @@ type UpdateMilkDeliveryRequest struct {
 	QuantityAccepted   float64 `json:"quantity_accepted" validate:"required"`
 	Cooler             string  `json:"cooler"`
 	Invoiced           int     `json:"invoiced"`
-	TransactionDate    string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate    string  `json:"transaction_date" validate:"required"`
 	Amount             float64 `json:"amount"`
 	AmountPaid         float64 `json:"amount_paid"`
 	RouteID            uint64  `json:"route_id"`

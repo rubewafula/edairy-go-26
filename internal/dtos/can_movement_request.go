@@ -3,27 +3,25 @@ package dtos
 import "time"
 
 type CreateCanMovementRequest struct {
-	CanID             uint64  `json:"can_id" validate:"required"`
-	MovementType      string  `json:"movement_type" validate:"required"`
-	Quantity          float64 `json:"quantity" validate:"required"`
-	Remarks           string  `json:"remarks"`
-	ShiftID           uint64  `json:"shift_id" validate:"required"`
-	TransporterID     uint64  `json:"transporter_id" validate:"required"`
-	RouteID           uint64  `json:"route_id" validate:"required"`
-	MovementDate      string  `json:"movement_date" validate:"required,datetime"`
-	ConditionOnReturn string  `json:"condition_on_return"`
+	CanID             uint64 `json:"can_id" validate:"required"`
+	MovementType      string `json:"movement_type" validate:"required"`
+	Remarks           string `json:"remarks"`
+	ShiftID           uint64 `json:"shift_id" validate:"required"`
+	TransporterID     uint64 `json:"transporter_id" validate:"required"`
+	RouteID           uint64 `json:"route_id" validate:"required"`
+	MovementDate      string `json:"movement_date" validate:"required"`
+	ConditionOnReturn string `json:"condition_on_return"`
 }
 
 type UpdateCanMovementRequest struct {
-	CanID             uint64  `json:"can_id" validate:"required"`
-	MovementType      string  `json:"movement_type" validate:"required"`
-	Quantity          float64 `json:"quantity" validate:"required"`
-	Remarks           string  `json:"remarks"`
-	ShiftID           uint64  `json:"shift_id" validate:"required"`
-	TransporterID     uint64  `json:"transporter_id" validate:"required"`
-	RouteID           uint64  `json:"route_id" validate:"required"`
-	MovementDate      string  `json:"movement_date" validate:"required,datetime"`
-	ConditionOnReturn string  `json:"condition_on_return"`
+	CanID             uint64 `json:"can_id" validate:"required"`
+	MovementType      string `json:"movement_type" validate:"required"`
+	Remarks           string `json:"remarks"`
+	ShiftID           uint64 `json:"shift_id" validate:"required"`
+	TransporterID     uint64 `json:"transporter_id" validate:"required"`
+	RouteID           uint64 `json:"route_id" validate:"required"`
+	MovementDate      string `json:"movement_date" validate:"required"`
+	ConditionOnReturn string `json:"condition_on_return"`
 }
 
 type CanMovementResponse struct {

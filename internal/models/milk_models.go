@@ -134,7 +134,7 @@ type DailyMilkVariance struct {
 }
 
 func (DailyMilkVariance) TableName() string {
-	return "daily_milk_variance"
+	return "daily_milk_variances"
 }
 
 type MilkJournal struct {

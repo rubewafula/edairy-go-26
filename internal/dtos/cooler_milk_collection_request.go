@@ -3,7 +3,7 @@ package dtos
 import "time"
 
 type CreateCoolerMilkCollectionRequest struct {
-	TransactionDate     string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate     string  `json:"transaction_date" validate:"required"`
 	Quantity            float64 `json:"quantity" validate:"required"`
 	TransportVehicleID  uint64  `json:"transport_vehicle_id"`
 	MilkDeliveryShiftID uint64  `json:"milk_delivery_shift_id"`
@@ -14,7 +14,7 @@ type CreateCoolerMilkCollectionRequest struct {
 }
 
 type UpdateCoolerMilkCollectionRequest struct {
-	TransactionDate     string  `json:"transaction_date" validate:"required,datetime"`
+	TransactionDate     string  `json:"transaction_date" validate:"required"`
 	Quantity            float64 `json:"quantity" validate:"required"`
 	TransportVehicleID  uint64  `json:"transport_vehicle_id"`
 	MilkDeliveryShiftID uint64  `json:"milk_delivery_shift_id"`

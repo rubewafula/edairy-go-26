@@ -68,7 +68,6 @@ type CanMovement struct {
 	BaseModel
 	CanID             uint64    `gorm:"column:can_id"`
 	MovementType      string    `gorm:"column:movement_type"`
-	Quantity          float64   `gorm:"column:quantity"`
 	Remarks           string    `gorm:"column:remarks"`
 	ShiftID           uint64    `gorm:"column:shift_id"`
 	TransporterID     uint64    `gorm:"column:transporter_id"`
@@ -79,6 +78,57 @@ type CanMovement struct {
 
 func (CanMovement) TableName() string {
 	return "can_movements"
+}
+
+type LivestockBreedingRecord struct {
+	BaseModel
+	LivestockID         uint64     `gorm:"index;column:livestock_id"`
+	BreedingDate        time.Time  `gorm:"column:breeding_date"`
+	BreedingType        string     `gorm:"column:breeding_type"` // AI or Natural
+	SireID              *uint64    `gorm:"column:sire_id"`
+	TechnicianName      string     `gorm:"column:technician_name"`
+	PregnancyCheckDate  *time.Time `gorm:"column:pregnancy_check_date"`
+	PregnancyStatus     string     `gorm:"column:pregnancy_status"` // e.g., PENDING, POSITIVE, NEGATIVE
+	ExpectedCalvingDate *time.Time `gorm:"column:expected_calving_date"`
+	ActualCalvingDate   *time.Time `gorm:"column:actual_calving_date"`
+	Remarks             string     `gorm:"column:remarks"`
+}
+
+func (LivestockBreedingRecord) TableName() string {
+	return "livestock_breeding_records"
+}
+
+type RecurrentDeduction struct {
+	BaseModel
+	CustomerID      uint64    `gorm:"column:customer_id"`
+	TotalAmount     float64   `gorm:"column:total_amount"`
+	PaidAmount      float64   `gorm:"column:paid_amount"`
+	RecurrentAmount float64   `gorm:"column:recurrent_amount"`
+	DeductionTypeID uint64    `gorm:"column:deduction_type_id"`
+	Reference       string    `gorm:"column:reference"`
+	CustomerType    string    `gorm:"column:customer_type"`
+	Settled         int       `gorm:"column:settled"`
+	PrincipalAmount float64   `gorm:"column:principal_amount"`
+	TransactionDate time.Time `gorm:"column:transaction_date"`
+}
+
+func (RecurrentDeduction) TableName() string {
+	return "recurrent_deductions"
+}
+
+type CashTransaction struct {
+	BaseModel
+	ReferenceNumber        string    `gorm:"column:reference_number"`
+	TransactionDescription string    `gorm:"column:transaction_description"`
+	TransactionType        string    `gorm:"column:transaction_type"`
+	TransactionDate        time.Time `gorm:"column:transaction_date"`
+	PaidBy                 string    `gorm:"column:paid_by"`
+	TransactionAmount      float64   `gorm:"column:transaction_amount"`
+	CustomerType           string    `gorm:"column:customer_type"`
+	CustomerID             uint64    `gorm:"column:customer_id"`
+	PaymentModeID          uint64    `gorm:"column:payment_mode_id"`
+	PaymentType            string    `gorm:"column:payment_type"`
+	TransactionID          uint64    `gorm:"column:transaction_id"`
 }
 
 type Route struct {

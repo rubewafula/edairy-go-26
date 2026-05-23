@@ -18,7 +18,6 @@ func (s *CanMovementService) CreateMovement(req dtos.CreateCanMovementRequest) (
 	movement := &models.CanMovement{
 		CanID:             req.CanID,
 		MovementType:      req.MovementType,
-		Quantity:          req.Quantity,
 		Remarks:           req.Remarks,
 		ShiftID:           req.ShiftID,
 		TransporterID:     req.TransporterID,
@@ -41,7 +40,7 @@ func (s *CanMovementService) GetMovements(page, limit int) ([]dtos.CanMovementRe
 
 	query := `
 		SELECT 
-			cm.id, cm.can_id, mc.can_id AS can_code, cm.movement_type, cm.quantity, cm.remarks,
+			cm.id, cm.can_id, mc.can_id AS can_code, cm.movement_type, mc.can_size, cm.remarks,
 			cm.shift_id, mds.name AS shift_name,
 			cm.transporter_id, t.transporter_no,
 			cm.route_id, r.route_name,
@@ -64,7 +63,7 @@ func (s *CanMovementService) GetMovement(id string) (*dtos.CanMovementResponse, 
 	var result dtos.CanMovementResponse
 	query := `
 		SELECT 
-			cm.id, cm.can_id, mc.can_id AS can_code, cm.movement_type, cm.quantity, cm.remarks,
+			cm.id, cm.can_id, mc.can_id AS can_code, cm.movement_type, mc.can_size, cm.remarks,
 			cm.shift_id, mds.name AS shift_name,
 			cm.transporter_id, t.transporter_no,
 			cm.route_id, r.route_name,
@@ -96,7 +95,6 @@ func (s *CanMovementService) UpdateMovement(id string, req dtos.UpdateCanMovemen
 
 	movement.CanID = req.CanID
 	movement.MovementType = req.MovementType
-	movement.Quantity = req.Quantity
 	movement.Remarks = req.Remarks
 	movement.ShiftID = req.ShiftID
 	movement.TransporterID = req.TransporterID

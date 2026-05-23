@@ -128,11 +128,11 @@ func (StoreSale) TableName() string {
 
 type StoreSaleItem struct {
 	BaseModel
-	ItemID      uint64 `gorm:"column:item_id"`
-	Quantity    int    `gorm:"column:quantity"`
-	UnitPrice   string `gorm:"column:unit_price"`
-	Total       string `gorm:"column:total"`
-	StoreSaleID uint64 `gorm:"column:store_sale_id"`
+	ItemID      uint64  `gorm:"column:item_id"`
+	Quantity    int     `gorm:"column:quantity"`
+	UnitPrice   float64 `gorm:"column:unit_price"`
+	Total       float64 `gorm:"column:total"`
+	StoreSaleID uint64  `gorm:"column:store_sale_id"`
 }
 
 func (StoreSaleItem) TableName() string {

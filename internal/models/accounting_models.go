@@ -54,20 +54,6 @@ type LedgerEntry struct {
 	Credit        float64 `gorm:"column:credit"`
 }
 
-type CashTransaction struct {
-	BaseModel
-	ReferenceNumber        string    `gorm:"uniqueIndex;column:reference_number"`
-	TransactionDescription string    `gorm:"column:transaction_description"`
-	TransactionType        string    `gorm:"column:transaction_type"`
-	TransactionDate        time.Time `gorm:"index;column:transaction_date"`
-	PaidBy                 string    `gorm:"column:paid_by"`
-	TransactionAmount      float64   `gorm:"column:transaction_amount"`
-	CustomerType           string    `gorm:"column:customer_type"`
-	CustomerID             uint64    `gorm:"index;column:customer_id"`
-	PaymentModeID          uint64    `gorm:"index;column:payment_mode_id"`
-	PaymentType            string    `gorm:"column:payment_type"`
-}
-
 type WalletType struct {
 	BaseModel
 	Code        string `gorm:"uniqueIndex;column:code"`

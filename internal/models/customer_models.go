@@ -4,20 +4,20 @@ import "time"
 
 type Customer struct {
 	BaseModel
-	ClassID       uint64  `gorm:"column:class_id"`
-	FullNames     string  `gorm:"column:full_names"`
-	Phone         string  `gorm:"column:phone"`
-	EmailAddress  string  `gorm:"column:email_address"`
-	CustomerNo    string  `gorm:"uniqueIndex;column:customer_no"`
-	KraPin        string  `gorm:"column:kra_pin"`
-	Status        string  `gorm:"column:status"`
-	CreditLimit   float64 `gorm:"column:credit_limit"`
-	PostalAddress string  `gorm:"column:postal_address"`
-	PostalCode    string  `gorm:"column:postal_code"`
-	PostalTown    string  `gorm:"column:postal_town"`
-	SiteID        uint64  `gorm:"column:site_id"`
-	Terms         string  `gorm:"column:terms"`
-	Rate          float64 `gorm:"column:rate"`
+	CustomerTypeID uint64  `gorm:"column:customer_type_id"`
+	FullNames      string  `gorm:"column:full_names"`
+	Phone          string  `gorm:"column:phone"`
+	EmailAddress   string  `gorm:"column:email_address"`
+	CustomerNo     string  `gorm:"uniqueIndex;column:customer_no"`
+	KraPin         string  `gorm:"column:kra_pin"`
+	Status         string  `gorm:"column:status"`
+	CreditLimit    float64 `gorm:"column:credit_limit"`
+	PostalAddress  string  `gorm:"column:postal_address"`
+	PostalCode     string  `gorm:"column:postal_code"`
+	PostalTown     string  `gorm:"column:postal_town"`
+	SiteID         uint64  `gorm:"column:site_id"`
+	Terms          string  `gorm:"column:terms"`
+	Rate           float64 `gorm:"column:rate"`
 }
 
 type CustomerDocument struct {

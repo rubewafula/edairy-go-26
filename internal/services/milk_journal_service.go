@@ -86,8 +86,8 @@ func (s *MilkJournalService) GetMilkJournals(page, limit int) ([]dtos.MilkJourna
 	db.DB.Model(&models.MilkJournal{}).Count(&total)
 	offset := (page - 1) * limit
 
-	query := `sss
-			SELECT 
+	query := `	
+		SELECT 
 					mj.id,
 					mj.journal,
 					mj.journal_date,

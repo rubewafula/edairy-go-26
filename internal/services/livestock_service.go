@@ -41,8 +41,8 @@ func (s *LivestockService) GetLivestocks(page, limit int) ([]dtos.LivestockRespo
 
 	query := `
 		SELECT l.*, lb.breed_name, lc.category_name
-		FROM livestock l
-		LEFT JOIN livestock_breeds lb ON l.breed_id = lb.id
+		FROM livestocks l
+		LEFT JOIN livestock_breeds lb ON l.livestock_breed_id = lb.id
 		LEFT JOIN livestock_categories lc ON lb.livestock_category_id = lc.id
 		WHERE l.deleted_at IS NULL
 		ORDER BY l.id DESC LIMIT ? OFFSET ?
@@ -55,8 +55,8 @@ func (s *LivestockService) GetLivestock(id string) (*dtos.LivestockResponse, err
 	var result dtos.LivestockResponse
 	query := `
 		SELECT l.*, lb.breed_name, lc.category_name
-		FROM livestock l
-		LEFT JOIN livestock_breeds lb ON l.breed_id = lb.id
+		FROM livestocks l
+		LEFT JOIN livestock_breeds lb ON l.livestock_breed_id = lb.id
 		LEFT JOIN livestock_categories lc ON lb.livestock_category_id = lc.id
 		WHERE l.id = ? AND l.deleted_at IS NULL LIMIT 1
 	`
@@ -246,7 +246,7 @@ func (s *LivestockService) GetDeaths(livestockID string, page, limit int) ([]dto
 		SELECT ld.id, ld.livestock_id, l.tag_no as livestock_tag_no, ld.death_date,
 		       ld.cause_of_death, ld.disposal_method, ld.remarks, ld.created_at, ld.updated_at
 		FROM livestock_deaths ld
-		JOIN livestock l ON ld.livestock_id = l.id
+		JOIN livestocks l ON ld.livestock_id = l.id
 		WHERE (? = '' OR ld.livestock_id = ?) AND ld.deleted_at IS NULL
 		ORDER BY ld.death_date DESC
 		LIMIT ? OFFSET ?
@@ -261,7 +261,7 @@ func (s *LivestockService) GetDeath(id string) (*dtos.LivestockDeathResponse, er
 		SELECT ld.id, ld.livestock_id, l.tag_no as livestock_tag_no, ld.death_date,
 		       ld.cause_of_death, ld.disposal_method, ld.remarks, ld.created_at, ld.updated_at
 		FROM livestock_deaths ld
-		JOIN livestock l ON ld.livestock_id = l.id
+		JOIN livestocks l ON ld.livestock_id = l.id
 		WHERE ld.id = ? AND ld.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -331,7 +331,7 @@ func (s *LivestockService) GetFeedings(livestockID string, page, limit int) ([]d
 		       lf.quantity, lf.unit, lf.feeding_date, lf.cost, lf.notes,
 		       lf.created_at, lf.updated_at
 		FROM livestock_feedings lf
-		JOIN livestock l ON lf.livestock_id = l.id
+		JOIN livestocks l ON lf.livestock_id = l.id
 		WHERE (? = '' OR lf.livestock_id = ?) AND lf.deleted_at IS NULL
 		ORDER BY lf.feeding_date DESC
 		LIMIT ? OFFSET ?
@@ -347,7 +347,7 @@ func (s *LivestockService) GetFeeding(id string) (*dtos.LivestockFeedingResponse
 		       lf.quantity, lf.unit, lf.feeding_date, lf.cost, lf.notes,
 		       lf.created_at, lf.updated_at
 		FROM livestock_feedings lf
-		JOIN livestock l ON lf.livestock_id = l.id
+		JOIN livestocks l ON lf.livestock_id = l.id
 		WHERE lf.id = ? AND lf.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -425,7 +425,7 @@ func (s *LivestockService) GetHealthRecords(livestockID string, page, limit int)
 		       lhr.treatment_date, lhr.next_visit_date, lhr.notes,
 		       lhr.created_at, lhr.updated_at
 		FROM livestock_health_records lhr
-		JOIN livestock l ON lhr.livestock_id = l.id
+		JOIN livestocks l ON lhr.livestock_id = l.id
 		WHERE (? = '' OR lhr.livestock_id = ?) AND lhr.deleted_at IS NULL
 		ORDER BY lhr.treatment_date DESC
 		LIMIT ? OFFSET ?
@@ -442,7 +442,7 @@ func (s *LivestockService) GetHealthRecord(id string) (*dtos.LivestockHealthResp
 		       lhr.treatment_date, lhr.next_visit_date, lhr.notes,
 		       lhr.created_at, lhr.updated_at
 		FROM livestock_health_records lhr
-		JOIN livestock l ON lhr.livestock_id = l.id
+		JOIN livestocks l ON lhr.livestock_id = l.id
 		WHERE lhr.id = ? AND lhr.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -521,7 +521,7 @@ func (s *LivestockService) GetMovements(livestockID string, page, limit int) ([]
 		       lm.to_location, lm.movement_date, lm.movement_type, lm.transporter,
 		       lm.remarks, lm.created_at, lm.updated_at
 		FROM livestock_movements lm
-		JOIN livestock l ON lm.livestock_id = l.id
+		JOIN livestocks l ON lm.livestock_id = l.id
 		WHERE (? = '' OR lm.livestock_id = ?) AND lm.deleted_at IS NULL
 		ORDER BY lm.movement_date DESC
 		LIMIT ? OFFSET ?
@@ -537,7 +537,7 @@ func (s *LivestockService) GetMovement(id string) (*dtos.LivestockMovementRespon
 		       lm.to_location, lm.movement_date, lm.movement_type, lm.transporter,
 		       lm.remarks, lm.created_at, lm.updated_at
 		FROM livestock_movements lm
-		JOIN livestock l ON lm.livestock_id = l.id
+		JOIN livestocks l ON lm.livestock_id = l.id
 		WHERE lm.id = ? AND lm.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -604,7 +604,7 @@ func (s *LivestockService) GetPhotos(livestockID string, page, limit int) ([]dto
 		SELECT lp.id, lp.livestock_id, l.tag_no as livestock_tag_no, lp.photo_url,
 		       lp.description, lp.created_at, lp.updated_at
 		FROM livestock_photos lp
-		JOIN livestock l ON lp.livestock_id = l.id
+		JOIN livestocks l ON lp.livestock_id = l.id
 		WHERE (? = '' OR lp.livestock_id = ?) AND lp.deleted_at IS NULL
 		ORDER BY lp.created_at DESC
 		LIMIT ? OFFSET ?
@@ -619,7 +619,7 @@ func (s *LivestockService) GetPhoto(id string) (*dtos.LivestockPhotoResponse, er
 		SELECT lp.id, lp.livestock_id, l.tag_no as livestock_tag_no, lp.photo_url,
 		       lp.description, lp.created_at, lp.updated_at
 		FROM livestock_photos lp
-		JOIN livestock l ON lp.livestock_id = l.id
+		JOIN livestocks l ON lp.livestock_id = l.id
 		WHERE lp.id = ? AND lp.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -652,92 +652,6 @@ func (s *LivestockService) DeletePhoto(id string, userID uint64) error {
 		return err
 	}
 	return db.DB.Model(&photo).Update("updated_by", userID).Delete(&photo).Error
-}
-
-func (s *LivestockService) CreateProduction(req dtos.CreateLivestockProductionRequest, userID uint64) (*models.LivestockProductionRecord, error) {
-	prod := &models.LivestockProductionRecord{
-		BaseModel:      models.BaseModel{CreatedBy: userID},
-		LivestockID:    req.LivestockID,
-		ProductionType: req.ProductionType,
-		ProductionDate: utils.ParseDate(req.ProductionDate),
-		Quantity:       req.Quantity,
-		Unit:           req.Unit,
-		Remarks:        req.Remarks,
-	}
-	if err := db.DB.Create(prod).Error; err != nil {
-		return nil, err
-	}
-	return prod, nil
-}
-
-func (s *LivestockService) GetProductionRecords(livestockID string, page, limit int) ([]dtos.LivestockProductionResponse, int64, error) {
-	var results []dtos.LivestockProductionResponse
-	var total int64
-
-	queryBuilder := db.DB.Model(&models.LivestockProductionRecord{})
-	if livestockID != "" {
-		queryBuilder = queryBuilder.Where("livestock_id = ?", livestockID)
-	}
-	queryBuilder.Count(&total)
-	offset := (page - 1) * limit
-
-	query := `
-		SELECT lpr.id, lpr.livestock_id, l.tag_no as livestock_tag_no, lpr.production_type,
-		       lpr.production_date, lpr.quantity, lpr.unit, lpr.remarks,
-		       lpr.created_at, lpr.updated_at
-		FROM livestock_production_records lpr
-		JOIN livestock l ON lpr.livestock_id = l.id
-		WHERE (? = '' OR lpr.livestock_id = ?) AND lpr.deleted_at IS NULL
-		ORDER BY lpr.production_date DESC
-		LIMIT ? OFFSET ?
-	`
-	err := db.DB.Raw(query, livestockID, livestockID, limit, offset).Scan(&results).Error
-	return results, total, err
-}
-
-func (s *LivestockService) GetProductionRecord(id string) (*dtos.LivestockProductionResponse, error) {
-	var result dtos.LivestockProductionResponse
-	query := `
-		SELECT lpr.id, lpr.livestock_id, l.tag_no as livestock_tag_no, lpr.production_type,
-		       lpr.production_date, lpr.quantity, lpr.unit, lpr.remarks,
-		       lpr.created_at, lpr.updated_at
-		FROM livestock_production_records lpr
-		JOIN livestock l ON lpr.livestock_id = l.id
-		WHERE lpr.id = ? AND lpr.deleted_at IS NULL
-		LIMIT 1
-	`
-	err := db.DB.Raw(query, id).Scan(&result).Error
-	if err != nil {
-		return nil, err
-	}
-	if result.ID == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return &result, nil
-}
-
-func (s *LivestockService) UpdateProductionRecord(id string, req dtos.UpdateLivestockProductionRequest, userID uint64) error {
-	var prod models.LivestockProductionRecord
-	if err := db.DB.First(&prod, id).Error; err != nil {
-		return err
-	}
-	updates := map[string]interface{}{
-		"production_type": req.ProductionType,
-		"production_date": utils.ParseDate(req.ProductionDate),
-		"quantity":        req.Quantity,
-		"unit":            req.Unit,
-		"remarks":         req.Remarks,
-		"updated_by":      userID,
-	}
-	return db.DB.Model(&prod).Updates(updates).Error
-}
-
-func (s *LivestockService) DeleteProductionRecord(id string, userID uint64) error {
-	var prod models.LivestockProductionRecord
-	if err := db.DB.First(&prod, id).Error; err != nil {
-		return err
-	}
-	return db.DB.Model(&prod).Update("updated_by", userID).Delete(&prod).Error
 }
 
 func (s *LivestockService) CreateSale(req dtos.CreateLivestockSaleRequest, userID uint64) (*models.LivestockSale, error) {
@@ -773,7 +687,7 @@ func (s *LivestockService) GetSales(livestockID string, page, limit int) ([]dtos
 		       ls.sale_date, ls.quantity, ls.sale_price, ls.payment_status, ls.notes,
 		       ls.created_at, ls.updated_at
 		FROM livestock_sales ls
-		JOIN livestock l ON ls.livestock_id = l.id
+		JOIN livestocks l ON ls.livestock_id = l.id
 		WHERE (? = '' OR ls.livestock_id = ?) AND ls.deleted_at IS NULL
 		ORDER BY ls.sale_date DESC
 		LIMIT ? OFFSET ?
@@ -789,7 +703,7 @@ func (s *LivestockService) GetSale(id string) (*dtos.LivestockSaleResponse, erro
 		       ls.sale_date, ls.quantity, ls.sale_price, ls.payment_status, ls.notes,
 		       ls.created_at, ls.updated_at
 		FROM livestock_sales ls
-		JOIN livestock l ON ls.livestock_id = l.id
+		JOIN livestocks l ON ls.livestock_id = l.id
 		WHERE ls.id = ? AND ls.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -857,7 +771,7 @@ func (s *LivestockService) GetWeightRecords(livestockID string, page, limit int)
 		SELECT lwr.id, lwr.livestock_id, l.tag_no as livestock_tag_no, lwr.weight,
 		       lwr.recorded_at, lwr.remarks, lwr.created_at, lwr.updated_at
 		FROM livestock_weight_records lwr
-		JOIN livestock l ON lwr.livestock_id = l.id
+		JOIN livestocks l ON lwr.livestock_id = l.id
 		WHERE (? = '' OR lwr.livestock_id = ?) AND lwr.deleted_at IS NULL
 		ORDER BY lwr.recorded_at DESC
 		LIMIT ? OFFSET ?
@@ -872,7 +786,7 @@ func (s *LivestockService) GetWeightRecord(id string) (*dtos.LivestockWeightResp
 		SELECT lwr.id, lwr.livestock_id, l.tag_no as livestock_tag_no, lwr.weight,
 		       lwr.recorded_at, lwr.remarks, lwr.created_at, lwr.updated_at
 		FROM livestock_weight_records lwr
-		JOIN livestock l ON lwr.livestock_id = l.id
+		JOIN livestocks l ON lwr.livestock_id = l.id
 		WHERE lwr.id = ? AND lwr.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -906,6 +820,117 @@ func (s *LivestockService) DeleteWeightRecord(id string, userID uint64) error {
 		return err
 	}
 	return db.DB.Model(&weight).Update("updated_by", userID).Delete(&weight).Error
+}
+
+// Breeding CRUD
+func (s *LivestockService) CreateBreeding(req dtos.CreateLivestockBreedingRequest, userID uint64) (*models.LivestockBreedingRecord, error) {
+	record := &models.LivestockBreedingRecord{
+		BaseModel:       models.BaseModel{CreatedBy: userID},
+		LivestockID:     req.LivestockID,
+		BreedingDate:    utils.ParseDate(req.BreedingDate),
+		BreedingType:    req.BreedingType,
+		TechnicianName:  req.TechnicianName,
+		PregnancyStatus: req.PregnancyStatus,
+		Remarks:         req.Remarks,
+	}
+
+	if req.SireID != 0 {
+		record.SireID = &req.SireID
+	}
+	if req.PregnancyCheckDate != "" {
+		t := utils.ParseDate(req.PregnancyCheckDate)
+		record.PregnancyCheckDate = &t
+	}
+	if req.ExpectedCalvingDate != "" {
+		t := utils.ParseDate(req.ExpectedCalvingDate)
+		record.ExpectedCalvingDate = &t
+	}
+	if req.ActualCalvingDate != "" {
+		t := utils.ParseDate(req.ActualCalvingDate)
+		record.ActualCalvingDate = &t
+	}
+
+	if err := db.DB.Create(record).Error; err != nil {
+		return nil, err
+	}
+	return record, nil
+}
+
+func (s *LivestockService) GetBreedingRecords(livestockID string, page, limit int) ([]dtos.LivestockBreedingResponse, int64, error) {
+	var results []dtos.LivestockBreedingResponse
+	var total int64
+
+	queryBuilder := db.DB.Model(&models.LivestockBreedingRecord{})
+	if livestockID != "" {
+		queryBuilder = queryBuilder.Where("livestock_id = ?", livestockID)
+	}
+	queryBuilder.Count(&total)
+	offset := (page - 1) * limit
+
+	query := `
+		SELECT lbr.*, l.tag_no as livestock_tag_no
+		FROM livestock_breeding_records lbr
+		JOIN livestocks l ON lbr.male_livestock_id = l.id
+		WHERE (lbr.female_livestock_id = ? OR lbr.male_livestock_id = ?) AND lbr.deleted_at IS NULL
+		ORDER BY lbr.breeding_date DESC
+		LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, livestockID, livestockID, limit, offset).Scan(&results).Error
+	return results, total, err
+}
+
+func (s *LivestockService) GetBreedingRecord(id string) (*dtos.LivestockBreedingResponse, error) {
+	var result dtos.LivestockBreedingResponse
+	query := `
+		SELECT lbr.*, l.tag_no as livestock_tag_no
+		FROM livestock_breeding_records lbr
+		JOIN livestocks l ON lbr.male_livestock_id = l.id
+		WHERE lbr.id = ? AND lbr.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&result).Error
+	if err != nil || result.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &result, nil
+}
+
+func (s *LivestockService) UpdateBreedingRecord(id string, req dtos.UpdateLivestockBreedingRequest, userID uint64) error {
+	var record models.LivestockBreedingRecord
+	if err := db.DB.First(&record, id).Error; err != nil {
+		return err
+	}
+
+	updates := map[string]interface{}{
+		"breeding_date":    utils.ParseDate(req.BreedingDate),
+		"breeding_type":    req.BreedingType,
+		"technician_name":  req.TechnicianName,
+		"pregnancy_status": req.PregnancyStatus,
+		"remarks":          req.Remarks,
+		"updated_by":       userID,
+	}
+
+	if req.SireID != 0 {
+		updates["sire_id"] = req.SireID
+	}
+	if req.PregnancyCheckDate != "" {
+		t := utils.ParseDate(req.PregnancyCheckDate)
+		updates["pregnancy_check_date"] = &t
+	}
+	if req.ExpectedCalvingDate != "" {
+		t := utils.ParseDate(req.ExpectedCalvingDate)
+		updates["expected_calving_date"] = &t
+	}
+	if req.ActualCalvingDate != "" {
+		t := utils.ParseDate(req.ActualCalvingDate)
+		updates["actual_calving_date"] = &t
+	}
+
+	return db.DB.Model(&record).Updates(updates).Error
+}
+
+func (s *LivestockService) DeleteBreedingRecord(id string, userID uint64) error {
+	return db.DB.Model(&models.LivestockBreedingRecord{}).Where("id = ?", id).Update("updated_by", userID).Delete(&models.LivestockBreedingRecord{}).Error
 }
 
 func (s *LivestockService) GetLivestockGenericResponse(livestockID string, page, limit int) ([]dtos.LivestockGenericResponse, int64, error) {
@@ -970,16 +995,27 @@ func (s *LivestockService) AddPhoto(req dtos.CreateLivestockPhotoRequest) (*mode
 	return photo, db.DB.Create(photo).Error
 }
 
-func (s *LivestockService) RecordProduction(req dtos.CreateLivestockProductionRequest) (*models.LivestockProductionRecord, error) {
-	prod := &models.LivestockProductionRecord{
-		LivestockID:    req.LivestockID,
-		ProductionType: req.ProductionType,
-		ProductionDate: utils.ParseDate(req.ProductionDate),
-		Quantity:       req.Quantity,
-		Unit:           req.Unit,
-		Remarks:        req.Remarks,
+func (s *LivestockService) RecordBreeding(req dtos.CreateLivestockBreedingRequest) (*models.LivestockBreedingRecord, error) {
+	record := &models.LivestockBreedingRecord{
+		LivestockID:     req.LivestockID,
+		BreedingDate:    utils.ParseDate(req.BreedingDate),
+		BreedingType:    req.BreedingType,
+		TechnicianName:  req.TechnicianName,
+		PregnancyStatus: req.PregnancyStatus,
+		Remarks:         req.Remarks,
 	}
-	return prod, db.DB.Create(prod).Error
+	if req.SireID != 0 {
+		record.SireID = &req.SireID
+	}
+	if req.PregnancyCheckDate != "" {
+		t := utils.ParseDate(req.PregnancyCheckDate)
+		record.PregnancyCheckDate = &t
+	}
+	if req.ExpectedCalvingDate != "" {
+		t := utils.ParseDate(req.ExpectedCalvingDate)
+		record.ExpectedCalvingDate = &t
+	}
+	return record, db.DB.Create(record).Error
 }
 
 func (s *LivestockService) RecordSale(req dtos.CreateLivestockSaleRequest) (*models.LivestockSale, error) {

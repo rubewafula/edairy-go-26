@@ -118,9 +118,10 @@ func (s *MilkJournalEntryService) GetStrayEntries(page, limit int) ([]dtos.Stray
 
 	countQuery := `
 		SELECT COUNT(*)
-		FROM milk_journal_entries mje
+		FROM milk_journals mj
+		INNER JOIN milk_journal_entries mje
 		INNER JOIN member_registrations m ON mje.member_id = m.id
-		WHERE mje.deleted_at IS NULL AND mje.route_id != m.route_id
+		WHERE mje.deleted_at IS NULL AND mj.route_id != m.route_id
 	`
 	db.DB.Raw(countQuery).Scan(&total)
 
@@ -132,18 +133,19 @@ func (s *MilkJournalEntryService) GetStrayEntries(page, limit int) ([]dtos.Stray
 			CONCAT(m.first_name, ' ', m.last_name) AS member_name,
 			m.route_id AS member_route_id,
 			mr.route_name AS member_route,
-			mje.route_id AS journal_route_id,
+			mj.route_id AS journal_route_id,
 			jr.route_name AS stray_route,
 			mje.quantity,
-			mje.journal_date,
+			mj.journal_date,
 			mds.name AS milk_delivery_shift,
 			mje.created_at
-		FROM milk_journal_entries mje
+		FROM milk_journals mj
+		INNER JOIN milk_journal_entries mje on mje.milk_journal_id = mj.id
 		INNER JOIN member_registrations m ON mje.member_id = m.id
 		LEFT JOIN routes mr ON m.route_id = mr.id
-		LEFT JOIN routes jr ON mje.route_id = jr.id
-		LEFT JOIN milk_delivery_shifts mds ON mje.milk_delivery_shift_id = mds.id
-		WHERE mje.deleted_at IS NULL AND mje.route_id != m.route_id
+		LEFT JOIN routes jr ON mj.route_id = jr.id
+		LEFT JOIN milk_delivery_shifts mds ON mj.milk_delivery_shift_id = mds.id
+		WHERE mje.deleted_at IS NULL AND mj.route_id != m.route_id
 		LIMIT ? OFFSET ?
 	`
 	err := db.DB.Raw(query, limit, offset).Scan(&entries).Error

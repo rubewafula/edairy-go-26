@@ -22,8 +22,8 @@ func (s *StoreSaleItemService) CreateSaleItem(req dtos.CreateStoreSaleItemReques
 		},
 		ItemID:      req.ItemID,
 		Quantity:    req.Quantity,
-		UnitPrice:   fmt.Sprintf("%.2f", req.UnitPrice),
-		Total:       fmt.Sprintf("%.2f", req.Total),
+		UnitPrice:   req.UnitPrice,
+		Total:       req.Total,
 		StoreSaleID: req.StoreSaleID,
 	}
 
