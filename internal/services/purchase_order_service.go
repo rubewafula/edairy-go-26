@@ -16,7 +16,7 @@ func NewPurchaseOrderService() *PurchaseOrderService {
 
 func (s *PurchaseOrderService) CreatePO(req dtos.CreatePurchaseOrderRequest, userID uint64) (*models.PurchaseOrder, error) {
 	po := &models.PurchaseOrder{
-		BaseModel:       models.BaseModel{CreatedBy: userID},
+		BaseModel:       models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		SupplierID:      req.SupplierID,
 		SupplierQuoteID: req.SupplierQuoteID,
 		PoNumber:        req.PoNumber,
@@ -56,17 +56,38 @@ func (s *PurchaseOrderService) CreatePO(req dtos.CreatePurchaseOrderRequest, use
 
 func (s *PurchaseOrderService) CreateRequisition(req dtos.CreatePurchaseRequisitionRequest, userID uint64) (*models.PurchaseRequisition, error) {
 	requisition := &models.PurchaseRequisition{
-		BaseModel:       models.BaseModel{CreatedBy: userID},
+		BaseModel:       models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		RequisitionNo:   req.RequisitionNo,
 		RequisitionDate: utils.ParseDate(req.RequisitionDate),
 		Description:     req.Description,
-		Status:          "draft",
+		Status:          req.Status,
 	}
 
-	if err := db.DB.Create(requisition).Error; err != nil {
-		return nil, err
+	if requisition.Status == "" {
+		requisition.Status = "draft"
 	}
-	return requisition, nil
+
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(requisition).Error; err != nil {
+			return err
+		}
+
+		for i := range req.Items {
+			item := &models.PurchaseRequisitionItem{
+				BaseModel:             models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
+				PurchaseRequisitionID: &requisition.ID,
+				ItemID:                &req.Items[i].ItemID,
+				Quantity:              req.Items[i].Quantity,
+				Status:                "pending",
+			}
+			if err := tx.Create(item).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return requisition, err
 }
 
 func (s *PurchaseOrderService) GetRequisitions(page, limit int) ([]dtos.PurchaseRequisitionResponse, int64, error) {
@@ -141,7 +162,7 @@ func (s *PurchaseOrderService) GetPOs(page, limit int) ([]dtos.PurchaseOrderResp
 
 func (s *PurchaseOrderService) CreateRequisitionItem(req dtos.CreatePurchaseRequisitionItemRequest, userID uint64) (*models.PurchaseRequisitionItem, error) {
 	item := &models.PurchaseRequisitionItem{
-		BaseModel:             models.BaseModel{CreatedBy: userID},
+		BaseModel:             models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		PurchaseRequisitionID: &req.PurchaseRequisitionID,
 		ItemID:                &req.ItemID,
 		Quantity:              req.Quantity,

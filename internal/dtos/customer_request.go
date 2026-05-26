@@ -12,8 +12,7 @@ type CreateCustomerRequest struct {
 	PostalAddress  string  `json:"postal_address"`
 	PostalCode     string  `json:"postal_code"`
 	PostalTown     string  `json:"postal_town"`
-	SiteID         uint64  `json:"site_id"`
-	Terms          string  `json:"terms"`
+	Terms          uint64  `json:"terms"`
 	Rate           float64 `json:"rate"`
 }
 
@@ -28,7 +27,6 @@ type UpdateCustomerRequest struct {
 	PostalAddress  string  `json:"postal_address"`
 	PostalCode     string  `json:"postal_code"`
 	PostalTown     string  `json:"postal_town"`
-	SiteID         uint64  `json:"site_id"`
-	Terms          string  `json:"terms"`
+	Terms          uint64  `json:"terms"`
 	Rate           float64 `json:"rate"`
 }

@@ -13,6 +13,7 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	customerPaymentController := controllers.NewCustomerPaymentController()
 	customerMilkRateController := controllers.NewCustomerMilkRateController()
 	customerPayDateRangeController := controllers.NewCustomerPayDateRangeController()
+	memberPayrollController := controllers.NewMemberPayrollController()
 
 	// Customer Routes
 	api.POST("/customers", customerController.CreateCustomer)
@@ -57,4 +58,11 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	api.GET("/customer-pay-date-ranges/:id", customerPayDateRangeController.GetCustomerPayDateRange)
 	api.PUT("/customer-pay-date-ranges/:id", customerPayDateRangeController.UpdateCustomerPayDateRange)
 	api.DELETE("/customer-pay-date-ranges/:id", customerPayDateRangeController.DeleteCustomerPayDateRange)
+
+	// Member Payroll Routes
+	api.POST("/member-payrolls", memberPayrollController.Create)
+	api.GET("/member-payrolls", memberPayrollController.List)
+	api.GET("/member-payrolls/:id", memberPayrollController.Get)
+	api.PUT("/member-payrolls/:id", memberPayrollController.Update)
+	api.DELETE("/member-payrolls/:id", memberPayrollController.Delete)
 }

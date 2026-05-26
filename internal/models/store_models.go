@@ -4,7 +4,7 @@ import "time"
 
 type Store struct {
 	BaseModel
-	Name        string `gorm:"column:name"`
+	Name        string `gorm:"column:store"`
 	Description string `gorm:"column:description"`
 }
 
@@ -71,28 +71,6 @@ type StoreStockTaking struct {
 
 func (StoreStockTaking) TableName() string {
 	return "store_stock_takings"
-}
-
-type StoreStockMovement struct {
-	ID              uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	TransactionDate time.Time `gorm:"column:transaction_date"`
-	StoreID         uint64    `gorm:"column:store_id"`
-	ItemID          uint64    `gorm:"column:item_id"`
-	MovementType    string    `gorm:"column:movement_type"`
-	ReferenceTable  string    `gorm:"column:reference_table"`
-	ReferenceID     uint64    `gorm:"column:reference_id"`
-	QtyIn           float64   `gorm:"column:qty_in"`
-	QtyOut          float64   `gorm:"column:qty_out"`
-	BalanceAfter    float64   `gorm:"column:balance_after"`
-	UnitCost        float64   `gorm:"column:unit_cost"`
-	SellingPrice    float64   `gorm:"column:selling_price"`
-	Remarks         string    `gorm:"column:remarks"`
-	CreatedBy       uint64    `gorm:"column:created_by"`
-	CreatedAt       time.Time `gorm:"column:created_at"`
-}
-
-func (StoreStockMovement) TableName() string {
-	return "store_stock_movements"
 }
 
 type StoreStockMovementType struct {

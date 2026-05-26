@@ -81,8 +81,6 @@ func registerInventoryRoutes(api *gin.RouterGroup) {
 	api.POST("/store-stock-takings", storeStockTakingController.CreateStockTaking)
 	api.GET("/store-stock-takings", storeStockTakingController.GetStockTakings)
 	api.GET("/store-stock-takings/:id", storeStockTakingController.GetStockTaking)
-	api.PUT("/store-stock-takings/:id", storeStockTakingController.UpdateStockTaking)
-	api.DELETE("/store-stock-takings/:id", storeStockTakingController.DeleteStockTaking)
 
 	// Inter Store Transfer Routes
 	api.POST("/inter-store-transfers", interStoreTransferController.CreateTransfer)
@@ -102,8 +100,6 @@ func registerInventoryRoutes(api *gin.RouterGroup) {
 	api.POST("/store-stock-movements", storeStockMovementController.CreateMovement)
 	api.GET("/store-stock-movements", storeStockMovementController.GetMovements)
 	api.GET("/store-stock-movements/:id", storeStockMovementController.GetMovement)
-	api.PUT("/store-stock-movements/:id", storeStockMovementController.UpdateMovement)
-	api.DELETE("/store-stock-movements/:id", storeStockMovementController.DeleteMovement)
 
 	// Store Stock Movement Type Routes
 	api.POST("/store-stock-movement-types", storeStockMovementTypeController.CreateMovementType)

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,13 @@ func NewSupplyRejectController() *SupplyRejectController {
 func (c *SupplyRejectController) CreateReject(ctx *gin.Context) {
 	var req dtos.CreateSupplyRejectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Println("Supply Rejects created, unable to parser json: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Println("Supply Rejects created, unable to validate json: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -36,6 +39,7 @@ func (c *SupplyRejectController) CreateReject(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	reject, err := c.service.CreateReject(req, userID)
 	if err != nil {
+		log.Println("Supply Rejects created, unable to created json: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

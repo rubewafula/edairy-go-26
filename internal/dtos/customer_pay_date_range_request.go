@@ -4,14 +4,14 @@ import "time"
 
 type CreateCustomerPayDateRangeRequest struct {
 	Name      string `json:"name" validate:"required,max=255"`
-	StartDate string `json:"start_date" validate:"required,datetime"`
-	EndDate   string `json:"end_date" validate:"required,datetime"`
+	StartDate string `json:"start_date" validate:"required"`
+	EndDate   string `json:"end_date" validate:"required"`
 }
 
 type UpdateCustomerPayDateRangeRequest struct {
 	Name      string `json:"name" validate:"required,max=255"`
-	StartDate string `json:"start_date" validate:"required,datetime"`
-	EndDate   string `json:"end_date" validate:"required,datetime"`
+	StartDate string `json:"start_date" validate:"required"`
+	EndDate   string `json:"end_date" validate:"required"`
 }
 
 type CustomerPayDateRangeResponse struct {

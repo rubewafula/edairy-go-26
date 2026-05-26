@@ -14,7 +14,7 @@ func NewSupplierService() *SupplierService {
 
 func (s *SupplierService) CreateSupplier(req dtos.CreateSupplierRequest, userID uint64) (*models.Supplier, error) {
 	supplier := &models.Supplier{
-		BaseModel:          models.BaseModel{CreatedBy: userID},
+		BaseModel:          models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		SupplierCategoryID: req.SupplierCategoryID,
 		SupplierCode:       req.SupplierCode,
 		SupplierType:       req.SupplierType,
@@ -24,13 +24,16 @@ func (s *SupplierService) CreateSupplier(req dtos.CreateSupplierRequest, userID 
 		PhoneNo:            req.PhoneNo,
 		EmailAddress:       req.EmailAddress,
 		KraPin:             req.KraPin,
-		OpeningBalance:     req.OpeningBalance,
-		CurrentBalance:     req.OpeningBalance,
 		CreditLimit:        req.CreditLimit,
 		PaymentTermsDays:   req.PaymentTermsDays,
 		Status:             req.Status,
 		Notes:              req.Notes,
 	}
+
+	if req.Gender != "" {
+		supplier.Gender = &req.Gender
+	}
+
 	if err := db.DB.Create(supplier).Error; err != nil {
 		return nil, err
 	}

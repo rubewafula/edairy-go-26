@@ -21,7 +21,7 @@ type Supplier struct {
 	FirstName          string     `gorm:"column:first_name"`
 	LastName           string     `gorm:"column:last_name"`
 	OtherNames         string     `gorm:"column:other_names"`
-	Gender             string     `gorm:"type:enum('male','female','other');column:gender"`
+	Gender             *string    `gorm:"type:enum('male','female','other');column:gender"`
 	Dob                *time.Time `gorm:"column:dob"`
 	IdNo               string     `gorm:"column:id_no"`
 	PassportNo         string     `gorm:"column:passport_no"`

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,13 @@ func NewStoreStockMovementController() *StoreStockMovementController {
 func (c *StoreStockMovementController) CreateMovement(ctx *gin.Context) {
 	var req dtos.CreateStoreStockMovementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("Store CreateMovement error cannot parse json: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("Store CreateMovement error cannot validate json: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -37,12 +40,11 @@ func (c *StoreStockMovementController) CreateMovement(ctx *gin.Context) {
 
 	movement, err := c.service.CreateMovement(req, userID)
 	if err != nil {
+		log.Printf("Store CreateMovement error cannot create func: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	response, _ := c.service.GetMovement(utils.Uint64ToString(movement.ID))
-	ctx.JSON(http.StatusCreated, response)
+	ctx.JSON(http.StatusCreated, gin.H{"data": movement})
 }
 
 func (c *StoreStockMovementController) GetMovements(ctx *gin.Context) {
@@ -64,31 +66,4 @@ func (c *StoreStockMovementController) GetMovement(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
-}
-
-func (c *StoreStockMovementController) UpdateMovement(ctx *gin.Context) {
-	var req dtos.UpdateStoreStockMovementRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
-		return
-	}
-
-	if err := c.service.UpdateMovement(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock movement record updated successfully"})
-}
-
-func (c *StoreStockMovementController) DeleteMovement(ctx *gin.Context) {
-	if err := c.service.DeleteMovement(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock movement record deleted successfully"})
 }

@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Customer struct {
 	BaseModel
@@ -15,8 +17,7 @@ type Customer struct {
 	PostalAddress  string  `gorm:"column:postal_address"`
 	PostalCode     string  `gorm:"column:postal_code"`
 	PostalTown     string  `gorm:"column:postal_town"`
-	SiteID         uint64  `gorm:"column:site_id"`
-	Terms          string  `gorm:"column:terms"`
+	Terms          uint64  `gorm:"column:payment_terms_days"`
 	Rate           float64 `gorm:"column:rate"`
 }
 
@@ -34,8 +35,8 @@ func (CustomerDocument) TableName() string {
 
 type CustomerType struct {
 	BaseModel
-	Name        string `gorm:"type:varchar(125);uniqueIndex;not null"`
-	Description string `gorm:"type:varchar(255)"`
+	Name        string `gorm:"column:name"`
+	Description string `gorm:"column:description"`
 }
 
 func (CustomerType) TableName() string {

@@ -80,6 +80,25 @@ func (CanMovement) TableName() string {
 	return "can_movements"
 }
 
+type StoreStockMovement struct {
+	BaseModel
+	TransactionID   uint64    `gorm:"index;column:transaction_id"`
+	TransactionDate time.Time `gorm:"column:transaction_date"`
+	StoreID         uint64    `gorm:"index;column:store_id"`
+	MovementTypeID  uint64    `gorm:"column:movement_type_id"` // e.g., IN, OUT, ADJUSTMENT
+	Remarks         string    `gorm:"column:remarks"`
+}
+
+type StoreStockMovementItem struct {
+	BaseModel
+	StoreStockMovementID uint64  `gorm:"index;column:store_stock_movement_id"`
+	ItemID               uint64  `gorm:"index;column:item_id"`
+	Quantity             float64 `gorm:"column:quantity"`
+	UnitCost             float64 `gorm:"column:unit_cost"`
+	SellingPrice         float64 `gorm:"column:selling_price"`
+	BalanceAfter         float64 `gorm:"column:balance_after"`
+}
+
 type LivestockBreedingRecord struct {
 	BaseModel
 	LivestockID         uint64     `gorm:"index;column:livestock_id"`
@@ -102,7 +121,7 @@ type RecurrentDeduction struct {
 	BaseModel
 	CustomerID      uint64    `gorm:"column:customer_id"`
 	TotalAmount     float64   `gorm:"column:total_amount"`
-	PaidAmount      float64   `gorm:"column:paid_amount"`
+	PaidAmount      float64   `gorm:"column:paid_amount"` // Using float64 for logic, DB is decimal
 	RecurrentAmount float64   `gorm:"column:recurrent_amount"`
 	DeductionTypeID uint64    `gorm:"column:deduction_type_id"`
 	Reference       string    `gorm:"column:reference"`
@@ -114,6 +133,33 @@ type RecurrentDeduction struct {
 
 func (RecurrentDeduction) TableName() string {
 	return "recurrent_deductions"
+}
+
+type Department struct {
+	BaseModel
+	DepartmentCode string `gorm:"column:department_code"`
+	DepartmentName string `gorm:"column:department_name"`
+	Description    string `gorm:"column:description"`
+}
+
+func (Department) TableName() string {
+	return "departments"
+}
+
+type JobPosition struct {
+	BaseModel
+	Code              string `gorm:"column:code"`
+	Name              string `gorm:"column:name"`
+	JobDescription    string `gorm:"column:job_description"`
+	DepartmentID      uint64 `gorm:"column:department_id"`
+	GradeID           string `gorm:"column:grade_id"` // Assuming grade_id is a string as per schema
+	NoOfPosts         int    `gorm:"column:no_of_posts"`
+	OccupiedPositions int    `gorm:"column:occupied_positions"`
+	VaccantPositions  int    `gorm:"column:vaccant_positions"`
+}
+
+func (JobPosition) TableName() string {
+	return "job_positions"
 }
 
 type CashTransaction struct {

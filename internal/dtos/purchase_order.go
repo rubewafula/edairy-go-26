@@ -13,7 +13,7 @@ type CreatePurchaseOrderRequest struct {
 	SupplierID      *uint64                    `json:"supplier_id"`
 	SupplierQuoteID *uint64                    `json:"supplier_quote_id"`
 	PoNumber        string                     `json:"po_number" validate:"required"`
-	PoDate          string                     `json:"po_date" validate:"required,datetime"`
+	PoDate          string                     `json:"po_date" validate:"required"`
 	Items           []PurchaseOrderItemRequest `json:"items" validate:"required,min=1"`
 }
 
@@ -26,10 +26,17 @@ type UpdatePurchaseOrderRequest struct {
 	TotalAmount     float64 `json:"total_amount"` // This might be recalculated by the system, but included for completeness
 }
 
+type PurchaseRequisitionItemRequest struct {
+	ItemID   uint64  `json:"item_id" validate:"required"`
+	Quantity float64 `json:"quantity" validate:"required"`
+}
+
 type CreatePurchaseRequisitionRequest struct {
-	RequisitionNo   string `json:"requisition_no" validate:"required"`
-	RequisitionDate string `json:"requisition_date" validate:"required,datetime"`
-	Description     string `json:"description"`
+	RequisitionNo   string                           `json:"requisition_no" validate:"required"`
+	RequisitionDate string                           `json:"requisition_date" validate:"required"`
+	Description     string                           `json:"description"`
+	Status          string                           `json:"status"`
+	Items           []PurchaseRequisitionItemRequest `json:"items" validate:"required,min=1"`
 }
 
 type UpdatePurchaseRequisitionRequest struct {

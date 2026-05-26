@@ -28,14 +28,18 @@ func (s *BankService) CreateBank(req dtos.CreateBankRequest) (*models.Bank, erro
 func (s *BankService) GetBanks(page, limit int) ([]dtos.BankResponse, int64, error) {
 	var banks []dtos.BankResponse
 	var total int64
-	db.DB.Model(&models.Bank{}).Count(&total)
+	db.DB.Model(&models.Bank{}).Where("deleted_at IS NULL").Count(&total)
 
 	offset := (page - 1) * limit
 
-	err := db.DB.Model(&models.Bank{}).
-		Where("deleted_at IS NULL").
-		Limit(limit).Offset(offset).Order("id DESC").
-		Scan(&banks).Error
+	query := `
+		SELECT id, bank_name, bank_code, created_at, updated_at
+		FROM banks
+		WHERE deleted_at IS NULL
+		ORDER BY id DESC
+		LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, limit, offset).Scan(&banks).Error
 
 	return banks, total, err
 }
@@ -43,18 +47,23 @@ func (s *BankService) GetBanks(page, limit int) ([]dtos.BankResponse, int64, err
 func (s *BankService) GetBank(id string) (*dtos.BankResponse, error) {
 	var bank dtos.BankResponse
 
-	err := db.DB.Model(&models.Bank{}).
-		Where("id = ? AND deleted_at IS NULL", id).
-		First(&bank).Error
+	query := `
+		SELECT id, bank_name, bank_code, created_at, updated_at
+		FROM banks
+		WHERE id = ? AND deleted_at IS NULL
+		LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&bank).Error
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, gorm.ErrRecordNotFound
-		}
 		return nil, err
 	}
-	return &bank, nil
 
+	if bank.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &bank, nil
 }
 
 func (s *BankService) UpdateBank(id string, req dtos.UpdateBankRequest) error {

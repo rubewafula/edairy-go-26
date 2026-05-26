@@ -297,14 +297,6 @@ type JobRequisition struct {
 	Status            string `gorm:"column:status"`
 }
 
-type JobPosition struct {
-	BaseModel
-	Code           string `gorm:"uniqueIndex;column:code"`
-	Name           string `gorm:"column:name"`
-	JobDescription string `gorm:"column:job_description"`
-	DepartmentID   uint64 `gorm:"index;column:department_id"`
-}
-
 type JobQualificationType struct {
 	BaseModel
 	QualificationType string `gorm:"column:qualification_type"`

@@ -140,37 +140,6 @@ type MemberDebt struct {
 	Year             int       `gorm:"column:year"`
 }
 
-type MemberPayroll struct {
-	BaseModel
-	PayrollMonth    string    `gorm:"column:payroll_month"`
-	PayrollYear     string    `gorm:"column:payroll_year"`
-	PayRateID       uint64    `gorm:"column:pay_rate_id"`
-	PayDateRangeID  uint64    `gorm:"column:pay_date_range_id"`
-	DateOpened      time.Time `gorm:"column:date_opened"`
-	TotalKilos      float64   `gorm:"column:total_kilos"`
-	TotalDeductions float64   `gorm:"column:total_deductions"`
-	GrossPay        float64   `gorm:"column:gross_pay"`
-	NetPay          float64   `gorm:"column:net_pay"`
-	Complete        string    `gorm:"column:complete"`
-	Confirmed       string    `gorm:"column:confirmed"`
-	Approved        bool      `gorm:"column:approved"`
-}
-
-type MemberPayslip struct {
-	BaseModel
-	MemberID        uint64  `gorm:"index;column:member_id"`
-	PayrollID       uint64  `gorm:"index;column:payroll_id"`
-	PayRateID       uint64  `gorm:"column:pay_rate_id"`
-	TotalKilos      float64 `gorm:"column:total_kilos"`
-	GrossPay        float64 `gorm:"column:gross_pay"`
-	TotalDeductions float64 `gorm:"column:total_deductions"`
-	NetPay          float64 `gorm:"column:net_pay"`
-	PayrollMonth    string  `gorm:"column:payroll_month"`
-	PayrollYear     string  `gorm:"column:payroll_year"`
-	PayDateRangeID  uint64  `gorm:"column:pay_date_range_id"`
-	Complete        string  `gorm:"column:complete"`
-}
-
 type MemberType struct {
 	BaseModel
 	Name        string `gorm:"column:name"`
@@ -190,4 +159,127 @@ type MemberMpesaWithdrawal struct {
 	WalletID     uint64  `gorm:"index;column:wallet_id"`
 	Amount       float64 `gorm:"column:amount"`
 	Status       string  `gorm:"column:status"`
+}
+
+type MemberPayroll struct {
+	BaseModel
+	DateOpened      *time.Time `gorm:"column:date_opened"`
+	Description     string     `gorm:"column:description"`
+	Status          string     `gorm:"type:enum('draft','confirmed','approved','closed','cancelled');default:'draft';column:status"`
+	PostedAt        *time.Time `gorm:"column:posted_at"`
+	PostedBy        *uint64    `gorm:"column:posted_by"`
+	ConfirmedAt     *time.Time `gorm:"column:confirmed_at"`
+	ConfirmedBy     *uint64    `gorm:"column:confirmed_by"`
+	ApprovedAt      *time.Time `gorm:"column:approved_at"`
+	ApprovedBy      *uint64    `gorm:"column:approved_by"`
+	PayDateRangeID  *uint64    `gorm:"column:pay_date_range_id"`
+	DateClosed      *time.Time `gorm:"column:date_closed"`
+	Closed          string     `gorm:"column:closed"`
+	PhysicalPeriod  string     `gorm:"column:physical_period"`
+	GrossKilos      float64    `gorm:"column:gross_kilos;default:0.00"`
+	RejectKilos     float64    `gorm:"column:reject_kilos;default:0.00"`
+	NetKilos        float64    `gorm:"column:net_kilos;default:0.00"`
+	TotalKilos      string     `gorm:"column:total_kilos"` // Varchar in schema
+	TotalDeductions float64    `gorm:"column:total_deductions;default:0.00"`
+	GrossPay        float64    `gorm:"column:gross_pay;default:0.00"`
+	NetPay          float64    `gorm:"column:net_pay;default:0.00"`
+	TotalRejects    float64    `gorm:"column:total_rejects;default:0.00"`
+	TransportCost   float64    `gorm:"column:transport_cost;default:0.00"`
+}
+
+func (MemberPayroll) TableName() string {
+	return "member_payrolls"
+}
+
+type MemberPayslip struct {
+	BaseModel
+	MemberID        uint64     `gorm:"column:member_id"`
+	PayRateID       uint64     `gorm:"column:pay_rate_id"`
+	PayrollID       uint64     `gorm:"column:payroll_id"`
+	DateOpened      *time.Time `gorm:"column:date_opened"`
+	Description     string     `gorm:"column:description"`
+	Status          string     `gorm:"type:enum('processing','draft','confirmed','approved','closed','cancelled','incomplete');default:'draft';column:status"`
+	PostedAt        *time.Time `gorm:"column:posted_at"`
+	PostedBy        *uint64    `gorm:"column:posted_by"`
+	ConfirmedAt     *time.Time `gorm:"column:confirmed_at"`
+	ConfirmedBy     *uint64    `gorm:"column:confirmed_by"`
+	ApprovedAt      *time.Time `gorm:"column:approved_at"`
+	ApprovedBy      *uint64    `gorm:"column:approved_by"`
+	PayDateRangeID  *uint64    `gorm:"column:pay_date_range_id"`
+	DateClosed      *time.Time `gorm:"column:date_closed"`
+	Closed          bool       `gorm:"column:closed"`
+	PhysicalPeriod  string     `gorm:"column:physical_period"`
+	GrossKilos      float64    `gorm:"column:gross_kilos"`
+	RejectKilos     float64    `gorm:"column:reject_kilos"`
+	NetKilos        float64    `gorm:"column:net_kilos"`
+	TotalKilos      float64    `gorm:"column:total_kilos"`
+	TotalDeductions float64    `gorm:"column:total_deductions"`
+	GrossPay        float64    `gorm:"column:gross_pay"`
+	NetPay          float64    `gorm:"column:net_pay"`
+	TotalRejects    float64    `gorm:"column:total_rejects"`
+	TransportCost   float64    `gorm:"column:transport_cost"`
+}
+
+func (MemberPayslip) TableName() string {
+	return "member_payslips"
+}
+
+type MemberPayrollDeduction struct {
+	BaseModel
+	MemberID        int64     `gorm:"column:member_id"`
+	DeductionMonth  string    `gorm:"column:deduction_month"`
+	FiscalYear      int       `gorm:"column:fiscal_year"`
+	DeductionTypeID uint64    `gorm:"column:deduction_type_id"`
+	Amount          string    `gorm:"column:amount"` // Varchar in schema
+	Priority        int       `gorm:"column:priority"`
+	Settled         string    `gorm:"column:settled"`
+	TransactionDate time.Time `gorm:"column:transaction_date"`
+	DateCaptured    time.Time `gorm:"column:date_captured"`
+	Confirmed       string    `gorm:"column:confirmed;default:'0'"`
+	PayrollID       uint64    `gorm:"column:payroll_id"`
+	Reference       string    `gorm:"column:reference"`
+	SettlementType  string    `gorm:"column:settlement_type"`
+}
+
+func (MemberPayrollDeduction) TableName() string {
+	return "member_payroll_deductions"
+}
+
+type MemberPayrollGenerationError struct {
+	BaseModel
+	MemberID  uint64 `gorm:"column:member_id"`
+	PayrollID uint64 `gorm:"column:payroll_id"`
+	Error     string `gorm:"column:error;type:text"`
+}
+
+func (MemberPayrollGenerationError) TableName() string {
+	return "member_payroll_generation_errors"
+}
+
+type MemberPayDateRange struct {
+	BaseModel
+	Name      string    `gorm:"column:name"`
+	StartDate time.Time `gorm:"column:start_date"`
+	EndDate   time.Time `gorm:"column:end_date"`
+	PayMonth  string    `gorm:"column:pay_month"`
+	PayYear   string    `gorm:"column:pay_year"`
+	Processed bool      `gorm:"column:processed;default:0"`
+	Confirmed bool      `gorm:"column:confirmed"`
+}
+
+func (MemberPayDateRange) TableName() string {
+	return "member_pay_date_ranges"
+}
+
+type MilkSpecialRate struct {
+	BaseModel
+	MemberID              uint64  `gorm:"column:member_id"`
+	Rate                  float64 `gorm:"column:rate"`
+	MonthlyPayDateRangeID uint64  `gorm:"column:monthly_pay_date_range_id"`
+	Confirmed             bool    `gorm:"column:confirmed"`
+	RouteID               uint64  `gorm:"column:route_id"`
+}
+
+func (MilkSpecialRate) TableName() string {
+	return "milk_special_rates"
 }

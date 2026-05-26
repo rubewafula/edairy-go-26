@@ -5,7 +5,8 @@ import "time"
 // BankResponse represents a bank entity in JSON responses.
 type BankResponse struct {
 	ID        uint64    `json:"id"`
-	Name      string    `json:"bank_name"`
+	BankName  string    `json:"bank_name"`
+	BankCode  string    `json:"bank_code"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

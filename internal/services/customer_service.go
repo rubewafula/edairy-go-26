@@ -32,7 +32,6 @@ func (s *CustomerService) CreateCustomer(req dtos.CreateCustomerRequest) (*dtos.
 		PostalAddress:  req.PostalAddress,
 		PostalCode:     req.PostalCode,
 		PostalTown:     req.PostalTown,
-		SiteID:         req.SiteID,
 		Terms:          req.Terms,
 		Rate:           req.Rate,
 	}
@@ -98,7 +97,6 @@ func (s *CustomerService) UpdateCustomer(id string, req dtos.UpdateCustomerReque
 	customer.PostalAddress = req.PostalAddress
 	customer.PostalCode = req.PostalCode
 	customer.PostalTown = req.PostalTown
-	customer.SiteID = req.SiteID
 	customer.Terms = req.Terms
 	customer.Rate = req.Rate
 

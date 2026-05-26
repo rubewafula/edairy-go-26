@@ -13,7 +13,7 @@ type CreateEmployeeRequest struct {
 	NssfNo            string `json:"nssf_no"`
 	NhifNo            string `json:"nhif_no"`
 	Gender            string `json:"gender"`
-	DateOfBirth       string `json:"date_of_birth" validate:"required,datetime"`
+	DateOfBirth       string `json:"date_of_birth" validate:"required"`
 	Phone             string `json:"phone_number"`
 	Email             string `json:"email_address" validate:"omitempty,email"`
 	JobPositionID     uint64 `json:"job_position_id"`
@@ -44,7 +44,7 @@ type UpdateEmployeeRequest struct {
 	NssfNo            string `json:"nssf_no"`
 	NhifNo            string `json:"nhif_no"`
 	Gender            string `json:"gender"`
-	DateOfBirth       string `json:"date_of_birth" validate:"required,datetime"`
+	DateOfBirth       string `json:"date_of_birth" validate:"required"`
 	Phone             string `json:"phone_number"`
 	Email             string `json:"email_address" validate:"omitempty,email"`
 	JobPositionID     uint64 `json:"job_position_id"`
@@ -204,9 +204,9 @@ type CreateEmployeeLeaveApplicationRequest struct {
 	EmployeeID  uint64  `json:"employee_id" validate:"required"`
 	LeaveTypeID uint64  `json:"leave_type_id" validate:"required"`
 	DaysApplied float64 `json:"days_applied" validate:"required,gt=0"`
-	StartDate   string  `json:"start_date" validate:"required,datetime"`
-	EndDate     string  `json:"end_date" validate:"required,datetime"`
-	ReturnDate  string  `json:"return_date" validate:"required,datetime"`
+	StartDate   string  `json:"start_date" validate:"required"`
+	EndDate     string  `json:"end_date" validate:"required"`
+	ReturnDate  string  `json:"return_date" validate:"required"`
 }
 
 type UpdateEmployeeLeaveApplicationRequest struct {

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,25 +25,27 @@ func NewStoreStockTakingController() *StoreStockTakingController {
 func (c *StoreStockTakingController) CreateStockTaking(ctx *gin.Context) {
 	var req dtos.CreateStoreStockTakingRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("StockTaking: Could not bind json: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("StockTaking: Could not validate json: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 
-	stockTaking, err := c.service.CreateStockTaking(req, userID)
+	items, err := c.service.CreateStockTaking(req, userID)
 	if err != nil {
+		log.Printf("StockTaking: Could not create stock taking: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	response, _ := c.service.GetStockTaking(utils.Uint64ToString(stockTaking.ID))
-	ctx.JSON(http.StatusCreated, response)
+	ctx.JSON(http.StatusCreated, gin.H{"message": "Successfully recorded " + strconv.Itoa(len(items)) + " stock taking entries", "stock_take_no": req.StockTakeNo})
 }
 
 func (c *StoreStockTakingController) GetStockTakings(ctx *gin.Context) {
@@ -64,31 +67,4 @@ func (c *StoreStockTakingController) GetStockTaking(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
-}
-
-func (c *StoreStockTakingController) UpdateStockTaking(ctx *gin.Context) {
-	var req dtos.UpdateStoreStockTakingRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
-		return
-	}
-
-	if err := c.service.UpdateStockTaking(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock taking record updated successfully"})
-}
-
-func (c *StoreStockTakingController) DeleteStockTaking(ctx *gin.Context) {
-	if err := c.service.DeleteStockTaking(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"Message": "Stock taking record deleted successfully"})
 }

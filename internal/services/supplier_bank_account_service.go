@@ -40,7 +40,7 @@ func (s *SupplierBankAccountService) GetBankAccounts(page, limit int) ([]dtos.Su
 
 	query := `
 		SELECT 
-			sba.*, b.name as bank_name, sba.branch_name
+			sba.*, b.bank_name, sba.branch_name
 		FROM supplier_bank_accounts sba
 		LEFT JOIN banks b ON sba.bank_id = b.id
 		WHERE sba.deleted_at IS NULL
@@ -54,7 +54,7 @@ func (s *SupplierBankAccountService) GetBankAccount(id string) (*dtos.SupplierBa
 	var result dtos.SupplierBankAccountResponse
 	query := `
 		SELECT 
-			sba.*, b.name as bank_name, sba.branch_name
+			sba.*, b.bank_name, sba.branch_name
 		FROM supplier_bank_accounts sba
 		LEFT JOIN banks b ON sba.bank_id = b.id
 		WHERE sba.id = ? AND sba.deleted_at IS NULL

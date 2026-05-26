@@ -5,16 +5,16 @@ import "time"
 type CreateEmployeeExitDetailRequest struct {
 	EmployeeID      uint64 `json:"employee_id" validate:"required"`
 	ContractType    string `json:"contract_type" validate:"required"`
-	ContractEndDate string `json:"contract_end_date" validate:"required,datetime"`
-	DateOfLeaving   string `json:"date_of_leaving" validate:"required,datetime"`
+	ContractEndDate string `json:"contract_end_date" validate:"required"`
+	DateOfLeaving   string `json:"date_of_leaving" validate:"required"`
 	ExitCategory    string `json:"exit_category" validate:"required"`
 	Reasons         string `json:"reasons" validate:"required"`
 }
 
 type UpdateEmployeeExitDetailRequest struct {
 	ContractType    string `json:"contract_type" validate:"required"`
-	ContractEndDate string `json:"contract_end_date" validate:"required,datetime"`
-	DateOfLeaving   string `json:"date_of_leaving" validate:"required,datetime"`
+	ContractEndDate string `json:"contract_end_date" validate:"required"`
+	DateOfLeaving   string `json:"date_of_leaving" validate:"required"`
 	ExitCategory    string `json:"exit_category" validate:"required"`
 	Reasons         string `json:"reasons" validate:"required"`
 }

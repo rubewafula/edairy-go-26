@@ -32,7 +32,6 @@ type CreateSupplierRequest struct {
 	PhoneNo            string  `json:"phone_no" validate:"required"`
 	EmailAddress       string  `json:"email_address" validate:"required,email"`
 	KraPin             string  `json:"kra_pin"`
-	OpeningBalance     float64 `json:"opening_balance"`
 	CreditLimit        float64 `json:"credit_limit"`
 	PaymentTermsDays   int     `json:"payment_terms_days"`
 	Status             string  `json:"status"`
