@@ -3,11 +3,10 @@ package dtos
 import "time"
 
 type CreateLivestockBreedingRequest struct {
-	LivestockID         uint64 `json:"livestock_id" validate:"required"`
+	MaleLivestockID     uint64 `json:"male_livestock_id" validate:"required"`
+	FemaleLivestockID   uint64 `json:"female_livestock_id" validate:"required"`
 	BreedingDate        string `json:"breeding_date" validate:"required"`
 	BreedingType        string `json:"breeding_type" validate:"required"` // AI or Natural
-	SireID              uint64 `json:"sire_id"`
-	TechnicianName      string `json:"technician_name"`
 	PregnancyCheckDate  string `json:"pregnancy_check_date"`
 	PregnancyStatus     string `json:"pregnancy_status"`
 	ExpectedCalvingDate string `json:"expected_calving_date"`
@@ -18,8 +17,8 @@ type CreateLivestockBreedingRequest struct {
 type UpdateLivestockBreedingRequest struct {
 	BreedingDate        string `json:"breeding_date"`
 	BreedingType        string `json:"breeding_type"`
-	SireID              uint64 `json:"sire_id"`
-	TechnicianName      string `json:"technician_name"`
+	MaleLivestockID     uint64 `json:"male_livestock_id" validate:"required"`
+	FemaleLivestockID   uint64 `json:"female_livestock_id" validate:"required"`
 	PregnancyCheckDate  string `json:"pregnancy_check_date"`
 	PregnancyStatus     string `json:"pregnancy_status"`
 	ExpectedCalvingDate string `json:"expected_calving_date"`

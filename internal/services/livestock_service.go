@@ -18,14 +18,23 @@ func NewLivestockService() *LivestockService {
 
 // Livestock CRUD
 func (s *LivestockService) CreateLivestock(req dtos.CreateLivestockRequest, userID uint64) (*models.Livestock, error) {
+
 	livestock := &models.Livestock{
-		BaseModel:   models.BaseModel{CreatedBy: userID},
-		TagNo:       req.TagNo,
-		BreedID:     req.BreedID,
-		Gender:      req.Gender,
-		DateOfBirth: utils.ParseDate(req.DateOfBirth),
-		Description: req.Description,
-		Status:      "ACTIVE",
+		BaseModel:           models.BaseModel{CreatedBy: userID},
+		MemberID:            req.MemberID,
+		LivestockCategoryID: req.LivestockCategoryID,
+		LivestockName:       req.LivestockName,
+		TagNo:               req.TagNo,
+		LivestockBreedID:    req.LivestockBreedID,
+		Gender:              req.Gender,
+		Color:               req.Color,
+		BirthDate:           utils.ParseDate(req.BirthDate),
+		PurchaseDate:        utils.ParseDate(req.BirthDate),
+		Notes:               req.Notes,
+		Source:              *req.Source,
+		Weight:              req.Weight,
+		InsuranceNumber:     req.InsuranceNumber,
+		Status:              "ACTIVE",
 	}
 	if err := db.DB.Create(livestock).Error; err != nil {
 		return nil, err
@@ -825,17 +834,17 @@ func (s *LivestockService) DeleteWeightRecord(id string, userID uint64) error {
 // Breeding CRUD
 func (s *LivestockService) CreateBreeding(req dtos.CreateLivestockBreedingRequest, userID uint64) (*models.LivestockBreedingRecord, error) {
 	record := &models.LivestockBreedingRecord{
-		BaseModel:       models.BaseModel{CreatedBy: userID},
-		LivestockID:     req.LivestockID,
-		BreedingDate:    utils.ParseDate(req.BreedingDate),
-		BreedingType:    req.BreedingType,
-		TechnicianName:  req.TechnicianName,
-		PregnancyStatus: req.PregnancyStatus,
-		Remarks:         req.Remarks,
+		BaseModel:         models.BaseModel{CreatedBy: userID},
+		MaleLivestockID:   req.MaleLivestockID,
+		FemaleLivestockID: req.FemaleLivestockID,
+		BreedingDate:      utils.ParseDate(req.BreedingDate),
+		BreedingType:      req.BreedingType,
+		PregnancyStatus:   req.PregnancyStatus,
+		Remarks:           req.Remarks,
 	}
 
-	if req.SireID != 0 {
-		record.SireID = &req.SireID
+	if req.MaleLivestockID != 0 {
+		record.MaleLivestockID = req.MaleLivestockID
 	}
 	if req.PregnancyCheckDate != "" {
 		t := utils.ParseDate(req.PregnancyCheckDate)
@@ -904,14 +913,13 @@ func (s *LivestockService) UpdateBreedingRecord(id string, req dtos.UpdateLivest
 	updates := map[string]interface{}{
 		"breeding_date":    utils.ParseDate(req.BreedingDate),
 		"breeding_type":    req.BreedingType,
-		"technician_name":  req.TechnicianName,
 		"pregnancy_status": req.PregnancyStatus,
 		"remarks":          req.Remarks,
 		"updated_by":       userID,
 	}
 
-	if req.SireID != 0 {
-		updates["sire_id"] = req.SireID
+	if req.MaleLivestockID != 0 {
+		updates["sire_id"] = req.MaleLivestockID
 	}
 	if req.PregnancyCheckDate != "" {
 		t := utils.ParseDate(req.PregnancyCheckDate)
@@ -997,15 +1005,15 @@ func (s *LivestockService) AddPhoto(req dtos.CreateLivestockPhotoRequest) (*mode
 
 func (s *LivestockService) RecordBreeding(req dtos.CreateLivestockBreedingRequest) (*models.LivestockBreedingRecord, error) {
 	record := &models.LivestockBreedingRecord{
-		LivestockID:     req.LivestockID,
-		BreedingDate:    utils.ParseDate(req.BreedingDate),
-		BreedingType:    req.BreedingType,
-		TechnicianName:  req.TechnicianName,
-		PregnancyStatus: req.PregnancyStatus,
-		Remarks:         req.Remarks,
+		MaleLivestockID:   req.MaleLivestockID,
+		FemaleLivestockID: req.FemaleLivestockID,
+		BreedingDate:      utils.ParseDate(req.BreedingDate),
+		BreedingType:      req.BreedingType,
+		PregnancyStatus:   req.PregnancyStatus,
+		Remarks:           req.Remarks,
 	}
-	if req.SireID != 0 {
-		record.SireID = &req.SireID
+	if req.MaleLivestockID != 0 {
+		record.MaleLivestockID = req.MaleLivestockID
 	}
 	if req.PregnancyCheckDate != "" {
 		t := utils.ParseDate(req.PregnancyCheckDate)

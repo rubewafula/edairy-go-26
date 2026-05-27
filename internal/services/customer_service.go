@@ -27,7 +27,7 @@ func (s *CustomerService) CreateCustomer(req dtos.CreateCustomerRequest) (*dtos.
 		EmailAddress:   req.EmailAddress,
 		CustomerNo:     req.CustomerNo,
 		KraPin:         req.KraPin,
-		Status:         status,
+		Status:         "ACTIVE",
 		CreditLimit:    req.CreditLimit,
 		PostalAddress:  req.PostalAddress,
 		PostalCode:     req.PostalCode,
@@ -92,7 +92,9 @@ func (s *CustomerService) UpdateCustomer(id string, req dtos.UpdateCustomerReque
 	customer.Phone = req.Phone
 	customer.EmailAddress = req.EmailAddress
 	customer.KraPin = req.KraPin
-	customer.Status = req.Status
+	if req.Status != "" {
+		customer.Status = req.Status
+	}
 	customer.CreditLimit = req.CreditLimit
 	customer.PostalAddress = req.PostalAddress
 	customer.PostalCode = req.PostalCode

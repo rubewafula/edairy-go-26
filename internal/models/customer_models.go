@@ -69,6 +69,7 @@ type CustomerPayDateRange struct {
 	Name      string    `gorm:"column:name"`
 	StartDate time.Time `gorm:"column:start_date"`
 	EndDate   time.Time `gorm:"column:end_date"`
+	Status    string    `gorm:"type:enum('pending','processing','processed','incomplete');default:'pending';column:status"`
 }
 
 type CustomerCollection struct {
@@ -130,4 +131,15 @@ type CustomerPaymentAllocation struct {
 	InvoiceID         uint64  `gorm:"column:invoice_id"`
 	CustomerPaymentID uint64  `gorm:"column:customer_payment_id"`
 	AllocatedAmount   float64 `gorm:"column:allocated_amount"`
+}
+
+type CustomerBillingGenerationError struct {
+	BaseModel
+	CustomerID     uint64 `gorm:"column:customer_id"`
+	PayDateRangeID uint64 `gorm:"column:pay_date_range_id"`
+	Error          string `gorm:"column:error;type:text"`
+}
+
+func (CustomerBillingGenerationError) TableName() string {
+	return "customer_billing_generation_errors"
 }

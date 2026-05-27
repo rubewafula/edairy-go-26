@@ -50,6 +50,26 @@ func (c *CustomerPayDateRangeController) CreateCustomerPayDateRange(ctx *gin.Con
 	ctx.JSON(http.StatusCreated, customerPayDateRange)
 }
 
+// GenerateNextPayDateRange godoc
+// @Summary Generate the next customer pay date range
+// @Description Automatically generates the next 7-day customer pay date range, ensuring no month overlap.
+// @Tags Customer Pay Date Ranges
+// @Accept json
+// @Produce json
+// @Success 201 {object} models.CustomerPayDateRange
+// @Failure 500 {object} map[string]string
+// @Router /customer-pay-date-ranges/generate-next [post]
+func (c *CustomerPayDateRangeController) GenerateNextPayDateRange(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+	newRange, err := c.service.GenerateNextPayDateRange(userID)
+	if err != nil {
+		log.Printf("[CustomerPayDateRangeController.GenerateNextPayDateRange] Error generating next pay date range: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusCreated, newRange)
+}
+
 // GetCustomerTypes godoc
 // @Summary Get all customer types
 // @Description Retrieve a list of all customer types

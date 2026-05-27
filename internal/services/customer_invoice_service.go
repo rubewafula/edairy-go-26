@@ -18,6 +18,16 @@ func NewCustomerInvoiceService() *CustomerInvoiceService {
 }
 
 func (s *CustomerInvoiceService) CreateInvoice(req dtos.CreateCustomerInvoiceRequest, userID uint64) (*models.CustomerInvoice, error) {
+
+	var customerBilling models.CustomerBilling
+	if err := db.DB.First(&customerBilling, req.BillingID).Error; err != nil {
+		return nil, fmt.Errorf("associated customer billing not found: %w", err)
+	}
+
+	if customerBilling.Status != "approved" {
+		return nil, fmt.Errorf("customer billing must be 'approved' before an invoice can be generated, current status: %s", customerBilling.Status)
+	}
+
 	invoice := &models.CustomerInvoice{
 		BaseModel: models.BaseModel{
 			CreatedBy: userID,

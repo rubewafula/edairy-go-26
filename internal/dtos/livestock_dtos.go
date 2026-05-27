@@ -8,11 +8,23 @@ import (
 
 // Livestock
 type CreateLivestockRequest struct {
-	TagNo       string `json:"tag_no" validate:"required"`
-	BreedID     uint64 `json:"breed_id" validate:"required"`
-	Gender      string `json:"gender" validate:"required,oneof=MALE FEMALE"`
-	DateOfBirth string `json:"date_of_birth" validate:"required"`
-	Description string `json:"description"`
+	MemberID            *uint64 `json:"member_id"`
+	TagNo               *string `json:"tag_no"`
+	LivestockCategoryID uint64  `json:"livestock_category_id" binding:"required"`
+	LivestockBreedID    *uint64 `json:"livestock_breed_id"`
+	LivestockName       *string `json:"livestock_name"`
+
+	Gender string `json:"gender" binding:"required"` // male | female
+	Color  string `json:"color"`
+
+	BirthDate    string `json:"birth_date"`
+	PurchaseDate string `json:"purchase_date"`
+
+	Source *string  `json:"source"` // born | purchased | donated | transferred
+	Weight *float64 `json:"weight"`
+
+	InsuranceNumber *string `json:"insurance_number"`
+	Notes           *string `json:"notes"`
 }
 
 type UpdateLivestockRequest struct {

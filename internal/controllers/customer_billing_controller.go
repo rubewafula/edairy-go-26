@@ -21,23 +21,52 @@ func NewCustomerBillingController() *CustomerBillingController {
 }
 
 func (c *CustomerBillingController) CreateBilling(ctx *gin.Context) {
-	var req struct {
-		PayDateRangeID uint64 `json:"pay_date_range_id" binding:"required"`
-	}
-
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
+	// No request body needed as it will automatically find the next unprocessed pay date range
 	userID := ctx.GetUint64("user_id")
-	if err := c.service.CreateBilling(req.PayDateRangeID, userID); err != nil {
+
+	// Proceed to generate all pending billings up to now
+	if err := c.service.CreateBilling(userID); err != nil {
 		log.Printf("[CustomerBillingController.CreateBilling] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "Customer billings generated successfully"})
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Customer billing generation started in the background"})
+}
+
+// New controller methods for Confirm and Approve
+func (c *CustomerBillingController) ConfirmBilling(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid billing ID"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ConfirmBilling(id, userID); err != nil {
+		log.Printf("[CustomerBillingController.ConfirmBilling] Error confirming billing %d: %v", id, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Customer billing confirmed successfully"})
+}
+
+func (c *CustomerBillingController) ApproveBilling(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid billing ID"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ApproveBilling(id, userID); err != nil {
+		log.Printf("[CustomerBillingController.ApproveBilling] Error approving billing %d: %v", id, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Customer billing approved successfully"})
 }
 
 func (c *CustomerBillingController) GetBillings(ctx *gin.Context) {

@@ -43,6 +43,7 @@ type MilkDelivery struct {
 	BaseModel
 	DeliveryNoteNumber string    `gorm:"index;column:delivery_note_number"`
 	CustomerID         uint64    `gorm:"index;column:customer_id"`
+	ProductGradeID     uint64    `gorm:"index;column:product_grade_id"`
 	QuantityAccepted   float64   `gorm:"column:quantity_accepted"`
 	Cooler             string    `gorm:"column:cooler"`
 	Invoiced           int       `gorm:"column:invoiced"`

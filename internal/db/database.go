@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type DbConfig struct {
@@ -49,7 +51,17 @@ func ConnectToDatabase() {
 		cfg.DBName,
 	)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Info, // prints SQL
+				IgnoreRecordNotFoundError: true,
+				Colorful:                  true,
+			},
+		)})
+
 	if err != nil {
 		log.Fatal("Failed to connect database:", err)
 	}

@@ -22,7 +22,7 @@ type UpdateCustomerRequest struct {
 	Phone          string  `json:"phone" validate:"required,max=15"`
 	EmailAddress   string  `json:"email_address" validate:"omitempty,email"`
 	KraPin         string  `json:"kra_pin"`
-	Status         string  `json:"status" validate:"required,oneof=ACTIVE INACTIVE"`
+	Status         string  `json:"status" validate:"omitempty,oneof=ACTIVE INACTIVE"`
 	CreditLimit    float64 `json:"credit_limit"`
 	PostalAddress  string  `json:"postal_address"`
 	PostalCode     string  `json:"postal_code"`

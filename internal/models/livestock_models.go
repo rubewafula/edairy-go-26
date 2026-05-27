@@ -6,12 +6,24 @@ import (
 
 type Livestock struct {
 	BaseModel
-	TagNo       string    `gorm:"column:tag_no;uniqueIndex;not null" json:"tag_no"`
-	BreedID     uint64    `gorm:"column:breed_id" json:"breed_id"`
-	Gender      string    `gorm:"column:gender" json:"gender"`
-	DateOfBirth time.Time `gorm:"column:date_of_birth" json:"date_of_birth"`
-	Status      string    `gorm:"column:status;default:ACTIVE" json:"status"`
-	Description string    `gorm:"column:description" json:"description"`
+	MemberID            *uint64 `gorm:"column:member_id;index"`
+	TagNo               *string `gorm:"column:tag_no;uniqueIndex;size:100"`
+	LivestockCategoryID uint64  `gorm:"column:livestock_category_id;index;not null"`
+	LivestockBreedID    *uint64 `gorm:"column:livestock_breed_id;index"`
+	LivestockName       *string `gorm:"column:livestock_name;size:150"`
+
+	Gender string `gorm:"column:gender;type:enum('male','female');not null"`
+	Color  string `gorm:"column:color;size:100"`
+
+	BirthDate    time.Time `gorm:"column:birth_date;type:date"`
+	PurchaseDate time.Time `gorm:"column:purchase_date;type:date"`
+
+	Source string `gorm:"column:source;type:enum('born','purchased','donated','transferred');default:'born'"`
+	Status string `gorm:"column:status;type:enum('active','sold','dead','slaughtered','missing');default:'active';index"`
+
+	Weight          *float64 `gorm:"column:weight;type:decimal(10,2)"`
+	InsuranceNumber *string  `gorm:"column:insurance_number;size:100"`
+	Notes           *string  `gorm:"column:notes;type:text"`
 }
 
 func (Livestock) TableName() string {

@@ -35,6 +35,8 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	api.GET("/customer-billings", customerBillingController.GetBillings)
 	api.GET("/customer-billings/:id", customerBillingController.GetBilling)
 	api.GET("/customer-billings/:id/items", customerBillingController.GetBillingItems)
+	api.PUT("/customer-billings/:id/confirm", customerBillingController.ConfirmBilling) // New route
+	api.PUT("/customer-billings/:id/approve", customerBillingController.ApproveBilling) // New route
 	api.DELETE("/customer-billings/:id", customerBillingController.DeleteBilling)
 
 	// Customer Invoice Routes
@@ -57,6 +59,7 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 
 	// Customer Pay Date Range Routes
 	api.POST("/customer-pay-date-ranges", customerPayDateRangeController.CreateCustomerPayDateRange)
+	api.POST("/customer-pay-date-ranges/generate-next", customerPayDateRangeController.GenerateNextPayDateRange) // New route
 	api.GET("/customer-pay-date-ranges", customerPayDateRangeController.GetCustomerPayDateRanges)
 	api.GET("/customer-pay-date-ranges/:id", customerPayDateRangeController.GetCustomerPayDateRange)
 	api.PUT("/customer-pay-date-ranges/:id", customerPayDateRangeController.UpdateCustomerPayDateRange)

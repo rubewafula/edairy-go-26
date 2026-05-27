@@ -101,16 +101,15 @@ type StoreStockMovementItem struct {
 
 type LivestockBreedingRecord struct {
 	BaseModel
-	LivestockID         uint64     `gorm:"index;column:livestock_id"`
+	MaleLivestockID     uint64     `gorm:"index;column:male_livestock_id"`
+	FemaleLivestockID   uint64     `gorm:"index;column:female_livestock_id"`
 	BreedingDate        time.Time  `gorm:"column:breeding_date"`
-	BreedingType        string     `gorm:"column:breeding_type"` // AI or Natural
-	SireID              *uint64    `gorm:"column:sire_id"`
-	TechnicianName      string     `gorm:"column:technician_name"`
+	BreedingType        string     `gorm:"column:breeding_method"` // AI or Natural
 	PregnancyCheckDate  *time.Time `gorm:"column:pregnancy_check_date"`
 	PregnancyStatus     string     `gorm:"column:pregnancy_status"` // e.g., PENDING, POSITIVE, NEGATIVE
 	ExpectedCalvingDate *time.Time `gorm:"column:expected_calving_date"`
 	ActualCalvingDate   *time.Time `gorm:"column:actual_calving_date"`
-	Remarks             string     `gorm:"column:remarks"`
+	Remarks             string     `gorm:"column:notes"`
 }
 
 func (LivestockBreedingRecord) TableName() string {
