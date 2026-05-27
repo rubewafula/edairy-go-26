@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -37,6 +38,7 @@ func (c *EmployeeController) CreateEmployee(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	employee, err := c.service.CreateEmployee(req, userID)
 	if err != nil {
+		log.Printf("[EmployeeController.CreateEmployee] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -79,6 +81,7 @@ func (c *EmployeeController) UpdateEmployee(ctx *gin.Context) {
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateEmployee(id, req, userID); err != nil {
+		log.Printf("[EmployeeController.UpdateEmployee] Error updating employee %s: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -89,6 +92,7 @@ func (c *EmployeeController) DeleteEmployee(ctx *gin.Context) {
 	id := ctx.Param("id")
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.DeleteEmployee(id, userID); err != nil {
+		log.Printf("[EmployeeController.DeleteEmployee] Error deleting employee %s: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -19,6 +19,7 @@ type MilkReject struct {
 type MilkSpecialRate struct {
 	BaseModel
 	MemberID              uint64  `gorm:"index;column:member_id"`
+	RouteID               uint64  `gorm:"index;column:route_id"`
 	Rate                  float64 `gorm:"column:rate"`
 	MonthlyPayDateRangeID uint64  `gorm:"index;column:monthly_pay_date_range_id"`
 	Confirmed             bool    `gorm:"column:confirmed"`
@@ -105,19 +106,6 @@ type MilkSale struct {
 	Amount   float64   `gorm:"column:amount"`
 	Buyer    string    `gorm:"column:buyer"`
 	Date     time.Time `gorm:"index;column:transaction_date"`
-}
-
-type MilkTransporterCost struct {
-	BaseModel
-	MemberID           uint64  `gorm:"index;column:member_id"`
-	TransporterID      uint64  `gorm:"index;column:transporter_id"`
-	MilkJournalBatchID uint64  `gorm:"index;column:milk_journal_batch_id"`
-	PayrollMonth       string  `gorm:"column:payroll_month"`
-	PayrollYear        string  `gorm:"column:payroll_year"`
-	PayDateRangeID     uint64  `gorm:"index;column:pay_date_range_id"`
-	PayrollID          uint64  `gorm:"index;column:payroll_id"`
-	Quantity           float64 `gorm:"column:quantity"`
-	Rejects            float64 `gorm:"column:rejects"`
 }
 
 type DailyMilkVariance struct {

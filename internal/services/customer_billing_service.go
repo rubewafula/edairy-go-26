@@ -1,6 +1,9 @@
 package services
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -11,6 +14,81 @@ type CustomerBillingService struct{}
 
 func NewCustomerBillingService() *CustomerBillingService {
 	return &CustomerBillingService{}
+}
+
+func (s *CustomerBillingService) CreateBilling(payDateRangeID uint64, userID uint64) error {
+	var pdr models.CustomerPayDateRange
+	if err := db.DB.First(&pdr, payDateRangeID).Error; err != nil {
+		return fmt.Errorf("invalid pay date range: %w", err)
+	}
+
+	return db.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Fetch all confirmed, unprocessed deliveries in range
+		var deliveries []models.MilkDelivery
+		if err := tx.Where("transaction_date BETWEEN ? AND ? AND customer_id != 0 AND processed = ?",
+			pdr.StartDate, pdr.EndDate, false).Find(&deliveries).Error; err != nil {
+			return err
+		}
+
+		if len(deliveries) == 0 {
+			return fmt.Errorf("no pending deliveries found for this period")
+		}
+
+		// 2. Group by Customer
+		customerGroups := make(map[uint64][]models.MilkDelivery)
+		for _, d := range deliveries {
+			customerGroups[d.CustomerID] = append(customerGroups[d.CustomerID], d)
+		}
+
+		for customerID, delys := range customerGroups {
+			var totalQty, totalAmt float64
+
+			// Create Billing Header
+			billing := models.CustomerBilling{
+				BaseModel:      models.BaseModel{CreatedBy: userID},
+				PayDateRangeID: payDateRangeID,
+				CustomerID:     customerID,
+				Status:         "pending",
+			}
+			if err := tx.Create(&billing).Error; err != nil {
+				return err
+			}
+
+			// Group by Product Grade for Items (Simplified: assuming Grade information exists or is default)
+			// In a real scenario, you'd join with product grades.
+			// Here we aggregate items based on the delivery records.
+			for _, d := range delys {
+				item := models.CustomerBillingItem{
+					BaseModel:         models.BaseModel{CreatedBy: userID},
+					CustomerBillingID: billing.ID,
+					TotalQuantity:     d.QuantityAccepted,
+					UnitPrice:         d.Amount / d.QuantityAccepted,
+					TotalAmount:       d.Amount,
+				}
+				if err := tx.Create(&item).Error; err != nil {
+					return err
+				}
+				totalQty += d.QuantityAccepted
+				totalAmt += d.Amount
+
+				// Mark delivery as processed
+				if err := tx.Model(&d).Update("processed", true).Error; err != nil {
+					return err
+				}
+			}
+
+			// Update Header totals
+			if err := tx.Model(&billing).Updates(map[string]interface{}{
+				"total_deliveries": totalQty,
+				"total_amount":     totalAmt,
+			}).Error; err != nil {
+				return err
+			}
+		}
+
+		// Update Pay Date Range status
+		return tx.Model(&pdr).Update("updated_at", time.Now()).Error
+	})
 }
 
 func (s *CustomerBillingService) GetBillings(page, limit int) ([]dtos.CustomerBillingResponse, int64, error) {
@@ -58,4 +136,8 @@ func (s *CustomerBillingService) GetBillingItems(billingID string) ([]dtos.Custo
 	`
 	err := db.DB.Raw(query, billingID).Scan(&items).Error
 	return items, err
+}
+
+func (s *CustomerBillingService) DeleteBilling(id string) error {
+	return db.DB.Delete(&models.CustomerBilling{}, id).Error
 }

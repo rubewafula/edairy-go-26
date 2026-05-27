@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -35,6 +36,7 @@ func (c *MilkDeliveryController) CreateDelivery(ctx *gin.Context) {
 
 	delivery, err := c.service.CreateDelivery(req)
 	if err != nil {
+		log.Printf("[MilkDeliveryController.CreateDelivery] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -77,6 +79,7 @@ func (c *MilkDeliveryController) UpdateDelivery(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateDelivery(ctx.Param("id"), req); err != nil {
+		log.Printf("[MilkDeliveryController.UpdateDelivery] Error updating delivery %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -85,6 +88,7 @@ func (c *MilkDeliveryController) UpdateDelivery(ctx *gin.Context) {
 
 func (c *MilkDeliveryController) DeleteDelivery(ctx *gin.Context) {
 	if err := c.service.DeleteDelivery(ctx.Param("id")); err != nil {
+		log.Printf("[MilkDeliveryController.DeleteDelivery] Error deleting delivery %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

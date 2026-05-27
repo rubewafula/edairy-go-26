@@ -4,7 +4,6 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
-	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -21,17 +20,6 @@ func (s *OrganizationDocumentService) CreateDocument(req dtos.CreateOrganization
 		DocumentTypeID: req.DocumentTypeID,
 		DocumentName:   req.DocumentName,
 		Submitted:      req.Submitted,
-	}
-
-	// Handle file upload if base64 content is provided
-	if req.DocumentContentBase64 != "" {
-		// Define upload directory (e.g., relative to your application root)
-		uploadDir := "uploads/organization_documents"
-		documentURL, err := utils.SaveBase64ToFile(req.DocumentContentBase64, req.DocumentName, uploadDir)
-		if err != nil {
-			return nil, err
-		}
-		document.Document = documentURL // Save the URL/path to the document field
 	}
 
 	if err := db.DB.Create(document).Error; err != nil {
@@ -92,20 +80,6 @@ func (s *OrganizationDocumentService) UpdateDocument(id string, req dtos.UpdateO
 		return err
 	}
 
-	// Handle file upload if new base64 content is provided
-	if req.DocumentContentBase64 != "" {
-		// Optionally, delete the old file first
-		if document.Document != "" {
-			utils.DeleteFile(document.Document) // Assuming DeleteFile handles relative paths
-		}
-		uploadDir := "uploads/organization_documents"
-		documentURL, err := utils.SaveBase64ToFile(req.DocumentContentBase64, req.DocumentName, uploadDir)
-		if err != nil {
-			return err
-		}
-		document.Document = documentURL
-	}
-
 	updates := map[string]interface{}{
 		"astra_id":         req.AstraID,
 		"document_type_id": req.DocumentTypeID,
@@ -124,10 +98,7 @@ func (s *OrganizationDocumentService) DeleteDocument(id string, userID uint64) e
 	if err := db.DB.First(&document, id).Error; err != nil {
 		return err
 	}
-	// Delete the actual file from disk
-	if document.Document != "" {
-		utils.DeleteFile(document.Document)
-	}
+
 	return db.DB.Model(&document).Update("updated_by", userID).Delete(&document).Error
 }
 

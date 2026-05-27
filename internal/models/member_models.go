@@ -230,7 +230,7 @@ type MemberPayrollDeduction struct {
 	DeductionMonth  string    `gorm:"column:deduction_month"`
 	FiscalYear      int       `gorm:"column:fiscal_year"`
 	DeductionTypeID uint64    `gorm:"column:deduction_type_id"`
-	Amount          string    `gorm:"column:amount"` // Varchar in schema
+	Amount          float64   `gorm:"column:amount"` // Varchar in schema
 	Priority        int       `gorm:"column:priority"`
 	Settled         string    `gorm:"column:settled"`
 	TransactionDate time.Time `gorm:"column:transaction_date"`
@@ -269,17 +269,4 @@ type MemberPayDateRange struct {
 
 func (MemberPayDateRange) TableName() string {
 	return "member_pay_date_ranges"
-}
-
-type MilkSpecialRate struct {
-	BaseModel
-	MemberID              uint64  `gorm:"column:member_id"`
-	Rate                  float64 `gorm:"column:rate"`
-	MonthlyPayDateRangeID uint64  `gorm:"column:monthly_pay_date_range_id"`
-	Confirmed             bool    `gorm:"column:confirmed"`
-	RouteID               uint64  `gorm:"column:route_id"`
-}
-
-func (MilkSpecialRate) TableName() string {
-	return "milk_special_rates"
 }

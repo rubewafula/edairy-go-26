@@ -1,8 +1,6 @@
 package services
 
 import (
-	"time"
-
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -16,30 +14,22 @@ func NewTransporterBenefitService() *TransporterBenefitService {
 	return &TransporterBenefitService{}
 }
 
-func (s *TransporterBenefitService) CreateBenefit(req dtos.CreateTransporterBenefitRequest) (*models.TransporterBenefit, error) {
-	status := req.Status
-	if status == "" {
-		status = "1"
-	}
-
-	var startDate, endDate *time.Time
-	if req.StartDate != "" {
-		t := utils.ParseDate(req.StartDate)
-		startDate = &t
-	}
-	if req.EndDate != "" {
-		t := utils.ParseDate(req.EndDate)
-		endDate = &t
-	}
-
+func (s *TransporterBenefitService) CreateBenefit(req dtos.CreateTransporterBenefitRequest, userID uint64) (*models.TransporterBenefit, error) {
 	benefit := &models.TransporterBenefit{
+		BaseModel: models.BaseModel{
+			CreatedBy: userID,
+		},
 		Name:        req.Name,
 		MinQuantity: req.MinQuantity,
 		Rate:        req.Rate,
-		RouteID:     req.RouteID,
-		Status:      status,
-		StartDate:   startDate,
-		EndDate:     endDate,
+		Status:      req.Status,
+		StartDate:   utils.ParseDatePtr(req.StartDate),
+		EndDate:     utils.ParseDatePtr(req.EndDate),
+	}
+
+	if req.RouteID != 0 {
+		routeID := req.RouteID
+		benefit.RouteID = &routeID
 	}
 
 	if err := db.DB.Create(benefit).Error; err != nil {
@@ -48,33 +38,29 @@ func (s *TransporterBenefitService) CreateBenefit(req dtos.CreateTransporterBene
 	return benefit, nil
 }
 
-func (s *TransporterBenefitService) GetBenefits() ([]dtos.TransporterBenefitResponse, int64, error) {
+func (s *TransporterBenefitService) GetBenefits(routeID string, page, limit int) ([]dtos.TransporterBenefitResponse, int64, error) {
 	var results []dtos.TransporterBenefitResponse
 	var total int64
-	db.DB.Model(&models.TransporterBenefit{}).Count(&total)
+	query := db.DB.Model(&models.TransporterBenefit{}).Where("transporter_benefits.deleted_at IS NULL")
 
-	query := `
-		SELECT 
-			tb.id, tb.name, tb.min_quantity, tb.rate,
-			tb.route_id, r.route_name,
-			tb.status, tb.start_date, tb.end_date,
-			tb.created_at, tb.updated_at
-		FROM transporter_benefits tb
-		LEFT JOIN routes r ON tb.route_id = r.id
-		WHERE tb.deleted_at IS NULL
-	`
-	err := db.DB.Raw(query).Scan(&results).Error
+	if routeID != "" {
+		query = query.Where("transporter_benefits.route_id = ?", routeID)
+	}
+
+	query.Count(&total)
+	offset := (page - 1) * limit
+
+	err := query.Select("transporter_benefits.*, routes.route_name").
+		Joins("LEFT JOIN routes ON transporter_benefits.route_id = routes.id").
+		Limit(limit).Offset(offset).Order("transporter_benefits.id DESC").Scan(&results).Error
 	return results, total, err
 }
 
 func (s *TransporterBenefitService) GetBenefit(id string) (*dtos.TransporterBenefitResponse, error) {
 	var result dtos.TransporterBenefitResponse
 	query := `
-		SELECT 
-			tb.id, tb.name, tb.min_quantity, tb.rate,
-			tb.route_id, r.route_name,
-			tb.status, tb.start_date, tb.end_date,
-			tb.created_at, tb.updated_at
+		SELECT
+			tb.*, r.route_name
 		FROM transporter_benefits tb
 		LEFT JOIN routes r ON tb.route_id = r.id
 		WHERE tb.id = ? AND tb.deleted_at IS NULL
@@ -90,30 +76,32 @@ func (s *TransporterBenefitService) GetBenefit(id string) (*dtos.TransporterBene
 	return &result, nil
 }
 
-func (s *TransporterBenefitService) UpdateBenefit(id string, req dtos.UpdateTransporterBenefitRequest) error {
+func (s *TransporterBenefitService) UpdateBenefit(id string, req dtos.UpdateTransporterBenefitRequest, userID uint64) error {
+	var benefit models.TransporterBenefit
+	if err := db.DB.First(&benefit, id).Error; err != nil {
+		return err
+	}
+
 	updates := map[string]interface{}{
 		"name":         req.Name,
 		"min_quantity": req.MinQuantity,
 		"rate":         req.Rate,
-		"route_id":     req.RouteID,
 		"status":       req.Status,
+		"updated_by":   userID,
 	}
-
 	if req.StartDate != "" {
-		t := utils.ParseDate(req.StartDate)
-		updates["start_date"] = &t
-	} else {
-		updates["start_date"] = nil
+		updates["start_date"] = utils.ParseDatePtr(req.StartDate)
 	}
-
 	if req.EndDate != "" {
-		t := utils.ParseDate(req.EndDate)
-		updates["end_date"] = &t
+		updates["end_date"] = utils.ParseDatePtr(req.EndDate)
+	}
+	if req.RouteID != nil {
+		updates["route_id"] = req.RouteID
 	} else {
-		updates["end_date"] = nil
+		updates["route_id"] = nil
 	}
 
-	return db.DB.Model(&models.TransporterBenefit{}).Where("id = ?", id).Updates(updates).Error
+	return db.DB.Model(&benefit).Updates(updates).Error
 }
 
 func (s *TransporterBenefitService) DeleteBenefit(id string) error {

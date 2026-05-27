@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -36,6 +37,7 @@ func (c *MemberPayrollController) Create(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	res, err := c.service.Create(req, userID)
 	if err != nil {
+		log.Printf("[MemberPayrollController.Create] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -52,6 +54,61 @@ func (c *MemberPayrollController) List(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
+}
+
+func (c *MemberPayrollController) Approve(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid payroll ID",
+		})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+
+	payroll, err := c.service.Approve(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member payroll not found"})
+			return
+		}
+		log.Printf("[MemberPayrollController.Approve] Error approving payroll %d: %v", id, err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Member payroll approved successfully", "payroll": payroll})
+}
+
+func (c *MemberPayrollController) Confirm(ctx *gin.Context) {
+
+	idStr := ctx.Param("id")
+
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(400, gin.H{
+			"error": "Invalid payroll",
+		})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+
+	payroll, err := c.service.Confirm(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member payroll not found"})
+			return
+		}
+		log.Printf("[MemberPayrollController.Confirm] Error confirming payroll %d: %v", id, err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Member payroll confirmed successfully", "payroll": payroll})
 }
 
 func (c *MemberPayrollController) Get(ctx *gin.Context) {

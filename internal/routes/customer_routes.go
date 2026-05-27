@@ -14,6 +14,7 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	customerMilkRateController := controllers.NewCustomerMilkRateController()
 	customerPayDateRangeController := controllers.NewCustomerPayDateRangeController()
 	memberPayrollController := controllers.NewMemberPayrollController()
+	memberPayDateRangeController := controllers.NewMemberPayDateRangeController()
 
 	// Customer Routes
 	api.POST("/customers", customerController.CreateCustomer)
@@ -30,9 +31,11 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	api.DELETE("/customer-types/:id", customerTypeController.DeleteType)
 
 	// Customer Billing Routes
+	api.POST("/customer-billings", customerBillingController.CreateBilling)
 	api.GET("/customer-billings", customerBillingController.GetBillings)
 	api.GET("/customer-billings/:id", customerBillingController.GetBilling)
 	api.GET("/customer-billings/:id/items", customerBillingController.GetBillingItems)
+	api.DELETE("/customer-billings/:id", customerBillingController.DeleteBilling)
 
 	// Customer Invoice Routes
 	api.POST("/customer-invoices", customerInvoiceController.CreateInvoice)
@@ -59,10 +62,17 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	api.PUT("/customer-pay-date-ranges/:id", customerPayDateRangeController.UpdateCustomerPayDateRange)
 	api.DELETE("/customer-pay-date-ranges/:id", customerPayDateRangeController.DeleteCustomerPayDateRange)
 
+	// Member Pay Date Range Routes
+	api.POST("/member-pay-date-ranges", memberPayDateRangeController.Create)
+	api.GET("/member-pay-date-ranges", memberPayDateRangeController.List)
+	api.GET("/member-pay-date-ranges/:id", memberPayDateRangeController.Get)
+	api.PUT("/member-pay-date-ranges/:id", memberPayDateRangeController.Update)
+	api.DELETE("/member-pay-date-ranges/:id", memberPayDateRangeController.Delete)
+
 	// Member Payroll Routes
 	api.POST("/member-payrolls", memberPayrollController.Create)
 	api.GET("/member-payrolls", memberPayrollController.List)
 	api.GET("/member-payrolls/:id", memberPayrollController.Get)
-	api.PUT("/member-payrolls/:id", memberPayrollController.Update)
-	api.DELETE("/member-payrolls/:id", memberPayrollController.Delete)
+	api.PUT("/member-payrolls/:id/confirm", memberPayrollController.Confirm)
+	api.PUT("/member-payrolls/:id/approve", memberPayrollController.Approve)
 }

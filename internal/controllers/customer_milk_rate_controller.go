@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -37,6 +38,7 @@ func (c *CustomerMilkRateController) CreateRate(ctx *gin.Context) {
 
 	rate, err := c.service.CreateCustomerMilkRate(req, userID)
 	if err != nil {
+		log.Printf("[CustomerMilkRateController.CreateRate] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -83,6 +85,7 @@ func (c *CustomerMilkRateController) UpdateRate(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(uint64)
 
 	if err := c.service.UpdateCustomerMilkRate(id, req, userID); err != nil {
+		log.Printf("[CustomerMilkRateController.UpdateRate] Error updating rate %s: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -91,6 +94,7 @@ func (c *CustomerMilkRateController) UpdateRate(ctx *gin.Context) {
 
 func (c *CustomerMilkRateController) DeleteRate(ctx *gin.Context) {
 	if err := c.service.DeleteCustomerMilkRate(ctx.Param("id")); err != nil {
+		log.Printf("[CustomerMilkRateController.DeleteRate] Error deleting rate %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

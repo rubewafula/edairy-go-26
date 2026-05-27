@@ -19,6 +19,8 @@ func registerTransportRoutes(api *gin.RouterGroup) {
 	routeController := controllers.NewRouteController()
 	routeCenterController := controllers.NewRouteCenterController()
 	transportRateController := controllers.NewTransportRateController()
+	transporterPayDateRangeController := controllers.NewTransporterPayDateRangeController()
+	transporterPayrollController := controllers.NewTransporterPayrollController()
 
 	// Transporter Routes
 	api.POST("/transporters", transporterController.CreateTransporter)
@@ -106,4 +108,18 @@ func registerTransportRoutes(api *gin.RouterGroup) {
 	api.GET("/transport-rates/:id", transportRateController.GetRate)
 	api.PUT("/transport-rates/:id", transportRateController.UpdateRate)
 	api.DELETE("/transport-rates/:id", transportRateController.DeleteRate)
+
+	// Transporter Pay Date Range Routes
+	api.POST("/transporter-pay-date-ranges", transporterPayDateRangeController.Create)
+	api.GET("/transporter-pay-date-ranges", transporterPayDateRangeController.List)
+	api.GET("/transporter-pay-date-ranges/:id", transporterPayDateRangeController.Get)
+	api.PUT("/transporter-pay-date-ranges/:id", transporterPayDateRangeController.Update)
+	api.DELETE("/transporter-pay-date-ranges/:id", transporterPayDateRangeController.Delete)
+
+	// Transporter Payroll Routes
+	api.POST("/transporter-payrolls", transporterPayrollController.Create)
+	api.GET("/transporter-payrolls", transporterPayrollController.List)
+	api.GET("/transporter-payrolls/:id", transporterPayrollController.Get)
+	api.PUT("/transporter-payrolls/:id/confirm", transporterPayrollController.Confirm)
+	api.PUT("/transporter-payrolls/:id/approve", transporterPayrollController.Approve)
 }

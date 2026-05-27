@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -37,6 +38,7 @@ func (c *CustomerPaymentController) CreatePayment(ctx *gin.Context) {
 
 	payment, err := c.service.CreatePayment(req, userID)
 	if err != nil {
+		log.Printf("[CustomerPaymentController.CreatePayment] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -42,6 +43,7 @@ func (c *CustomerPayDateRangeController) CreateCustomerPayDateRange(ctx *gin.Con
 
 	customerPayDateRange, err := c.service.CreateCustomerPayDateRange(req, userID)
 	if err != nil {
+		log.Printf("[CustomerPayDateRangeController.CreateCustomerPayDateRange] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -88,6 +90,7 @@ func (c *CustomerPayDateRangeController) GetCustomerPayDateRange(ctx *gin.Contex
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer type not found"})
 			return
 		}
+		log.Printf("[CustomerPayDateRangeController.UpdateCustomerPayDateRange] Error updating range %s: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -123,6 +126,7 @@ func (c *CustomerPayDateRangeController) UpdateCustomerPayDateRange(ctx *gin.Con
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer type not found"})
 			return
 		}
+		log.Printf("[CustomerPayDateRangeController.DeleteCustomerPayDateRange] Error deleting range %s: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

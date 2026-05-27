@@ -12,6 +12,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type MemberPayrollService struct{}
@@ -83,7 +84,7 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 	db.DB.Table("milk_journal_entries").
 		Select("member_id, SUM(quantity) as kilos").
 		Joins("JOIN milk_journals ON milk_journal_entries.milk_journal_id = milk_journals.id").
-		Where("milk_journals.status = ? AND milk_journals.date_captured BETWEEN ? AND ?", "approved", pdr.StartDate, pdr.EndDate).
+		Where("milk_journals.confirmed = ? AND milk_journals.journal_date BETWEEN ? AND ?", true, pdr.StartDate, pdr.EndDate).
 		Group("member_id").Scan(&milkCollections)
 
 	if len(milkCollections) == 0 {
@@ -95,7 +96,7 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 	var milkRejects []milkSum
 	db.DB.Table("milk_rejects").
 		Select("member_id, SUM(quantity) as kilos").
-		Where("reject_date BETWEEN ? AND ?", pdr.StartDate, pdr.EndDate).
+		Where("transaction_date BETWEEN ? AND ?", pdr.StartDate, pdr.EndDate).
 		Group("member_id").Scan(&milkRejects)
 
 	rejectMap := make(map[uint64]float64)
@@ -141,14 +142,6 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 		memberRouteMap[m.ID] = m.RouteID
 	}
 
-	var allDeductions []models.RecurrentDeduction
-	db.DB.Where("customer_id IN ? AND settled = 0 AND customer_type = 'member'", memberIDs).
-		Order("created_at ASC").Find(&allDeductions)
-	deductionMap := make(map[uint64][]models.RecurrentDeduction)
-	for _, d := range allDeductions {
-		deductionMap[d.CustomerID] = append(deductionMap[d.CustomerID], d)
-	}
-
 	// 5. Worker Pool Setup
 	dateOpened := utils.ParseDate(req.DateOpened)
 	numWorkers := runtime.NumCPU() * 2
@@ -173,35 +166,59 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 		go func() {
 			defer wg.Done()
 			for collection := range jobs {
-				var mGross, mNet, mDeductions float64
-				var err error
-
-				// Retry logic: try up to 3 times per member
-				for attempt := 1; attempt <= 3; attempt++ {
-					err = db.DB.Transaction(func(tx *gorm.DB) error {
-						mGross, mNet, mDeductions = 0, 0, 0
-						rejectKilos := rejectMap[collection.MemberID]
-						netKilos := collection.Kilos - rejectKilos
-						if netKilos < 0 {
-							netKilos = 0
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("[MemberPayrollService] Worker panicked during payroll generation for member %d: %v", collection.MemberID, r)
+							db.DB.Create(&models.MemberPayrollGenerationError{
+								BaseModel: models.BaseModel{CreatedBy: userID},
+								MemberID:  collection.MemberID,
+								PayrollID: payrollID,
+								Error:     fmt.Sprintf("Panic during generation: %v", r),
+							})
+							db.DB.Model(&models.MemberPayslip{}).Where("member_id = ?", collection.MemberID).Update("status", "incomplete")
+							mu.Lock()
+							failedCount++
+							mu.Unlock()
 						}
+					}()
+					var mGross, mNet, mDeductions float64
+					var err error
 
-						routeID := memberRouteMap[collection.MemberID]
-						var rate float64
-						if r, ok := memberRateMap[collection.MemberID]; ok {
-							rate = r
-						} else if r, ok := routePeriodRateMap[routeID]; ok {
-							rate = r
-						} else if r, ok := defaultRouteRateMap[routeID]; ok {
-							rate = r
-						} else {
-							rate = globalDefault
-						}
+					// Retry logic: try up to 3 times per member
+					for attempt := 1; attempt <= 3; attempt++ {
+						err = db.DB.Transaction(func(tx *gorm.DB) error {
+							mGross, mNet, mDeductions = 0, 0, 0
+							rejectKilos := rejectMap[collection.MemberID]
+							netKilos := collection.Kilos - rejectKilos
+							if netKilos < 0 {
+								netKilos = 0
+							}
 
-						mGross = netKilos * rate
-						var payslipDeductions float64
-						if mDeds, ok := deductionMap[collection.MemberID]; ok {
-							for _, rd := range mDeds {
+							routeID := memberRouteMap[collection.MemberID]
+							var rate float64
+							if r, ok := memberRateMap[collection.MemberID]; ok {
+								rate = r
+							} else if r, ok := routePeriodRateMap[routeID]; ok {
+								rate = r
+							} else if r, ok := defaultRouteRateMap[routeID]; ok {
+								rate = r
+							} else {
+								rate = globalDefault
+							}
+
+							mGross = netKilos * rate
+
+							// Fetch deductions for this member with a row-level lock
+							var memberDeductions []models.RecurrentDeduction
+							if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+								Where("customer_id = ? AND settled = 0 AND customer_type = 'member'", collection.MemberID).
+								Order("created_at ASC").Find(&memberDeductions).Error; err != nil {
+								return err
+							}
+
+							var payslipDeductions float64
+							for _, rd := range memberDeductions {
 								remaining := rd.TotalAmount - rd.PaidAmount
 								deductAmount := rd.RecurrentAmount
 								if deductAmount > remaining {
@@ -218,60 +235,61 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 									MemberID:        int64(collection.MemberID),
 									PayrollID:       payrollID,
 									DeductionTypeID: rd.DeductionTypeID,
-									Amount:          fmt.Sprintf("%.2f", deductAmount),
+									Amount:          deductAmount,
 									TransactionDate: dateOpened,
 									Reference:       rd.Reference,
 								}
 								if err := tx.Create(&mpd).Error; err != nil {
 									return err
 								}
+
 								payslipDeductions += deductAmount
 							}
-						}
 
-						mDeductions = payslipDeductions
-						mNet = mGross - mDeductions
-						payslip := models.MemberPayslip{
-							MemberID:        collection.MemberID,
-							PayrollID:       payrollID,
-							DateOpened:      &dateOpened,
-							Status:          "draft",
-							GrossKilos:      collection.Kilos,
-							RejectKilos:     rejectKilos,
-							NetKilos:        netKilos,
-							GrossPay:        mGross,
-							TotalDeductions: mDeductions,
-							NetPay:          mNet,
-							PhysicalPeriod:  req.PhysicalPeriod,
-							PayDateRangeID:  &req.PayDateRangeID,
-						}
-						return tx.Create(&payslip).Error
-					})
+							mDeductions = payslipDeductions
+							mNet = mGross - mDeductions
+							payslip := models.MemberPayslip{
+								MemberID:        collection.MemberID,
+								PayrollID:       payrollID,
+								DateOpened:      &dateOpened,
+								Status:          "draft",
+								GrossKilos:      collection.Kilos,
+								RejectKilos:     rejectKilos,
+								NetKilos:        netKilos,
+								GrossPay:        mGross,
+								TotalDeductions: mDeductions,
+								NetPay:          mNet,
+								PhysicalPeriod:  req.PhysicalPeriod,
+								PayDateRangeID:  &req.PayDateRangeID,
+							}
+							return tx.Create(&payslip).Error
+						})
 
-					if err == nil {
-						break
+						if err == nil {
+							break
+						}
+						time.Sleep(time.Duration(attempt) * 50 * time.Millisecond)
 					}
-					time.Sleep(time.Duration(attempt) * 50 * time.Millisecond)
-				}
 
-				if err != nil {
-					mu.Lock()
-					failedCount++
-					mu.Unlock()
-					log.Printf("[MemberPayrollService] Failed to generate payroll for member %d: %v", collection.MemberID, err)
-					db.DB.Create(&models.MemberPayrollGenerationError{
-						BaseModel: models.BaseModel{CreatedBy: userID},
-						MemberID:  collection.MemberID,
-						PayrollID: payrollID,
-						Error:     err.Error(),
-					})
-				} else {
-					mu.Lock()
-					totalGross += mGross
-					totalNet += mNet
-					totalDeductions += mDeductions
-					mu.Unlock()
-				}
+					if err != nil {
+						mu.Lock()
+						failedCount++
+						mu.Unlock()
+						log.Printf("[MemberPayrollService] Failed to generate payroll for member %d: %v", collection.MemberID, err)
+						db.DB.Create(&models.MemberPayrollGenerationError{
+							BaseModel: models.BaseModel{CreatedBy: userID},
+							MemberID:  collection.MemberID,
+							PayrollID: payrollID,
+							Error:     err.Error(),
+						})
+					} else {
+						mu.Lock()
+						totalGross += mGross
+						totalNet += mNet
+						totalDeductions += mDeductions
+						mu.Unlock()
+					}
+				}()
 			}
 		}()
 	}
@@ -356,4 +374,318 @@ func (s *MemberPayrollService) Get(id string) (*dtos.MemberPayrollResponse, erro
 		return nil, gorm.ErrRecordNotFound
 	}
 	return &result, nil
+}
+
+func (s *MemberPayrollService) Approve(payrollID uint64, userID uint64) (*models.MemberPayroll, error) {
+	var payroll models.MemberPayroll
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Validate state and Lock payroll record
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND deleted_at IS NULL", payrollID).First(&payroll).Error; err != nil {
+			return err
+		}
+
+		// 2. Ensure payroll is in 'confirmed' status
+		if payroll.Status != "confirmed" {
+			return fmt.Errorf("payroll must be in 'confirmed' status to be approved, current status: %s", payroll.Status)
+		}
+
+		// 3. Validate all payslips are complete and no generation errors exist
+		var errCount int64
+		tx.Model(&models.MemberPayrollGenerationError{}).Where("payroll_id = ?", payrollID).Count(&errCount)
+		if errCount > 0 {
+			return fmt.Errorf("cannot approve payroll with %d generation errors", errCount)
+		}
+
+		var incompleteCount int64
+		tx.Model(&models.MemberPayslip{}).Where("payroll_id = ? AND status = 'incomplete'", payrollID).Count(&incompleteCount)
+		if incompleteCount > 0 {
+			return fmt.Errorf("cannot approve payroll with %d incomplete payslips", incompleteCount)
+		}
+
+		// Update status to prevent re-triggering
+		return tx.Model(&payroll).Update("status", "approving").Error
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	go s.approvePayrollInBackground(payrollID, userID)
+
+	return &payroll, nil
+}
+
+func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, userID uint64) {
+	var payroll models.MemberPayroll
+	if err := db.DB.Where("id = ? AND deleted_at IS NULL", payrollID).First(&payroll).Error; err != nil {
+		log.Printf("[MemberPayrollService] Background approval failed to find payroll %d: %v", payrollID, err)
+		return
+	}
+
+	now := time.Now()
+
+	// 2. Fetch Account Posting Rules
+	var grossRule, loanRule, shareRule models.TransactionPostingRule
+	db.DB.Where("transaction_type = ?", "MILK_PAYMENT").First(&grossRule)
+	db.DB.Where("transaction_type = ?", "MEMBER_REPAYMENT_DEDUCTION").First(&loanRule)
+	db.DB.Where("transaction_type = ?", "SHARES_CONTRIBUTION").First(&shareRule)
+
+	if grossRule.ID == 0 {
+		log.Printf("[MemberPayrollService] Missing posting rule for MILK_PAYROLL_GROSS, aborting payroll %d", payrollID)
+		db.DB.Model(&payroll).Update("status", "confirmed")
+		return
+	}
+
+	if loanRule.ID == 0 {
+		log.Printf("[MemberPayrollService] Missing posting rule for MEMBER_REPAYMENT_DEDUCTION, aborting payroll %d", payrollID)
+		db.DB.Model(&payroll).Update("status", "confirmed")
+		return
+	}
+
+	if shareRule.ID == 0 {
+		log.Printf("[MemberPayrollService] Missing posting rule for SHARES_CONTRIBUTION, aborting payroll %d", payrollID)
+		db.DB.Model(&payroll).Update("status", "confirmed")
+		return
+	}
+	// 3. Load Payslips
+	var payslips []models.MemberPayslip
+	if err := db.DB.Where("payroll_id = ? AND status != 'approved'", payrollID).Find(&payslips).Error; err != nil {
+		log.Printf("[MemberPayrollService] Failed to fetch payslips for payroll %d: %v", payrollID, err)
+		return
+	}
+
+	// 4. Worker Pool Setup
+	numWorkers := runtime.NumCPU() * 2
+	var wg sync.WaitGroup
+	jobs := make(chan models.MemberPayslip, len(payslips))
+	var mu sync.Mutex
+	var failedCount int64
+
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for ps := range jobs {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("[MemberPayrollService] Worker panicked during payroll approval for payslip %d: %v", ps.ID, r)
+							db.DB.Create(&models.MemberPayrollGenerationError{
+								BaseModel: models.BaseModel{CreatedBy: userID},
+								MemberID:  ps.MemberID,
+								PayrollID: payrollID,
+								Error:     fmt.Sprintf("Panic during approval: %v", r),
+							})
+							// Mark the affected payslip as incomplete
+							db.DB.Model(&models.MemberPayslip{}).Where("id = ?", ps.ID).Update("status", "incomplete")
+							mu.Lock()
+							failedCount++
+							mu.Unlock()
+						}
+					}()
+					var err error
+					// Retry logic: try up to 3 times per payslip
+					for attempt := 1; attempt <= 3; attempt++ {
+						err = db.DB.Transaction(func(tx *gorm.DB) error {
+							// Lock and check current payslip status
+							var currentPS models.MemberPayslip
+							if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&currentPS, ps.ID).Error; err != nil {
+								return err
+							}
+							if currentPS.Status == "approved" {
+								return nil // Already processed
+							}
+
+							// 1. Create Independent Transaction Header for THIS payslip
+							transaction := models.Transaction{
+								BaseModel:       models.BaseModel{CreatedBy: userID},
+								Reference:       fmt.Sprintf("PSL-%d", ps.ID),
+								TransactionName: fmt.Sprintf("Payslip Approval - %s (Member %d)", payroll.PhysicalPeriod, ps.MemberID),
+								TransactionType: "PAYROLL_PAYSLIP",
+								TransactionDate: now,
+								Description:     fmt.Sprintf("Payslip for Member %d in Payroll %s", ps.MemberID, payroll.PhysicalPeriod),
+								Status:          "approved",
+							}
+							if err := tx.Create(&transaction).Error; err != nil {
+								return err
+							}
+
+							// DR Milk Purchase Expense / CR Member Payables
+							glGross := []models.GeneralLedgerEntry{
+								{
+									BaseModel:       models.BaseModel{CreatedBy: userID},
+									TransactionID:   transaction.ID,
+									AccountID:       grossRule.DebitAccountID,
+									Debit:           ps.GrossPay,
+									TransactionDate: now,
+									Description:     fmt.Sprintf("Gross Pay: Member %d", ps.MemberID),
+								},
+								{
+									BaseModel:       models.BaseModel{CreatedBy: userID},
+									TransactionID:   transaction.ID,
+									AccountID:       grossRule.CreditAccountID,
+									Credit:          ps.GrossPay,
+									TransactionDate: now,
+									Description:     fmt.Sprintf("Gross Pay Payable: Member %d", ps.MemberID),
+								},
+							}
+							if err := tx.Create(&glGross).Error; err != nil {
+								return err
+							}
+
+							// Process Individual Deductions
+							var deductions []models.MemberPayrollDeduction
+							if err := tx.Where("payroll_id = ? AND member_id = ?", payrollID, ps.MemberID).Find(&deductions).Error; err != nil {
+								return err
+							}
+
+							for _, d := range deductions {
+								var dType models.DeductionType
+								if err := tx.First(&dType, d.DeductionTypeID).Error; err != nil {
+									return err
+								}
+
+								rule := loanRule
+								if dType.Code == "SHARE" {
+									rule = shareRule
+								}
+								creditAcc := rule.CreditAccountID
+								if creditAcc == 0 {
+									return fmt.Errorf("no accounting mapping for deduction type %s", dType.Code)
+								}
+
+								// DR Member Payables / CR Loan/Share Receivable
+								glDeduct := []models.GeneralLedgerEntry{
+									{
+										BaseModel:       models.BaseModel{CreatedBy: userID},
+										TransactionID:   transaction.ID,
+										AccountID:       grossRule.CreditAccountID,
+										Debit:           d.Amount,
+										TransactionDate: now,
+										Description:     fmt.Sprintf("Deduction DR: Member %d - %s", ps.MemberID, d.Reference),
+									},
+									{
+										BaseModel:       models.BaseModel{CreatedBy: userID},
+										TransactionID:   transaction.ID,
+										AccountID:       creditAcc,
+										Credit:          d.Amount,
+										TransactionDate: now,
+										Description:     fmt.Sprintf("Deduction CR: Member %d - %s", ps.MemberID, d.Reference),
+									},
+								}
+								if err := tx.Create(&glDeduct).Error; err != nil {
+									return err
+								}
+
+								// Update Recurrent Deduction balances
+								var rd models.RecurrentDeduction
+								if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+									Where("customer_id = ? AND reference = ? AND customer_type = 'member'", d.MemberID, d.Reference).
+									First(&rd).Error; err == nil {
+
+									newPaid := rd.PaidAmount + d.Amount
+									settled := 0
+									if newPaid >= rd.TotalAmount {
+										settled = 1
+									}
+									if err := tx.Model(&rd).Updates(map[string]interface{}{
+										"paid_amount": newPaid,
+										"settled":     settled,
+										"updated_by":  userID,
+									}).Error; err != nil {
+										return err
+									}
+								}
+							}
+
+							// 5. Finalize Payslip status
+							return tx.Model(&currentPS).Updates(map[string]interface{}{
+								"status":      "approved",
+								"approved_at": &now,
+								"approved_by": &userID,
+								"posted_at":   &now,
+								"posted_by":   &userID,
+								"updated_by":  userID,
+							}).Error
+						})
+
+						if err == nil {
+							break
+						}
+						time.Sleep(time.Duration(attempt) * 50 * time.Millisecond)
+					}
+
+					if err != nil {
+						mu.Lock()
+						failedCount++
+						mu.Unlock()
+						log.Printf("[MemberPayrollService] Approval failed for payslip %d: %v", ps.ID, err)
+						db.DB.Create(&models.MemberPayrollGenerationError{
+							BaseModel: models.BaseModel{CreatedBy: userID},
+							MemberID:  ps.MemberID,
+							PayrollID: payrollID,
+							Error:     fmt.Sprintf("Approval Error: %s", err.Error()),
+						})
+						db.DB.Model(&models.MemberPayslip{}).Where("id = ?", ps.ID).Update("status", "incomplete")
+					}
+				}()
+			}
+		}()
+	}
+
+	for _, ps := range payslips {
+		jobs <- ps
+	}
+	close(jobs)
+	wg.Wait()
+
+	// 5. Finalize Payroll Header
+	finalStatus := "approved"
+	if failedCount > 0 {
+		finalStatus = "incomplete"
+	}
+
+	db.DB.Model(&payroll).Updates(map[string]interface{}{
+		"status":      finalStatus,
+		"approved_at": &now,
+		"approved_by": &userID,
+		"updated_by":  userID,
+		"posted_at":   &now,
+		"posted_by":   &userID,
+		"updated_at":  time.Now(),
+	})
+}
+
+func (s *MemberPayrollService) Confirm(payrollID uint64, userID uint64) (*models.MemberPayroll, error) {
+
+	var payroll models.MemberPayroll
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id = ? AND deleted_at IS NULL", payrollID).First(&payroll).Error; err != nil {
+			return err
+		}
+
+		if payroll.Status != "draft" {
+			return fmt.Errorf("payroll must be in 'draft' status to be confirmed, current status: %s", payroll.Status)
+		}
+
+		now := time.Now()
+		// Update the main payroll record
+		if err := tx.Model(&payroll).Updates(map[string]interface{}{
+			"status":       "confirmed",
+			"confirmed_at": &now,
+			"confirmed_by": &userID,
+			"updated_by":   userID,
+			"updated_at":   now,
+		}).Error; err != nil {
+			return err
+		}
+
+		// Update all associated payslips to confirmed status
+		if err := tx.Model(&models.MemberPayslip{}).Where("payroll_id = ?", payrollID).Update("status", "confirmed").Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	return &payroll, err
 }

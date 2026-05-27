@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func (c *LoanController) CreateLoan(ctx *gin.Context) {
 
 	loan, err := c.service.CreateLoan(req)
 	if err != nil {
+		log.Printf("[LoanController.CreateLoan] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -71,6 +73,7 @@ func (c *LoanController) UpdateLoan(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateLoan(ctx.Param("id"), req); err != nil {
+		log.Printf("[LoanController.UpdateLoan] Error updating loan %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -79,6 +82,7 @@ func (c *LoanController) UpdateLoan(ctx *gin.Context) {
 
 func (c *LoanController) DeleteLoan(ctx *gin.Context) {
 	if err := c.service.DeleteLoan(ctx.Param("id")); err != nil {
+		log.Printf("[LoanController.DeleteLoan] Error deleting loan %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

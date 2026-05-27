@@ -1,116 +1,73 @@
 package utils
 
 import (
-	"encoding/base64"
-	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
-func NormalizePhone(phone string) string {
-	re := regexp.MustCompile(`^(?:0|254)?([17]\d{8})$`)
-	m := re.FindStringSubmatch(phone)
-
-	if len(m) == 2 {
-		return "254" + m[1]
-	}
-	return phone
-}
-
-func ParseDate(d string) time.Time {
-	layouts := []string{
-		"2006-01-02T15:04:05Z07:00",
-		"2006-01-02T15:04:05",
-		"2006-01-02T15:04", // Matches "2026-05-22T03:52"
-		"2006-01-02",
-	}
-	for _, layout := range layouts {
-		if t, err := time.Parse(layout, d); err == nil {
-			return t
+// GetUniqueRouteIDs extracts a slice of unique non-zero route IDs from a transporter-to-route map.
+func GetUniqueRouteIDs(m map[uint64]uint64) []uint64 {
+	uniqueMap := make(map[uint64]struct{})
+	for _, routeID := range m {
+		if routeID != 0 {
+			uniqueMap[routeID] = struct{}{}
 		}
 	}
-	return time.Time{}
-}
 
-func FormatValidationError(err error) map[string]string {
-	errors := make(map[string]string)
-
-	for _, e := range err.(validator.ValidationErrors) {
-		errors[e.Field()] = e.Tag()
+	result := make([]uint64, 0, len(uniqueMap))
+	for routeID := range uniqueMap {
+		result = append(result, routeID)
 	}
-
-	return errors
+	return result
 }
 
+// ParseDate parses a string into a time.Time object.
+func ParseDate(dateStr string) time.Time {
+	t, _ := time.Parse("2006-01-02", dateStr)
+	return t
+}
+
+// ParseDatePtr parses a string into a time.Time pointer, returning nil if empty or invalid.
+func ParseDatePtr(dateStr string) *time.Time {
+	if dateStr == "" {
+		return nil
+	}
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
+// Uint64ToString converts a uint64 to a string.
+func Uint64ToString(i uint64) string {
+	return strconv.FormatUint(i, 10)
+}
+
+// FormatValidationError returns a simple string representation of validation errors.
+func FormatValidationError(err error) string {
+	return err.Error()
+}
+
+// HashPassword hashes a plain text password using bcrypt.
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
 
-func Uint64ToString(n uint64) string {
-	return strconv.FormatUint(n, 10)
-}
-
-// GormDeletedAtToPtr converts gorm.DeletedAt to *time.Time for JSON omitempty
-func GormDeletedAtToPtr(deletedAt gorm.DeletedAt) *time.Time {
-	if deletedAt.Valid {
-		return &deletedAt.Time
+// NormalizePhone removes non-digit characters and ensures a common prefix (e.g., +254).
+func NormalizePhone(phone string) string {
+	digitsOnly := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, phone)
+	if strings.HasPrefix(digitsOnly, "0") {
+		return "+254" + digitsOnly[1:]
 	}
-	return nil
-}
-
-// GenerateUniqueFilename creates a unique filename using a UUID and the original extension.
-func GenerateUniqueFilename(originalFilename string) string {
-	ext := filepath.Ext(originalFilename)
-	return uuid.New().String() + ext
-}
-
-// SaveBase64ToFile decodes a base64 string, saves it to disk, and returns the relative path.
-// The uploadDir should be relative to the application's root.
-func SaveBase64ToFile(base64Content string, originalFilename string, uploadDir string) (string, error) {
-	if base64Content == "" {
-		return "", nil
-	}
-
-	// Decode base64 string
-	data, err := base64.StdEncoding.DecodeString(base64Content)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode base64 content: %w", err)
-	}
-
-	// Create upload directory if it doesn't exist
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create upload directory: %w", err)
-	}
-
-	// Generate a unique filename
-	uniqueFilename := GenerateUniqueFilename(originalFilename)
-	filePath := filepath.Join(uploadDir, uniqueFilename)
-
-	// Save the file
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
-		return "", fmt.Errorf("failed to save file: %w", err)
-	}
-
-	return "/" + filePath, nil // Return the relative URL/path
-}
-
-// DeleteFile deletes a file from the file system given its path.
-func DeleteFile(filePath string) error {
-	// Remove leading slash if present, as filepath.Join expects relative paths
-	if len(filePath) > 0 && filePath[0] == '/' {
-		filePath = filePath[1:]
-	}
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil // File does not exist, nothing to delete
-	}
-	return os.Remove(filePath)
+	return "+" + digitsOnly
 }

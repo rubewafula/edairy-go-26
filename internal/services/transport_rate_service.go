@@ -23,7 +23,7 @@ func (s *TransportRateService) CreateTransportRate(req dtos.CreateTransportRateR
 	rate := &models.TransportRate{
 		RouteID:       req.RouteID,
 		TransporterID: req.TransporterID,
-		Rate:          req.TransportRate,
+		TransportRate: req.TransportRate,
 		MemberID:      req.MemberID,
 		Status:        status,
 	}
@@ -125,7 +125,7 @@ func (s *TransportRateService) UpdateTransportRate(id string, req dtos.UpdateTra
 
 	rate.RouteID = req.RouteID
 	rate.TransporterID = req.TransporterID
-	rate.Rate = req.TransportRate
+	rate.TransportRate = req.TransportRate
 	rate.MemberID = req.MemberID
 	rate.Status = req.Status
 

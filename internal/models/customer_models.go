@@ -83,6 +83,7 @@ type CustomerCollection struct {
 type CustomerBilling struct {
 	BaseModel
 	PayDateRangeID  uint64  `gorm:"column:pay_date_range_id"`
+	CustomerID      uint64  `gorm:"column:customer_id"`
 	TotalDeliveries float64 `gorm:"column:total_deliveries"`
 	TotalAmount     float64 `gorm:"column:total_amount"`
 	Status          string  `gorm:"type:enum('pending','invoiced');default:'pending';column:status"`

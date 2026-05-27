@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -35,6 +36,7 @@ func (c *CustomerController) CreateCustomer(ctx *gin.Context) {
 
 	customer, err := c.service.CreateCustomer(req)
 	if err != nil {
+		log.Printf("[CustomerController.CreateCustomer] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -75,6 +77,7 @@ func (c *CustomerController) UpdateCustomer(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateCustomer(ctx.Param("id"), req); err != nil {
+		log.Printf("[CustomerController.UpdateCustomer] Error updating customer %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -83,6 +86,7 @@ func (c *CustomerController) UpdateCustomer(ctx *gin.Context) {
 
 func (c *CustomerController) DeleteCustomer(ctx *gin.Context) {
 	if err := c.service.DeleteCustomer(ctx.Param("id")); err != nil {
+		log.Printf("[CustomerController.DeleteCustomer] Error deleting customer %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

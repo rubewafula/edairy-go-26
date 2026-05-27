@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -35,6 +36,7 @@ func (c *CustomerTypeController) CreateType(ctx *gin.Context) {
 
 	customerType, err := c.service.CreateCustomerType(req)
 	if err != nil {
+		log.Printf("[CustomerTypeController.CreateType] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -75,6 +77,7 @@ func (c *CustomerTypeController) UpdateType(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateCustomerType(ctx.Param("id"), req); err != nil {
+		log.Printf("[CustomerTypeController.UpdateType] Error updating type %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -83,6 +86,7 @@ func (c *CustomerTypeController) UpdateType(ctx *gin.Context) {
 
 func (c *CustomerTypeController) DeleteType(ctx *gin.Context) {
 	if err := c.service.DeleteCustomerType(ctx.Param("id")); err != nil {
+		log.Printf("[CustomerTypeController.DeleteType] Error deleting type %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

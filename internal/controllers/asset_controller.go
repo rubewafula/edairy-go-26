@@ -24,19 +24,20 @@ func NewAssetController() *AssetController {
 func (c *AssetController) CreateAsset(ctx *gin.Context) {
 	var req dtos.CreateAssetRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Println("Found error trying to validate asset: %s", err.Error())
+		log.Printf("[AssetController.CreateAsset] JSON binding error: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		log.Println("Found error trying to validate Struct: %s", err.Error())
+		log.Printf("[AssetController.CreateAsset] Validation error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	asset, err := c.service.CreateAsset(req)
 	if err != nil {
+		log.Printf("[AssetController.CreateAsset] Service error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -74,6 +75,7 @@ func (c *AssetController) UpdateAsset(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateAsset(ctx.Param("id"), req); err != nil {
+		log.Printf("[AssetController.UpdateAsset] Error updating asset %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -82,6 +84,7 @@ func (c *AssetController) UpdateAsset(ctx *gin.Context) {
 
 func (c *AssetController) DeleteAsset(ctx *gin.Context) {
 	if err := c.service.DeleteAsset(ctx.Param("id")); err != nil {
+		log.Printf("[AssetController.DeleteAsset] Error deleting asset %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

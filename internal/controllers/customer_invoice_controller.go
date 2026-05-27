@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -37,6 +38,7 @@ func (c *CustomerInvoiceController) CreateInvoice(ctx *gin.Context) {
 
 	invoice, err := c.service.CreateInvoice(req, userID)
 	if err != nil {
+		log.Printf("[CustomerInvoiceController.CreateInvoice] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -68,6 +70,7 @@ func (c *CustomerInvoiceController) GetInvoice(ctx *gin.Context) {
 
 func (c *CustomerInvoiceController) DeleteInvoice(ctx *gin.Context) {
 	if err := c.service.DeleteInvoice(ctx.Param("id")); err != nil {
+		log.Printf("[CustomerInvoiceController.DeleteInvoice] Error deleting invoice %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
