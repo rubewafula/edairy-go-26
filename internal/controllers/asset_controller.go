@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -45,7 +46,16 @@ func (c *AssetController) CreateAsset(ctx *gin.Context) {
 }
 
 func (c *AssetController) GetAssets(ctx *gin.Context) {
-	assets, total, err := c.service.GetAssets()
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	assetCode := ctx.Query("asset_code")
+	assetName := ctx.Query("asset_name")
+	categoryID := ctx.Query("asset_category_id")
+	fromDate := ctx.Query("asset_aquisition_date_from")
+	toDate := ctx.Query("asset_aquisition_date_to")
+
+	assets, total, err := c.service.GetAssets(page, limit, assetCode, assetName, categoryID, fromDate, toDate)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -89,4 +99,19 @@ func (c *AssetController) DeleteAsset(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Asset deleted successfully"})
+}
+
+func (c *AssetController) ImportAssets(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ImportAssets(file, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Asset import started in the background. Check logs for status."})
 }

@@ -11,6 +11,7 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	memberBankAccountController := controllers.NewMemberBankAccountController()
 	memberDependantController := controllers.NewMemberDependantController()
 	memberTypeController := controllers.NewMemberTypeController()
+	memberNextOfKinController := controllers.NewMemberNextOfKinController()
 
 	// Member Registration Routes
 	api.POST("/members", memberController.CreateMember)
@@ -18,6 +19,8 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/members/:id", memberController.GetMember)
 	api.PUT("/members/:id", memberController.UpdateMember)
 	api.DELETE("/members/:id", memberController.DeleteMember)
+	api.PUT("/members/suspend/:id", memberController.SuspendMember)
+	api.POST("/members/import", memberController.ImportMembers)
 
 	// Member Type Routes
 	api.POST("/member-types", memberTypeController.CreateMemberType)
@@ -37,5 +40,11 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/member-dependants/:id", memberDependantController.GetDependant)
 	api.PUT("/member-dependants/:id", memberDependantController.UpdateDependant)
 	api.DELETE("/member-dependants/:id", memberDependantController.DeleteDependant)
+
+	api.POST("/member-next-of-kins", memberNextOfKinController.CreateMemberNextOfKin)
+	api.GET("/member-next-of-kins", memberNextOfKinController.GetMemberNextOfKins)
+	api.GET("/member-next-of-kins/:id", memberNextOfKinController.GetMemberNextOfKin)
+	api.PUT("/member-next-of-kins/:id", memberNextOfKinController.UpdateMemberNextOfKin)
+	api.DELETE("/member-next-of-kins/:id", memberNextOfKinController.DeleteMemberNextOfKin)
 
 }

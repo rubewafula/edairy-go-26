@@ -92,3 +92,18 @@ func (c *CustomerController) DeleteCustomer(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Customer deleted successfully"})
 }
+
+func (c *CustomerController) ImportCustomers(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ImportCustomers(file, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Import started in background"})
+}

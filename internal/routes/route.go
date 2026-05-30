@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/controllers"
 	"github.com/rubewafula/edairy-go-26/internal/middleware"
+	socket "github.com/rubewafula/edairy-go-26/internal/socket-io"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -14,6 +15,9 @@ import (
 )
 
 func SetupRouter() *gin.Engine {
+	// Initialize Socket.IO Server
+	socket.Init()
+
 	r := gin.Default()
 
 	// CORS Middleware to allow cross-origin requests
@@ -36,6 +40,10 @@ func SetupRouter() *gin.Engine {
 
 	registerPublicRoutes(r)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Socket.IO Routes
+	r.GET("/socket.io/*any", gin.WrapH(socket.Server))
+	r.POST("/socket.io/*any", gin.WrapH(socket.Server))
 
 	api := r.Group("/api")
 	api.Use(authMiddleware)
@@ -64,6 +72,8 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	registerTransportRoutes(api)
 	registerInventoryRoutes(api)
 	registerCustomerRoutes(api)
+	registerEmployeePayrollRoutes(api)
+	registerUINotificationRoutes(api)
 	registerSupplierRoutes(api)
 	registerLoanRoutes(api)
 	registerShareRoutes(api)

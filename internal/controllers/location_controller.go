@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 )
 
@@ -15,6 +17,66 @@ func NewLocationController() *LocationController {
 	return &LocationController{
 		service: services.NewLocationService(),
 	}
+}
+
+// Administrative Location APIs
+func (c *LocationController) CreateLocation(ctx *gin.Context) {
+	var req dtos.CreateLocationRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	location, err := c.service.CreateLocation(req, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusCreated, location)
+}
+
+func (c *LocationController) GetLocations(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	results, total, err := c.service.GetLocations(page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
+}
+
+func (c *LocationController) GetLocation(ctx *gin.Context) {
+	result, err := c.service.GetLocation(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Location not found"})
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (c *LocationController) UpdateLocation(ctx *gin.Context) {
+	var req dtos.UpdateLocationRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.UpdateLocation(ctx.Param("id"), req, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Location updated successfully"})
+}
+
+func (c *LocationController) DeleteLocation(ctx *gin.Context) {
+	if err := c.service.DeleteLocation(ctx.Param("id")); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Location deleted successfully"})
 }
 
 // Counties

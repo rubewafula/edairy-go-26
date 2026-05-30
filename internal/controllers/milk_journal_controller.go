@@ -42,7 +42,8 @@ func (c *MilkJournalController) CreateMilkJournal(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, journal)
+	log.Printf("MIlk journal create success:  %v", *journal)
+	ctx.JSON(http.StatusCreated, gin.H{"data": *journal, "message": "Milk journal posted successfully"})
 }
 
 func (c *MilkJournalController) GetMilkJournals(ctx *gin.Context) {

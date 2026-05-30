@@ -139,3 +139,32 @@ func (c *MemberController) DeleteMember(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "deleted successfully"})
 }
+
+func (c *MemberController) SuspendMember(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if err := c.service.SuspendMember(id); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Member suspended successfully"})
+}
+
+func (c *MemberController) ImportMembers(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ImportMembers(file, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Member import started in the background. Check logs for status."})
+}

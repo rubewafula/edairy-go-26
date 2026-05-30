@@ -24,6 +24,7 @@ func registerAssetRoutes(api *gin.RouterGroup) {
 	api.GET("/fixed-assets/:id", assetController.GetAsset)
 	api.PUT("/fixed-assets/:id", assetController.UpdateAsset)
 	api.DELETE("/fixed-assets/:id", assetController.DeleteAsset)
+	api.POST("/fixed-assets/import", assetController.ImportAssets)
 
 	// Asset Assignment Routes
 	api.POST("/asset-assignments", assetAssignmentController.CreateAssignment)

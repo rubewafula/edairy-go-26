@@ -11,7 +11,7 @@ type Member struct {
 	OtherNames        string    `gorm:"column:other_names"`
 	IDNumber          string    `gorm:"uniqueIndex;column:id_no"`
 	Gender            string    `gorm:"column:gender"`
-	DateOfBirth       string    `gorm:"column:dob"`
+	DateOfBirth       time.Time `gorm:"column:dob"`
 	PrimaryPhone      string    `gorm:"column:primary_phone"`
 	SecondaryPhone    string    `gorm:"column:secondary_phone"`
 	Email             string    `gorm:"column:email"`
@@ -138,6 +138,27 @@ type MemberDebt struct {
 	NetAmount        float64   `gorm:"column:net_amount"`
 	Period           int       `gorm:"column:period"`
 	Year             int       `gorm:"column:year"`
+}
+
+type MemberNextOfKin struct {
+	BaseModel
+	MemberID               uint64  `gorm:"column:member_id;not null;index"`
+	FullName               string  `gorm:"column:full_name;not null;size:255"`
+	Relationship           *string `gorm:"column:relationship;size:100"`
+	PhoneNumber            *string `gorm:"column:phone_number;size:30"`
+	AlternativePhoneNumber *string `gorm:"column:alternative_phone_number;size:30"`
+	EmailAddress           *string `gorm:"column:email_address;size:255"`
+	NationalIDNo           *string `gorm:"column:national_id_no;size:100"`
+	PostalAddress          *string `gorm:"column:postal_address;size:255"`
+	PhysicalAddress        *string `gorm:"column:physical_address;size:255"`
+	Occupation             *string `gorm:"column:occupation;size:255"`
+	IsPrimary              bool    `gorm:"column:is_primary;not null;default:0"`
+	Status                 bool    `gorm:"column:status;not null;default:1"` // TINYINT(1) maps to bool
+	Remarks                *string `gorm:"column:remarks;type:text"`
+}
+
+func (MemberNextOfKin) TableName() string {
+	return "member_next_of_kins"
 }
 
 type MemberType struct {
@@ -269,4 +290,14 @@ type MemberPayDateRange struct {
 
 func (MemberPayDateRange) TableName() string {
 	return "member_pay_date_ranges"
+}
+
+type MemberImportError struct {
+	BaseModel
+	RowData string `gorm:"column:row_data;type:text"` // Store the raw row data that caused the error
+	Error   string `gorm:"column:error;type:text"`    // Store the error message
+}
+
+func (MemberImportError) TableName() string {
+	return "member_import_errors"
 }

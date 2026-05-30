@@ -30,6 +30,25 @@ func ParseDate(dateStr string) time.Time {
 	return t
 }
 
+// ParseFlexibleDate attempts to parse a date string using various common formats.
+func ParseFlexibleDate(dateStr string) time.Time {
+	dateStr = strings.TrimSpace(dateStr)
+	formats := []string{
+		"02 Jan 2006", // 01 Jan 2024
+		"2006-01-02",  // ISO
+		"02/01/2006",  // DD/MM/YYYY
+		"01/02/2006",  // MM/DD/YYYY
+		"02-01-2006",  // DD-MM-YYYY
+		"2006/01/02",
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, dateStr); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 // ParseDatePtr parses a string into a time.Time pointer, returning nil if empty or invalid.
 func ParseDatePtr(dateStr string) *time.Time {
 	if dateStr == "" {
@@ -70,4 +89,12 @@ func NormalizePhone(phone string) string {
 		return "+254" + digitsOnly[1:]
 	}
 	return "+" + digitsOnly
+}
+
+// ParseFloat safely converts a string to float64, returning 0 if empty or invalid.
+func ParseFloat(s string) (float64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.ParseFloat(strings.TrimSpace(s), 64)
 }

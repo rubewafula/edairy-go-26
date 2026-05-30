@@ -1,19 +1,30 @@
 package services
 
 import (
+	"encoding/csv"
 	"fmt"
+	"mime/multipart"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
-type LivestockService struct{}
+type LivestockService struct {
+	notificationService *UINotificationService
+}
 
 func NewLivestockService() *LivestockService {
-	return &LivestockService{}
+	return &LivestockService{
+		notificationService: NewUINotificationService(),
+	}
 }
 
 // Livestock CRUD
@@ -1047,4 +1058,125 @@ func (s *LivestockService) RecordWeight(req dtos.CreateLivestockWeightRequest) (
 		Remarks:     req.Remarks,
 	}
 	return weight, db.DB.Create(weight).Error
+}
+
+func (s *LivestockService) ImportLivestock(file *multipart.FileHeader, userID uint64) error {
+	src, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	var data [][]string
+
+	if ext == ".csv" {
+		reader := csv.NewReader(src)
+		data, err = reader.ReadAll()
+	} else if ext == ".xlsx" || ext == ".xls" {
+		f, err := excelize.OpenReader(src)
+		if err != nil {
+			return err
+		}
+		sheets := f.GetSheetList()
+		data, err = f.GetRows(sheets[0])
+	} else {
+		return fmt.Errorf("unsupported format")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	go s.processLivestockRowsInBackground(data, userID)
+	return nil
+}
+
+func (s *LivestockService) processLivestockRowsInBackground(data [][]string, userID uint64) {
+	var wg sync.WaitGroup
+	jobs := make(chan []string, len(data)-1)
+	errorChan := make(chan error, len(data)-1)
+	numWorkers := runtime.NumCPU() * 2
+
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for row := range jobs {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							db.DB.Create(&models.LivestockImportError{
+								BaseModel: models.BaseModel{CreatedBy: userID},
+								RowData:   strings.Join(row, ","),
+								Error:     fmt.Sprintf("Panic: %v", r),
+							})
+						}
+					}()
+
+					err := db.DB.Transaction(func(tx *gorm.DB) error {
+						if len(row) < 5 {
+							return fmt.Errorf("insufficient columns")
+						}
+
+						tagNo := strings.TrimSpace(row[1])
+						var count int64
+						tx.Model(&models.Livestock{}).Where("tag_no = ?", tagNo).Count(&count)
+						if count > 0 {
+							return fmt.Errorf("tag %s exists", tagNo)
+						}
+
+						// Resolve Category and Breed
+						var cat models.LivestockCategory
+						tx.Where("category_name = ?", row[2]).First(&cat)
+						var breed models.LivestockBreed
+						tx.Where("breed_name = ?", row[3]).First(&breed)
+
+						weight, _ := utils.ParseFloat(row[7])
+						livestock := models.Livestock{
+							BaseModel:           models.BaseModel{CreatedBy: userID},
+							TagNo:               &tagNo,
+							LivestockName:       &row[4],
+							Gender:              strings.ToLower(row[5]),
+							BirthDate:           utils.ParseFlexibleDate(row[6]),
+							LivestockCategoryID: cat.ID,
+							LivestockBreedID:    &breed.ID,
+							Weight:              &weight,
+							Status:              "active",
+						}
+						return tx.Create(&livestock).Error
+					})
+
+					if err != nil {
+						db.DB.Create(&models.LivestockImportError{
+							BaseModel: models.BaseModel{CreatedBy: userID},
+							RowData:   strings.Join(row, ","),
+							Error:     err.Error(),
+						})
+						errorChan <- err
+					}
+				}()
+			}
+		}()
+	}
+
+	for i := 1; i < len(data); i++ {
+		jobs <- data[i]
+	}
+	close(jobs)
+	wg.Wait()
+	close(errorChan)
+
+	failedCount := 0
+	for range errorChan {
+		failedCount++
+	}
+
+	msg := "Livestock import completed."
+	if failedCount > 0 {
+		msg = fmt.Sprintf("Livestock import finished with %d errors.", failedCount)
+	}
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title: "Livestock Import Status", Message: msg, NotificationType: "IMPORT_STATUS",
+	})
 }

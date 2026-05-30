@@ -81,6 +81,7 @@ type EmployeePayrollBenefit struct {
 	Year       string  `gorm:"column:benefit_year"`
 	Month      string  `gorm:"column:benefit_month"`
 	PayrollID  uint64  `gorm:"index;column:payroll_id"`
+	PayslipID  uint64  `gorm:"index;column:payslip_id"`
 }
 
 type EmployeeDeduction struct {
@@ -106,6 +107,7 @@ type EmployeePayrollDeduction struct {
 	Month       string  `gorm:"column:deduction_month"`
 	Year        string  `gorm:"column:deduction_year"`
 	PayrollID   uint64  `gorm:"index;column:payroll_id"`
+	PayslipID   uint64  `gorm:"index;column:payslip_id"`
 }
 
 type EmployeeDependant struct {
@@ -231,6 +233,7 @@ type EmployeePayroll struct { // Renamed from Payroll to avoid conflict and repr
 	TotalTax        float64   `gorm:"column:total_tax"`
 	TotalRelief     float64   `gorm:"column:total_relief"`
 	Period          string    `gorm:"column:period"`
+	Status          string    `gorm:"column:status"`
 	PaidAt          time.Time `gorm:"column:paid_at"`
 }
 
@@ -246,6 +249,7 @@ type EmployeePayslip struct {
 	BasicSalary     float64 `gorm:"column:basic_salary"`
 	PayrollID       uint64  `gorm:"index;column:payroll_id"`
 	TotalTax        float64 `gorm:"column:total_tax"`
+	Status          string  `gorm:"column:status"`
 	TotalRelief     float64 `gorm:"column:total_relief"`
 }
 
@@ -343,4 +347,14 @@ type DocumentType struct {
 
 func (DocumentType) TableName() string {
 	return "document_types"
+}
+
+type EmployeePayrollGenerationError struct {
+	BaseModel
+	EmployeeID uint64 `gorm:"column:employee_id"`
+	Error      string `gorm:"column:error;type:text"`
+}
+
+func (EmployeePayrollGenerationError) TableName() string {
+	return "employee_payroll_generation_errors"
 }

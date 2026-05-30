@@ -12,7 +12,6 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	employeeLeaveTypeController := controllers.NewEmployeeLeaveTypeController()
 	employeeLeaveApplicationController := controllers.NewEmployeeLeaveApplicationController()
 	employeeLeaveAssignmentController := controllers.NewEmployeeLeaveAssignmentController()
-	employeePayrollController := controllers.NewEmployeePayrollController()
 	documentTypeController := controllers.NewDocumentTypeController()
 	employeeReliefController := controllers.NewEmployeeReliefController()
 	deductionTypeController := controllers.NewEmployeeDeductionTypeController()
@@ -91,13 +90,6 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.GET("/employee-leave-assignments/:id", employeeLeaveAssignmentController.Get)
 	api.PUT("/employee-leave-assignments/:id", employeeLeaveAssignmentController.Update)
 	api.DELETE("/employee-leave-assignments/:id", employeeLeaveAssignmentController.Delete)
-
-	// Employee Payrolls
-	api.POST("/employee-payrolls", employeePayrollController.CreateEmployeePayroll)
-	api.GET("/employee-payrolls", employeePayrollController.GetEmployeePayrolls)
-	api.GET("/employee-payrolls/:id", employeePayrollController.GetEmployeePayroll)
-	api.PUT("/employee-payrolls/:id", employeePayrollController.UpdateEmployeePayroll)
-	api.DELETE("/employee-payrolls/:id", employeePayrollController.DeleteEmployeePayroll)
 
 	// Employee Reliefs
 	api.POST("/employee-reliefs", employeeReliefController.Create)

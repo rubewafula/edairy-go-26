@@ -134,3 +134,13 @@ type LivestockWeightRecord struct {
 	Remarks     string    `gorm:"column:remarks"`
 	RecordedAt  time.Time `gorm:"column:recorded_at;not null"`
 }
+
+type LivestockImportError struct {
+	BaseModel
+	RowData string `gorm:"column:row_data;type:text"`
+	Error   string `gorm:"column:error;type:text"`
+}
+
+func (LivestockImportError) TableName() string {
+	return "livestock_import_errors"
+}

@@ -25,6 +25,12 @@ func registerLocationRoutes(api *gin.RouterGroup) {
 	api.DELETE("/route-centers/:id", routeCenterController.DeleteCenter)
 
 	// Administrative Location APIs
+	api.POST("/locations", locationController.CreateLocation)
+	api.GET("/locations", locationController.GetLocations)
+	api.GET("/locations/:id", locationController.GetLocation)
+	api.PUT("/locations/:id", locationController.UpdateLocation)
+	api.DELETE("/locations/:id", locationController.DeleteLocation)
+
 	api.GET("/counties", locationController.GetCounties)
 	api.POST("/counties", locationController.CreateCounty)
 	api.GET("/sub-counties", locationController.GetSubCounties)

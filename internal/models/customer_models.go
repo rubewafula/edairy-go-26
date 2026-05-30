@@ -143,3 +143,13 @@ type CustomerBillingGenerationError struct {
 func (CustomerBillingGenerationError) TableName() string {
 	return "customer_billing_generation_errors"
 }
+
+type CustomerImportError struct {
+	BaseModel
+	RowData string `gorm:"column:row_data;type:text"`
+	Error   string `gorm:"column:error;type:text"`
+}
+
+func (CustomerImportError) TableName() string {
+	return "customer_import_errors"
+}

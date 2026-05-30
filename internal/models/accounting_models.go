@@ -117,3 +117,21 @@ type GeneralLedgerEntry struct {
 func (GeneralLedgerEntry) TableName() string {
 	return "general_ledger_entries"
 }
+
+type StatutoryDeductionConfiguration struct {
+	BaseModel
+	DeductionID           uint64  `gorm:"column:deduction_id"` // Links to employee_deduction_types.id
+	EmployeeDeductionRate float64 `gorm:"column:employee_deduction_rate"`
+	EmployerDeductionRate float64 `gorm:"column:employer_deduction_rate"`
+	MinAmount             float64 `gorm:"column:min_amount"`
+	MaxAmount             float64 `gorm:"column:max_amount"`
+	FixedAmount           float64 `gorm:"column:fixed_amount"`
+	BandLowerLimitAmount  float64 `gorm:"column:band_lower_limit_amount"`
+	BandUpperLimitAmount  float64 `gorm:"column:band_upper_limit_amount"`
+	MinApplicableAmount   float64 `gorm:"column:min_applicable_amount"`
+	// Add other fields as needed from the schema, e.g., 'is_percentage', 'is_fixed'
+}
+
+func (StatutoryDeductionConfiguration) TableName() string {
+	return "statutory_deductions_configurations"
+}

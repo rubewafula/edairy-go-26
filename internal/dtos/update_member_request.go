@@ -6,7 +6,7 @@ type UpdateMemberRequest struct {
 	LastName     string `json:"last_name" validate:"required,max=128"`
 	OtherNames   string `json:"other_names" validate:"max=128"`
 	RouteID      uint64 `json:"route_id"`
-	DOB          string `json:"dob" validate:"required,datetime"`
+	DOB          string `json:"dob" validate:"required"`
 
 	IDNo      string `json:"id_no" validate:"required,max=25"`
 	MemberNo  string `json:"member_no"`
@@ -21,7 +21,7 @@ type UpdateMemberRequest struct {
 	IDFrontPhoto  string `json:"id_front_photo" validate:"max=255"`
 	IDBackPhoto   string `json:"id_back_photo" validate:"max=255"`
 	PassportPhoto string `json:"passport_photo" validate:"max=255"`
-	IDDateOfIssue string `json:"id_date_of_issue" validate:"required,datetime"`
+	IDDateOfIssue string `json:"id_date_of_issue" validate:"required"`
 
 	TaxNumber     string `json:"tax_number"`
 	MaritalStatus string `json:"marital_status"`

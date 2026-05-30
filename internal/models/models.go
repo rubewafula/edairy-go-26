@@ -186,7 +186,8 @@ type Route struct {
 
 type Location struct {
 	BaseModel
-	Name string `gorm:"column:name"`
+	Code         string `gorm:"column:code" json:"code"`
+	LocationName string `gorm:"column:location_name" json:"location_name"`
 }
 
 type CreditLimitChangeLog struct {

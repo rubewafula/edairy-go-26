@@ -66,3 +66,9 @@ type AssetDepreciationEntry struct {
 	TransactionID           uint64    `gorm:"column:transaction_id"`
 	Notes                   string    `gorm:"column:notes"`
 }
+
+type AssetImportError struct {
+	BaseModel
+	RowData string `gorm:"column:data"`
+	Error   string `gorm:"column:error"`
+}

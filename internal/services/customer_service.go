@@ -1,18 +1,30 @@
 package services
 
 import (
+	"encoding/csv"
 	"fmt"
+	"mime/multipart"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
-type CustomerService struct{}
+type CustomerService struct {
+	notificationService *UINotificationService
+}
 
 func NewCustomerService() *CustomerService {
-	return &CustomerService{}
+	return &CustomerService{
+		notificationService: NewUINotificationService(),
+	}
 }
 
 func (s *CustomerService) CreateCustomer(req dtos.CreateCustomerRequest) (*dtos.CustomerResponse, error) {
@@ -107,4 +119,117 @@ func (s *CustomerService) UpdateCustomer(id string, req dtos.UpdateCustomerReque
 
 func (s *CustomerService) DeleteCustomer(id string) error {
 	return db.DB.Delete(&models.Customer{}, id).Error
+}
+
+func (s *CustomerService) ImportCustomers(file *multipart.FileHeader, userID uint64) error {
+	src, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	var data [][]string
+
+	if ext == ".csv" {
+		reader := csv.NewReader(src)
+		data, err = reader.ReadAll()
+	} else if ext == ".xlsx" || ext == ".xls" {
+		f, err := excelize.OpenReader(src)
+		if err != nil {
+			return err
+		}
+		sheets := f.GetSheetList()
+		if len(sheets) == 0 {
+			return fmt.Errorf("no sheets found")
+		}
+		data, err = f.GetRows(sheets[0])
+	} else {
+		return fmt.Errorf("unsupported format")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	go s.processCustomerRowsInBackground(data, userID)
+	return nil
+}
+
+func (s *CustomerService) processCustomerRowsInBackground(data [][]string, userID uint64) {
+	var wg sync.WaitGroup
+	jobs := make(chan []string, len(data)-1)
+	errorChan := make(chan error, len(data)-1)
+	numWorkers := runtime.NumCPU() * 2
+
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for row := range jobs {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							db.DB.Create(&models.CustomerImportError{
+								BaseModel: models.BaseModel{CreatedBy: userID},
+								RowData:   strings.Join(row, ","),
+								Error:     fmt.Sprintf("Panic: %v", r),
+							})
+						}
+					}()
+
+					err := db.DB.Transaction(func(tx *gorm.DB) error {
+						if len(row) < 5 {
+							return fmt.Errorf("insufficient columns")
+						}
+						custNo := strings.TrimSpace(row[0])
+						var count int64
+						tx.Model(&models.Customer{}).Where("customer_no = ?", custNo).Count(&count)
+						if count > 0 {
+							return fmt.Errorf("customer %s already exists", custNo)
+						}
+
+						rate, _ := utils.ParseFloat(row[5])
+						customer := models.Customer{
+							BaseModel:    models.BaseModel{CreatedBy: userID},
+							CustomerNo:   custNo,
+							FullNames:    row[1],
+							Phone:        utils.NormalizePhone(row[2]),
+							EmailAddress: row[3],
+							KraPin:       row[4],
+							Rate:         rate,
+							Status:       "ACTIVE",
+						}
+						return tx.Create(&customer).Error
+					})
+
+					if err != nil {
+						db.DB.Create(&models.CustomerImportError{
+							BaseModel: models.BaseModel{CreatedBy: userID},
+							RowData:   strings.Join(row, ","),
+							Error:     err.Error(),
+						})
+						errorChan <- err
+					}
+				}()
+			}
+		}()
+	}
+
+	for i := 1; i < len(data); i++ {
+		jobs <- data[i]
+	}
+	close(jobs)
+	wg.Wait()
+	close(errorChan)
+
+	failedCount := len(errorChan)
+	msg := "Customer import completed successfully."
+	if failedCount > 0 {
+		msg = fmt.Sprintf("Customer import finished with %d failures. Check logs.", failedCount)
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title: "Customer Import Status", Message: msg, NotificationType: "IMPORT_STATUS",
+	})
 }

@@ -2,21 +2,33 @@ package services
 
 import (
 	"context"
+	"encoding/csv"
+	"fmt"
+	"log"
 	"mime/multipart"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+
+	"runtime"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	models "github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
-type MemberService struct{}
+type MemberService struct {
+	notificationService *UINotificationService
+}
 
 func NewMemberService() *MemberService {
-	return &MemberService{}
+	return &MemberService{
+		notificationService: NewUINotificationService(),
+	}
 }
 
 // Create user
@@ -51,7 +63,7 @@ func (s *MemberService) CreateMember(
 		LastName:       req.LastName,
 		OtherNames:     req.OtherNames,
 		RouteID:        req.RouteID,
-		DateOfBirth:    req.DOB,
+		DateOfBirth:    utils.ParseDate(req.DOB),
 		IDNumber:       req.IDNo,
 		Gender:         req.Gender,
 		BirthCity:      req.BirthCity,
@@ -216,7 +228,7 @@ func (s *MemberService) UpdateMember(
 	member.LastName = req.LastName
 	member.OtherNames = req.OtherNames
 	member.RouteID = req.RouteID
-	member.DateOfBirth = req.DOB
+	member.DateOfBirth = utils.ParseDate(req.DOB)
 	member.IDNumber = req.IDNo
 	member.Gender = req.Gender
 	member.BirthCity = req.BirthCity
@@ -243,4 +255,227 @@ func (s *MemberService) DeleteMember(id string) error {
 	}
 
 	return db.DB.Delete(&member).Error
+}
+
+func (s *MemberService) SuspendMember(id string) error {
+	var member models.Member
+	if err := db.DB.First(&member, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Model(&member).Update("status", "SUSPENDED").Error
+}
+
+// ImportMembers bulk imports members from CSV, XLS, or XLSX files.
+func (s *MemberService) ImportMembers(file *multipart.FileHeader, userID uint64) error {
+	src, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	var data [][]string
+
+	if ext == ".csv" {
+		reader := csv.NewReader(src)
+		data, err = reader.ReadAll()
+		if err != nil {
+			return err
+		}
+	} else if ext == ".xlsx" || ext == ".xls" {
+		f, err := excelize.OpenReader(src)
+		if err != nil {
+			return err
+		}
+		sheets := f.GetSheetList()
+		if len(sheets) == 0 {
+			return fmt.Errorf("no sheets found in excel file")
+		}
+		data, err = f.GetRows(sheets[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("unsupported file format: %s", ext)
+	}
+
+	// The actual processing will happen in a goroutine
+	go s.processMemberRowsInBackground(data, userID)
+
+	// Return immediately to the API caller
+	return nil
+}
+
+func (s *MemberService) processMemberRowsInBackground(data [][]string, userID uint64) {
+	log.Printf("[MemberService.processMemberRowsInBackground] Starting background member import for %d rows.", len(data)-1)
+
+	var wg sync.WaitGroup
+	jobs := make(chan []string, len(data)-1) // Buffer jobs channel
+	errorChan := make(chan error, len(data)-1)
+
+	numWorkers := runtime.NumCPU() * 2 // Use a reasonable number of workers
+	if numWorkers < 1 {
+		numWorkers = 1
+	}
+
+	// Start worker goroutines
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for row := range jobs {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("[MemberService] Worker panicked during member import for row: %v, error: %v", row, r)
+							db.DB.Create(&models.MemberImportError{
+								BaseModel: models.BaseModel{CreatedBy: userID},
+								RowData:   strings.Join(row, ","),
+								Error:     fmt.Sprintf("Panic during import: %v", r),
+							})
+							errorChan <- fmt.Errorf("panic during import for row: %v", r)
+						}
+					}()
+
+					err := db.DB.Transaction(func(tx *gorm.DB) error {
+						// Skip header and rows that don't have enough columns
+						if len(row) < 19 {
+							return fmt.Errorf("row has insufficient columns (%d < 19)", len(row))
+						}
+
+						idNo := strings.TrimSpace(row[3])
+						if idNo == "" {
+							return fmt.Errorf("ID number is empty for row")
+						}
+
+						// Idempotency: skip if member already exists
+						var count int64
+						tx.Model(&models.Member{}).Where("id_no = ?", idNo).Count(&count)
+						if count > 0 {
+							return fmt.Errorf("member with ID number %s already exists", idNo)
+						}
+
+						fullName := strings.TrimSpace(row[2])
+						nameParts := strings.Fields(fullName)
+						firstName, lastName, otherNames := "", "", ""
+						if len(nameParts) > 0 {
+							firstName = nameParts[0]
+							if len(nameParts) > 1 {
+								lastName = nameParts[len(nameParts)-1]
+								if len(nameParts) > 2 {
+									otherNames = strings.Join(nameParts[1:len(nameParts)-1], " ")
+								}
+							}
+						}
+
+						// Lookups for Route and Bank
+						routeVal := strings.TrimSpace(row[18])
+						var route models.Route
+						tx.Where("code = ? OR name = ?", routeVal, routeVal).First(&route)
+
+						bankName := strings.TrimSpace(row[16])
+						var bank models.Bank
+						tx.Where("bank_name LIKE ?", "%"+bankName+"%").First(&bank)
+
+						var memberType models.MemberType
+						// Fallback to first member type if none matches
+						tx.First(&memberType)
+
+						dob := utils.ParseFlexibleDate(row[5])
+						joiningDate := utils.ParseFlexibleDate(row[4])
+
+						member := models.Member{
+							BaseModel:      models.BaseModel{CreatedBy: userID},
+							MemberNo:       strings.TrimSpace(row[0]),
+							Title:          strings.TrimSpace(row[1]),
+							FirstName:      firstName,
+							LastName:       lastName,
+							OtherNames:     otherNames,
+							IDNumber:       idNo,
+							DateOfBirth:    dob,
+							PrimaryPhone:   utils.NormalizePhone(row[8]),
+							Email:          strings.TrimSpace(row[9]),
+							Status:         strings.ToUpper(strings.TrimSpace(row[10])),
+							Gender:         strings.ToUpper(strings.TrimSpace(row[11])),
+							BirthCity:      strings.TrimSpace(row[14]),
+							RouteID:        route.ID,
+							MemberTypeID:   memberType.ID,
+							DateRegistered: joiningDate,
+						}
+
+						if err := tx.Create(&member).Error; err != nil {
+							return err
+						}
+
+						// Attachment of Bank Account if provided
+						accNo := strings.TrimSpace(row[17])
+						if accNo != "" && bank.ID != 0 {
+							bankAcc := models.MemberBankAccount{
+								BaseModel:     models.BaseModel{CreatedBy: userID},
+								MemberID:      member.ID,
+								BankID:        bank.ID,
+								AccountNumber: accNo,
+								AccountName:   fullName,
+								Status:        "ACTIVE",
+							}
+							tx.Create(&bankAcc)
+						}
+						return nil
+					})
+
+					if err != nil {
+						log.Printf("[MemberService.processMemberRowsInBackground] Error processing row: %v, error: %v", row, err)
+						db.DB.Create(&models.MemberImportError{
+							BaseModel: models.BaseModel{CreatedBy: userID},
+							RowData:   strings.Join(row, ","),
+							Error:     err.Error(),
+						})
+						errorChan <- err
+					}
+				}()
+			}
+		}()
+	}
+
+	// Send rows to job channel, skipping header
+	for i := 1; i < len(data); i++ {
+		jobs <- data[i]
+	}
+	close(jobs)
+
+	wg.Wait() // Wait for all workers to finish
+	close(errorChan)
+
+	failedCount := 0
+	for err := range errorChan {
+		if err != nil {
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		log.Printf("[MemberService.processMemberRowsInBackground] Member import completed with %d failures.", failedCount)
+	} else {
+		log.Printf("[MemberService.processMemberRowsInBackground] Member import completed successfully.")
+	}
+
+	// Create and emit UI notification
+	var notificationTitle string
+	var notificationMessage string
+	if failedCount == 0 {
+		notificationTitle = "Member Import Successful"
+		notificationMessage = "All members from your file were imported successfully."
+	} else {
+		notificationTitle = "Member Import Completed with Errors"
+		notificationMessage = fmt.Sprintf("Member import finished with %d failures. Please check the import error logs for details.", failedCount)
+	}
+
+	_, err := s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            notificationTitle,
+		Message:          notificationMessage,
+		NotificationType: "MEMBER_IMPORT_STATUS",
+	})
+	if err != nil {
+		log.Printf("[MemberService.processMemberRowsInBackground] Failed to create UI notification: %v", err)
+	}
 }
