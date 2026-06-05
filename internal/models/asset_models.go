@@ -22,7 +22,7 @@ type Asset struct {
 	AccumulatedDepreciation float64   `gorm:"column:accumulated_depreciation;default:0.00"`
 	BookValue               float64   `gorm:"column:book_value"`
 	WarrantyEndDate         time.Time `gorm:"column:warranty_end_date"`
-	CurrentLocation         string    `gorm:"column:current_location"`
+	LocationID              uint64    `gorm:"column:location_id"`
 	Status                  string    `gorm:"column:status;default:ACTIVE"`
 	Loanable                bool      `gorm:"column:loanable;default:0"`
 	Comments                string    `gorm:"column:comments"`
@@ -65,10 +65,4 @@ type AssetDepreciationEntry struct {
 	BookValue               float64   `gorm:"column:book_value"`
 	TransactionID           uint64    `gorm:"column:transaction_id"`
 	Notes                   string    `gorm:"column:notes"`
-}
-
-type AssetImportError struct {
-	BaseModel
-	RowData string `gorm:"column:data"`
-	Error   string `gorm:"column:error"`
 }

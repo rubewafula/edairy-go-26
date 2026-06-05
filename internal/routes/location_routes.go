@@ -6,23 +6,7 @@ import (
 )
 
 func registerLocationRoutes(api *gin.RouterGroup) {
-	routeController := controllers.NewRouteController()
-	routeCenterController := controllers.NewRouteCenterController()
 	locationController := controllers.NewLocationController()
-
-	// Route APIs
-	api.POST("/routes", routeController.CreateRoute)
-	api.GET("/routes", routeController.GetRoutes)
-	api.GET("/routes/:id", routeController.GetRoute)
-	api.PUT("/routes/:id", routeController.UpdateRoute)
-	api.DELETE("/routes/:id", routeController.DeleteRoute)
-
-	// Route Center APIs
-	api.POST("/route-centers", routeCenterController.CreateCenter)
-	api.GET("/route-centers", routeCenterController.GetCenters)
-	api.GET("/route-centers/:id", routeCenterController.GetCenter)
-	api.PUT("/route-centers/:id", routeCenterController.UpdateCenter)
-	api.DELETE("/route-centers/:id", routeCenterController.DeleteCenter)
 
 	// Administrative Location APIs
 	api.POST("/locations", locationController.CreateLocation)

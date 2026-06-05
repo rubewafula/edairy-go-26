@@ -25,6 +25,10 @@ func registerAssetRoutes(api *gin.RouterGroup) {
 	api.PUT("/fixed-assets/:id", assetController.UpdateAsset)
 	api.DELETE("/fixed-assets/:id", assetController.DeleteAsset)
 	api.POST("/fixed-assets/import", assetController.ImportAssets)
+	api.GET("/fixed-assets/report", assetController.DownloadAssetReport)
+	api.GET("/fixed-assets/report/download/:filename", assetController.DownloadReportFile)
+	// Asset Import Errors
+	api.GET("/fixed-assets/import-errors/:importid", assetController.GetAssetImportErrors)
 
 	// Asset Assignment Routes
 	api.POST("/asset-assignments", assetAssignmentController.CreateAssignment)
@@ -39,4 +43,5 @@ func registerAssetRoutes(api *gin.RouterGroup) {
 	api.GET("/asset-depreciation-entries", assetDepreciationController.GetEntries)
 	api.GET("/asset-depreciation-entries/:id", assetDepreciationController.GetEntry)
 	api.DELETE("/asset-depreciation-entries/:id", assetDepreciationController.DeleteEntry)
+
 }

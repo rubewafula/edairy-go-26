@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -114,4 +118,52 @@ func (c *AssetController) ImportAssets(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusAccepted, gin.H{"message": "Asset import started in the background. Check logs for status."})
+}
+
+func (c *AssetController) GetAssetImportErrors(ctx *gin.Context) {
+
+	importIDStr := ctx.Param("importid")
+	importID, _ := strconv.ParseUint(importIDStr, 10, 64)
+
+	errors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch import errors"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": errors})
+}
+
+func (c *AssetController) DownloadAssetReport(ctx *gin.Context) {
+	assetCode := ctx.Query("asset_code")
+	assetName := ctx.Query("asset_name")
+	categoryID := ctx.Query("asset_category_id")
+	fromDate := ctx.Query("asset_aquisition_date_from")
+	toDate := ctx.Query("asset_aquisition_date_to")
+	format := ctx.DefaultQuery("format", "pdf")
+	userID := ctx.GetUint64("user_id")
+
+	c.service.ProcessReportInBackground(userID, format, assetCode, assetName, categoryID, fromDate, toDate)
+
+	ctx.JSON(http.StatusAccepted, gin.H{
+		"message": "Report generation started in the background. You will receive a notification once it's ready.",
+	})
+}
+
+func (c *AssetController) DownloadReportFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	filePath := filepath.Join("./storage/reports", filename)
+
+	// Basic security check to prevent path traversal
+	if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filename"})
+		return
+	}
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "File not found or has expired"})
+		return
+	}
+
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.File(filePath)
 }

@@ -1173,10 +1173,12 @@ func (s *LivestockService) processLivestockRowsInBackground(data [][]string, use
 	}
 
 	msg := "Livestock import completed."
+	notificationType := "SUCCESS"
 	if failedCount > 0 {
 		msg = fmt.Sprintf("Livestock import finished with %d errors.", failedCount)
+		notificationType = "ERROR"
 	}
 	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
-		Title: "Livestock Import Status", Message: msg, NotificationType: "IMPORT_STATUS",
+		Title: "Livestock Import Status", Message: msg, NotificationType: notificationType,
 	})
 }

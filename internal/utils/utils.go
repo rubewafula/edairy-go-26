@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +50,14 @@ func ParseFlexibleDate(dateStr string) time.Time {
 	return time.Time{}
 }
 
+// FormatDate formats a time.Time object into a "YYYY-MM-DD" string.
+func FormatDate(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("2006-01-02")
+}
+
 // ParseDatePtr parses a string into a time.Time pointer, returning nil if empty or invalid.
 func ParseDatePtr(dateStr string) *time.Time {
 	if dateStr == "" {
@@ -77,18 +86,21 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
+var phoneRegex = regexp.MustCompile(`^\+?(254|0)?([71]\d{8})$`)
+
 // NormalizePhone removes non-digit characters and ensures a common prefix (e.g., +254).
+
 func NormalizePhone(phone string) string {
-	digitsOnly := strings.Map(func(r rune) rune {
-		if r >= '0' && r <= '9' {
-			return r
-		}
-		return -1
-	}, phone)
-	if strings.HasPrefix(digitsOnly, "0") {
-		return "+254" + digitsOnly[1:]
+	// Remove spaces, dashes, brackets, etc.
+	digits := regexp.MustCompile(`\D`).ReplaceAllString(phone, "")
+
+	matches := phoneRegex.FindStringSubmatch(digits)
+	if matches == nil {
+		return ""
 	}
-	return "+" + digitsOnly
+
+	// matches[2] contains the 9-digit subscriber number
+	return "254" + matches[2]
 }
 
 // ParseFloat safely converts a string to float64, returning 0 if empty or invalid.

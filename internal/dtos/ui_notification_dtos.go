@@ -20,4 +20,6 @@ type CreateUINotificationRequest struct {
 	NotificationType string  `json:"notification_type" validate:"required,max=100"`
 	ReferenceID      *uint64 `json:"reference_id"`
 	ReferenceType    *string `json:"reference_type"`
+	ErrorLink        string  `json:"error_link"`
+	DownloadLink     string  `json:"download_link"`
 }

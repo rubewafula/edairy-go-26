@@ -27,10 +27,16 @@ type CreateMemberRequest struct {
 	PassportPhoto *multipart.FileHeader `form:"passport_photo" validate:"required"`
 	IDDateOfIssue string                `json:"id_date_of_issue" form:"id_date_of_issue" validate:"required"`
 
-	TaxNumber     string `json:"tax_number" form:"tax_number"`
-	MaritalStatus string `json:"marital_status" form:"marital_status"`
-	Title         string `json:"title" form:"title"`
+	TaxNumber     string                         `json:"tax_number" form:"tax_number"`
+	MaritalStatus string                         `json:"marital_status" form:"marital_status"` //
+	Title         string                         `json:"title" form:"title"`                   //
+	NextOfKins    []CreateMemberNextOfKinRequest `json:"next_of_kins" form:"next_of_kins"`
 
 	NextOfKinFullName string `json:"next_of_kin_full_name" form:"next_of_kin_full_name"`
 	NextOfKinPhone    string `json:"next_of_kin_phone" form:"next_of_kin_phone"`
+
+	BankID      uint64 `json:"bank_id" form:"bank_id"`
+	BankBranch  string `json:"bank_branch" form:"bank_branch"`
+	AccountNo   string `json:"account_no" form:"account_no"`
+	AccountName string `json:"account_name" form:"account_name"`
 }

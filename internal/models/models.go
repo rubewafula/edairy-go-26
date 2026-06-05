@@ -658,3 +658,14 @@ type ActivityLog struct {
 func (ActivityLog) TableName() string {
 	return "activity_log"
 }
+
+type ImportError struct {
+	BaseModel
+	RowData  string `gorm:"column:row_data;type:text"`
+	Error    string `gorm:"column:error;type:text"`
+	ImportId uint64 `gorm:"column:import_id;index"`
+}
+
+func (ImportError) TableName() string {
+	return "import_errors"
+}

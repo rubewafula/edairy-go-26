@@ -40,6 +40,13 @@ func (c *LocationController) GetLocations(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 
+	// Support 'size' parameter from client
+	if size := ctx.Query("size"); size != "" {
+		if s, err := strconv.Atoi(size); err == nil {
+			limit = s
+		}
+	}
+
 	results, total, err := c.service.GetLocations(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

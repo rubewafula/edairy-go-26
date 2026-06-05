@@ -13,6 +13,8 @@ type UINotification struct {
 	IsRead           bool      `gorm:"column:is_read;default:0;index:idx_ui_notifications_read" json:"is_read"`
 	CreatedAt        time.Time `gorm:"column:created_at;index:idx_ui_notifications_created;default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt        time.Time `gorm:"column:updated_at;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	ErrorLink        string    `gorm:"column:error_link;default:null" json:"error_link"`
+	DownloadLink     string    `gorm:"column:download_link;default:null" json:"download_link"`
 }
 
 func (UINotification) TableName() string {

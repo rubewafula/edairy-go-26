@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -83,4 +84,30 @@ func (c *StoreController) DeleteStore(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Store deleted successfully"})
+}
+
+func (c *StoreController) ImportStoreStock(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ImportStoreStock(file, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Store stock import started in the background."})
+}
+
+func (c *StoreController) GetImportErrors(ctx *gin.Context) {
+	importIDStr := ctx.Param("importid")
+	importID, _ := strconv.ParseUint(importIDStr, 10, 64)
+	errors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch import errors"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": errors})
 }

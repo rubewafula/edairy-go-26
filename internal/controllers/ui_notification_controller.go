@@ -57,12 +57,21 @@ func (c *UINotificationController) MarkAllAsRead(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "All notifications marked as read"})
 }
 
-func (c *UINotificationController) GetUnreadCount(ctx *gin.Context) {
+func (c *UINotificationController) GetUnread(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
-	count, err := c.service.GetUnreadCount(userID)
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	notifications, total, err := c.service.GetUserUnreadNotifications(userID, page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"count": count})
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"data":  notifications,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
 }

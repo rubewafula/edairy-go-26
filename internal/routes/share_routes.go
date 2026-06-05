@@ -32,6 +32,10 @@ func registerShareRoutes(api *gin.RouterGroup) {
 	// Share Account Routes
 	api.POST("/share-accounts", shareAccountController.CreateAccount)
 	api.GET("/share-accounts", shareAccountController.GetAccounts)
+	api.GET("/share-accounts/export", shareAccountController.ExportAccounts)
+	api.GET("/share-accounts/export/download/:filename", shareAccountController.DownloadExportFile)
+	api.POST("/share-accounts/import", shareAccountController.ImportAccounts)
+	api.GET("/share-accounts/import-errors/:importid", shareAccountController.GetImportErrors)
 	api.GET("/share-accounts/:id", shareAccountController.GetAccount)
 	api.PUT("/share-accounts/:id", shareAccountController.UpdateAccount)
 	api.DELETE("/share-accounts/:id", shareAccountController.DeleteAccount)

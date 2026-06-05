@@ -103,3 +103,30 @@ func (c *MilkJournalController) GetDailyJournals(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": journals})
 }
+
+func (c *MilkJournalController) ImportJournals(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ImportJournals(file, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Milk journal import started in the background. Check logs for status."})
+}
+
+func (c *MilkJournalController) GetMilkJournalImportErrors(ctx *gin.Context) {
+	importIDStr := ctx.Param("importid")
+	importID, _ := strconv.ParseUint(importIDStr, 10, 64)
+
+	errors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch import errors"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": errors})
+}

@@ -9,7 +9,7 @@ type ShareType struct {
 	Description       string  `gorm:"column:description"`
 	Rate              float64 `gorm:"column:rate"`
 	Mandatory         int     `gorm:"column:madatory"` // Matches 'madatory' in schema
-	HasShareValue     string  `gorm:"column:has_share_value"`
+	HasShareValue     int     `gorm:"column:has_share_value"`
 	RepayMethod       string  `gorm:"column:repay_method"`
 	CalculatingMethod string  `gorm:"column:calculating_method"`
 	ShareValue        float64 `gorm:"column:share_value"`

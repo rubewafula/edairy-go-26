@@ -122,23 +122,34 @@ func RequireAutoPermission() gin.HandlerFunc {
 
 		resource := extractResource(path)
 
-		var action string
+		var required string
 
-		switch method {
-		case "GET":
-			action = "view"
-		case "POST":
-			action = "create"
-		case "PUT", "PATCH":
-			action = "update"
-		case "DELETE":
-			action = "delete"
+		switch {
+		case strings.HasSuffix(path, "/import"):
+			required = resource
+
+		case strings.HasSuffix(path, "/export"):
+			required = resource
+
 		default:
-			c.AbortWithStatusJSON(405, gin.H{"Error": "method not allowed"})
-			return
-		}
+			var action string
 
-		required := resource + "." + action
+			switch method {
+			case "GET":
+				action = "view"
+			case "POST":
+				action = "create"
+			case "PUT", "PATCH":
+				action = "update"
+			case "DELETE":
+				action = "delete"
+			default:
+				c.AbortWithStatusJSON(405, gin.H{"error": "method not allowed"})
+				return
+			}
+
+			required = resource + "." + action
+		}
 
 		val, exists := c.Get("permissions")
 
@@ -158,6 +169,7 @@ func RequireAutoPermission() gin.HandlerFunc {
 				return
 			}
 		}
+		log.Printf("[RBAC] Forbidden: %s", required)
 
 		c.AbortWithStatusJSON(403, gin.H{
 			"Error": "forbidden: " + required,

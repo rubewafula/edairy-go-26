@@ -16,11 +16,14 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	// Member Registration Routes
 	api.POST("/members", memberController.CreateMember)
 	api.GET("/members", memberController.GetMembers)
+	api.GET("/members/export", memberController.ExportMembers)
+	api.GET("/members/export/download/:filename", memberController.DownloadExportFile)
 	api.GET("/members/:id", memberController.GetMember)
 	api.PUT("/members/:id", memberController.UpdateMember)
 	api.DELETE("/members/:id", memberController.DeleteMember)
 	api.PUT("/members/suspend/:id", memberController.SuspendMember)
 	api.POST("/members/import", memberController.ImportMembers)
+	api.GET("/members/import-errors/:importid", memberController.GetMemberImportErrors)
 
 	// Member Type Routes
 	api.POST("/member-types", memberTypeController.CreateMemberType)

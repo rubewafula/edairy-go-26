@@ -123,6 +123,7 @@ func (s *AssetDepreciationService) CreateEntry(req dtos.CreateAssetDepreciationR
 
 		// 5. Update Asset Master Record
 		if err := tx.Model(&models.Asset{}).Where("id = ?", req.AssetID).Updates(map[string]interface{}{
+
 			"accumulated_depreciation": newAccumulatedDepreciation,
 			"book_value":               newBookValue,
 			"depreciation_rate":        depreciationRateForAssetUpdate,
@@ -229,6 +230,7 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 
 		// 5. Update Asset Master Record
 		if err := tx.Model(&models.Asset{}).Where("id = ?", oldEntry.AssetID).Updates(map[string]interface{}{
+
 			"accumulated_depreciation": newAssetAccumulatedDepreciation,
 			"book_value":               newAssetBookValue,
 			"depreciation_rate":        depreciationRateForAssetUpdate,
@@ -252,10 +254,12 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 	}
 
 	return &updatedEntry, nil
+
 }
 
 func (s *AssetDepreciationService) GetEntries() ([]dtos.AssetDepreciationResponse, int64, error) {
 	var results []dtos.AssetDepreciationResponse
+
 	var total int64
 	db.DB.Model(&models.AssetDepreciationEntry{}).Count(&total)
 
@@ -296,12 +300,14 @@ func (s *AssetDepreciationService) GetEntry(id string) (*dtos.AssetDepreciationR
 
 func (s *AssetDepreciationService) DeleteEntry(id string) error {
 	var entryToDelete models.AssetDepreciationEntry
+
 	if err := db.DB.First(&entryToDelete, id).Error; err != nil {
 		return fmt.Errorf("asset depreciation entry not found: %w", err)
 	}
 
 	var asset models.Asset
 	if err := db.DB.First(&asset, entryToDelete.AssetID).Error; err != nil {
+
 		return fmt.Errorf("asset not found: %w", err)
 	}
 

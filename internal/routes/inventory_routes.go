@@ -76,6 +76,8 @@ func registerInventoryRoutes(api *gin.RouterGroup) {
 	api.GET("/store-stocks/:id", storeStockController.GetStock)
 	api.PUT("/store-stocks/:id", storeStockController.UpdateStock)
 	api.DELETE("/store-stocks/:id", storeStockController.DeleteStock)
+	api.POST("/store-stocks/import", storeController.ImportStoreStock)
+	api.GET("/store-stocks/import-errors/:importid", storeController.GetImportErrors)
 
 	// Store Stock Taking Routes
 	api.POST("/store-stock-takings", storeStockTakingController.CreateStockTaking)

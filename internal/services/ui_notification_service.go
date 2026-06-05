@@ -6,7 +6,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
-	socket "github.com/rubewafula/edairy-go-26/internal/socket-io"
+	ws "github.com/rubewafula/edairy-go-26/internal/ws-socket"
 )
 
 type UINotificationService struct{}
@@ -25,6 +25,8 @@ func (s *UINotificationService) CreateNotification(userID uint64, req dtos.Creat
 		ReferenceID:      req.ReferenceID,
 		ReferenceType:    req.ReferenceType,
 		IsRead:           false,
+		ErrorLink:        req.ErrorLink,
+		DownloadLink:     req.DownloadLink,
 	}
 
 	if err := db.DB.Create(notification).Error; err != nil {
@@ -32,9 +34,24 @@ func (s *UINotificationService) CreateNotification(userID uint64, req dtos.Creat
 	}
 
 	// Emit real-time notification to the user's private room
-	socket.EmitNotification(strconv.FormatUint(userID, 10), notification)
+	ws.EmitNotification(strconv.FormatUint(userID, 10), notification)
 
 	return notification, nil
+}
+
+// GetUserNotifications retrieves paginated notifications for a user.
+func (s *UINotificationService) GetUserUnreadNotifications(userID uint64, page, limit int) ([]models.UINotification, int64, error) {
+	var notifications []models.UINotification
+	var total int64
+
+	offset := (page - 1) * limit
+	query := db.DB.Model(&models.UINotification{}).
+		Where("user_id = ? and is_read = ? ", userID, 0)
+
+	query.Count(&total)
+
+	err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&notifications).Error
+	return notifications, total, err
 }
 
 // GetUserNotifications retrieves paginated notifications for a user.

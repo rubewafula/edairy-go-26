@@ -36,6 +36,8 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	api.PUT("/milk-journals/:id", milkJournalController.UpdateMilkJournal)
 	api.GET("/milk-journals-today", milkJournalController.GetDailyJournals)
 	api.DELETE("/milk-journals/:id", milkJournalController.DeleteMilkJournal)
+	api.POST("/milk-journals/import", milkJournalController.ImportJournals)
+	api.GET("/milk-journals/import-errors/:importid", milkJournalController.GetMilkJournalImportErrors)
 
 	api.POST("/milk-journal-entries", milkJournalEntryController.CreateEntry)
 	api.GET("/milk-journal-entries", milkJournalEntryController.GetEntries)

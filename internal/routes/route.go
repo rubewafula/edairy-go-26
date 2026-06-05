@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/controllers"
 	"github.com/rubewafula/edairy-go-26/internal/middleware"
-	socket "github.com/rubewafula/edairy-go-26/internal/socket-io"
+	ws "github.com/rubewafula/edairy-go-26/internal/ws-socket"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -16,13 +16,24 @@ import (
 
 func SetupRouter() *gin.Engine {
 	// Initialize Socket.IO Server
-	socket.Init()
+	hub := ws.NewHub()
+	go hub.Run()
+
+	ws.InitHub(hub)
 
 	r := gin.Default()
 
+	// WebSocket Route moved above global middleware to prevent CORS interference during handshake
+	r.GET("/ws", ws.ServeWS(hub))
+
 	// CORS Middleware to allow cross-origin requests
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
@@ -40,10 +51,6 @@ func SetupRouter() *gin.Engine {
 
 	registerPublicRoutes(r)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Socket.IO Routes
-	r.GET("/socket.io/*any", gin.WrapH(socket.Server))
-	r.POST("/socket.io/*any", gin.WrapH(socket.Server))
 
 	api := r.Group("/api")
 	api.Use(authMiddleware)
@@ -83,10 +90,12 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	registerLivestockRoutes(api)
 	registerSMSRoutes(api)
 	registerMasterDataRoutes(api)
+	registerLocationRoutes(api)
 
 	// Auth & Dashboard
 	authController := controllers.NewAuthController()
 	adminDashboardController := controllers.NewAdminDashboardController()
 	api.POST("/change-password", authController.ChangePassword)
 	api.GET("/admin-dashboard", adminDashboardController.GetDashboard)
+
 }

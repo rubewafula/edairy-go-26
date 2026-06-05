@@ -97,7 +97,7 @@ type StoreSale struct {
 	SaleType      string  `gorm:"column:sale_type;default:cash"`
 	CustomerID    uint64  `gorm:"column:customer_id"`
 	CustomerType  string  `gorm:"column:customer_type"`
-	TransactionID int64   `gorm:"column:transaction_id"`
+	TransactionID uint64  `gorm:"column:transaction_id"`
 }
 
 func (StoreSale) TableName() string {

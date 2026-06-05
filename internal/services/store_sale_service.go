@@ -64,7 +64,7 @@ func (s *StoreSaleService) CreateSale(req dtos.CreateStoreSaleRequest, userID ui
 			SaleType:      req.SaleType,
 			CustomerID:    req.CustomerID,
 			CustomerType:  req.CustomerType,
-			TransactionID: int64(transaction.ID),
+			TransactionID: transaction.ID,
 		}
 		if err := tx.Create(&sale).Error; err != nil {
 			return err
@@ -105,28 +105,30 @@ func (s *StoreSaleService) CreateSale(req dtos.CreateStoreSaleRequest, userID ui
 			if err := tx.Create(&saleItem).Error; err != nil {
 				return err
 			}
+
+			// 4.1 Record Store Transaction (Inventory Audit)
+			storeTx := models.StoreTransaction{
+				BaseModel:       models.BaseModel{CreatedBy: userID},
+				TransactionID:   transaction.ID,
+				StoreID:         req.StoreID,
+				StoreItemID:     itemReq.ItemID,
+				TransactionType: "SALES",
+				Quantity:        float64(itemReq.Quantity),
+				UnitCost:        stock.BuyingPrice,
+				SellingPrice:    itemReq.UnitPrice,
+				BalanceAfter:    stock.Quantity,
+				ReferenceType:   "SALE",
+				ReferenceID:     sale.ID,
+				Notes:           fmt.Sprintf("Sale to %s (ID: %d)", req.CustomerType, req.CustomerID),
+				TransactedAt:    transactionDate,
+			}
+			if err := tx.Create(&storeTx).Error; err != nil {
+				return err
+			}
 		}
 
 		// 5. Handle Cash Portion
 		if req.AmountPaid > 0 {
-			cashTx := models.CashTransaction{
-				ReferenceNumber:        req.Reference,
-				TransactionDescription: "CASH RECEIVED FOR STORE SALES",
-				TransactionType:        "STORES",
-				TransactionDate:        transactionDate,
-				PaidBy:                 req.CustomerType,
-				TransactionAmount:      req.AmountPaid,
-				CustomerType:           req.CustomerType,
-				CustomerID:             req.CustomerID,
-				TransactionID:          transaction.ID,
-				BaseModel: models.BaseModel{
-					CreatedBy: userID,
-				},
-			}
-			if err := tx.Create(&cashTx).Error; err != nil {
-				return err
-			}
-
 			// GL: Debit Cash (Asset Up)
 			if err := s.postGLEntry(
 				tx,

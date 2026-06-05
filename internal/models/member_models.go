@@ -5,34 +5,34 @@ import "time"
 // Member+ Lending
 type Member struct {
 	BaseModel
-	MemberNo          string    `gorm:"uniqueIndex;column:member_no"`
-	FirstName         string    `gorm:"column:first_name"`
-	LastName          string    `gorm:"column:last_name"`
-	OtherNames        string    `gorm:"column:other_names"`
-	IDNumber          string    `gorm:"uniqueIndex;column:id_no"`
-	Gender            string    `gorm:"column:gender"`
-	DateOfBirth       time.Time `gorm:"column:dob"`
-	PrimaryPhone      string    `gorm:"column:primary_phone"`
-	SecondaryPhone    string    `gorm:"column:secondary_phone"`
-	Email             string    `gorm:"column:email"`
-	TaxNumber         string    `gorm:"column:tax_number"`
-	MaritalStatus     string    `gorm:"column:marital_status"`
-	Status            string    `gorm:"column:status"`
-	RouteID           uint64    `gorm:"column:route_id"`
-	MemberTypeID      uint64    `gorm:"column:member_type_id"`
-	NumberOfCows      int       `gorm:"column:number_of_cows"`
-	NextOfKinFullName string    `gorm:"column:next_of_kin_full_name"`
-	NextOfKinPhone    string    `gorm:"column:next_of_kin_phone"`
-	DateRegistered    time.Time `gorm:"column:date_registered"`
-	PassportPhoto     string    `gorm:"column:passport_photo"`
-	IdFrontPhoto      string    `gorm:"column:id_front_photo"`
-	IdBackPhoto       string    `gorm:"column:id_back_photo"`
-	UpdatedBy         string    `gorm:"column:updated_by"`
-	Downloaded        string    `gorm:"column:downloaded"`
-	BirthCity         string    `gorm:"column:birth_city"`
-	IdDateOfIssue     time.Time `gorm:"column:id_date_of_issue"`
-	Title             string    `gorm:"column:title"`
-	CashoutEnrolled   bool      `gorm:"column:cashout_enrolled"`
+	MemberNo          string     `gorm:"uniqueIndex;column:member_no"`
+	IDNo              string     `gorm:"uniqueIndex;column:id_no"`
+	FirstName         string     `gorm:"column:first_name"`
+	LastName          string     `gorm:"column:last_name"`
+	OtherNames        string     `gorm:"column:other_names"`
+	Gender            string     `gorm:"column:gender"`
+	DateOfBirth       time.Time  `gorm:"column:dob"`
+	PrimaryPhone      string     `gorm:"column:primary_phone"`
+	SecondaryPhone    string     `gorm:"column:secondary_phone"`
+	Email             string     `gorm:"column:email"`
+	TaxNumber         string     `gorm:"column:tax_number"`
+	MaritalStatus     string     `gorm:"column:marital_status"`
+	Status            string     `gorm:"column:status"`
+	RouteID           uint64     `gorm:"column:route_id"`
+	MemberTypeID      uint64     `gorm:"column:member_type_id"`
+	NumberOfCows      int        `gorm:"column:number_of_cows"`
+	NextOfKinFullName string     `gorm:"column:next_of_kin_full_name"`
+	NextOfKinPhone    string     `gorm:"column:next_of_kin_phone"`
+	DateRegistered    time.Time  `gorm:"column:date_registered"`
+	PassportPhoto     string     `gorm:"column:passport_photo"`
+	IdFrontPhoto      string     `gorm:"column:id_front_photo"`
+	IdBackPhoto       string     `gorm:"column:id_back_photo"`
+	UpdatedBy         string     `gorm:"column:updated_by"`
+	Downloaded        string     `gorm:"column:downloaded"`
+	BirthCity         string     `gorm:"column:birth_city"`
+	IdDateOfIssue     *time.Time `gorm:"column:id_date_of_issue"`
+	Title             string     `gorm:"column:title"`
+	CashoutEnrolled   bool       `gorm:"column:cashout_enrolled"`
 }
 
 func (Member) TableName() string {
@@ -290,14 +290,4 @@ type MemberPayDateRange struct {
 
 func (MemberPayDateRange) TableName() string {
 	return "member_pay_date_ranges"
-}
-
-type MemberImportError struct {
-	BaseModel
-	RowData string `gorm:"column:row_data;type:text"` // Store the raw row data that caused the error
-	Error   string `gorm:"column:error;type:text"`    // Store the error message
-}
-
-func (MemberImportError) TableName() string {
-	return "member_import_errors"
 }

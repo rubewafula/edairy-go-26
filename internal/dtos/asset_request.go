@@ -17,7 +17,7 @@ type CreateAssetRequest struct {
 	AccumulatedDepreciation float64 `json:"accumulated_depreciation"`
 	BookValue               float64 `json:"book_value"`
 	WarrantyEndDate         string  `json:"warranty_end_date" validate:"required"`
-	CurrentLocation         string  `json:"current_location" validate:"max=255"`
+	LocationID              uint64  `json:"location_id"`
 	Status                  string  `json:"status" validate:"omitempty,oneof=ACTIVE MAINTENANCE DISPOSED WRITTEN_OFF"`
 	Loanable                bool    `json:"loanable"`
 	Comments                string  `json:"comments"`
@@ -40,7 +40,7 @@ type UpdateAssetRequest struct {
 	AccumulatedDepreciation float64 `json:"accumulated_depreciation"`
 	BookValue               float64 `json:"book_value"`
 	WarrantyEndDate         string  `json:"warranty_end_date" validate:"required"`
-	CurrentLocation         string  `json:"current_location" validate:"max=255"`
+	LocationID              uint64  `json:"location_id"`
 	Status                  string  `json:"status" validate:"omitempty,oneof=ACTIVE MAINTENANCE DISPOSED WRITTEN_OFF"`
 	Loanable                bool    `json:"loanable"`
 	Comments                string  `json:"comments"`

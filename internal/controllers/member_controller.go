@@ -3,6 +3,8 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -44,8 +46,8 @@ func (c *MemberController) CreateMember(ctx *gin.Context) {
 		})
 		return
 	}
-
-	member, err := c.service.CreateMember(ctx.Request.Context(), req)
+	userID := ctx.GetUint64("user_id")
+	member, err := c.service.CreateMember(ctx.Request.Context(), req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -115,9 +117,11 @@ func (c *MemberController) UpdateMember(ctx *gin.Context) {
 	idBack, _ := ctx.FormFile("id_back_photo")
 	passport, _ := ctx.FormFile("passport_photo")
 
+	userID := ctx.GetUint64("user_id")
 	err := c.service.UpdateMember(
 		ctx.Param("id"),
 		req,
+		userID,
 		idFront,
 		idBack,
 		passport,
@@ -167,4 +171,46 @@ func (c *MemberController) ImportMembers(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusAccepted, gin.H{"message": "Member import started in the background. Check logs for status."})
+}
+
+func (c *MemberController) GetMemberImportErrors(ctx *gin.Context) {
+	importIDStr := ctx.Param("importid")
+	importID, _ := strconv.ParseUint(importIDStr, 10, 64)
+
+	errors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch import errors"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": errors})
+}
+
+func (c *MemberController) ExportMembers(ctx *gin.Context) {
+	memberNo := ctx.Query("member_no")
+	primaryPhone := ctx.Query("primary_phone")
+	memberTypeID := ctx.Query("member_type_id")
+	routeID := ctx.Query("route_id")
+	gender := ctx.Query("gender")
+	status := ctx.Query("status")
+	reportType := ctx.DefaultQuery("format", "csv")
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ExportMembers(userID, memberNo, primaryPhone, memberTypeID, routeID, gender, status, reportType); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Member export started in the background. You will receive a notification when it's ready."})
+}
+
+func (c *MemberController) DownloadExportFile(ctx *gin.Context) {
+	filename := filepath.Base(ctx.Param("filename"))
+	filePath := filepath.Join("./storage/exports", filename)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Export file not found"})
+		return
+	}
+
+	ctx.File(filePath)
 }

@@ -18,10 +18,11 @@ type UpdateMemberRequest struct {
 	Email          string `json:"email" validate:"omitempty,email"`
 	NumberOfCows   int    `json:"number_of_cows" validate:"required,min=0"`
 
-	IDFrontPhoto  string `json:"id_front_photo" validate:"max=255"`
-	IDBackPhoto   string `json:"id_back_photo" validate:"max=255"`
-	PassportPhoto string `json:"passport_photo" validate:"max=255"`
-	IDDateOfIssue string `json:"id_date_of_issue" validate:"required"`
+	IDFrontPhoto  string                         `json:"id_front_photo" validate:"max=255"`
+	IDBackPhoto   string                         `json:"id_back_photo" validate:"max=255"`
+	PassportPhoto string                         `json:"passport_photo" validate:"max=255"`
+	IDDateOfIssue string                         `json:"id_date_of_issue" validate:"omitempty"`
+	NextOfKins    []CreateMemberNextOfKinRequest `json:"next_of_kins" form:"next_of_kins"`
 
 	TaxNumber     string `json:"tax_number"`
 	MaritalStatus string `json:"marital_status"`
@@ -29,4 +30,9 @@ type UpdateMemberRequest struct {
 
 	NextOfKinFullName string `json:"next_of_kin_full_name"`
 	NextOfKinPhone    string `json:"next_of_kin_phone"`
+
+	BankID      uint64 `json:"bank_id" form:"bank_id"`
+	BankBranch  string `json:"bank_branch" form:"bank_branch"`
+	AccountNo   string `json:"account_no" form:"account_no"`
+	AccountName string `json:"account_name" form:"account_name"`
 }

@@ -100,7 +100,3 @@ type SMSCampaignRecipient struct {
 	CreatedAt       time.Time  `gorm:"column:created_at"`
 	UpdatedAt       time.Time  `gorm:"column:updated_at"`
 }
-
-func (AssetDepreciationEntry) TableName() string {
-	return "asset_depreciation_entries"
-}

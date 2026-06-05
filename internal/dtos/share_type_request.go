@@ -6,7 +6,7 @@ type CreateShareTypeRequest struct {
 	Description       string  `json:"description"`
 	Rate              float64 `json:"rate"`
 	Mandatory         int     `json:"mandatory"`
-	HasShareValue     string  `json:"has_share_value"`
+	HasShareValue     int     `json:"has_share_value"`
 	RepayMethod       string  `json:"repay_method"`
 	CalculatingMethod string  `json:"calculating_method"`
 	ShareValue        float64 `json:"share_value"`
@@ -20,7 +20,7 @@ type UpdateShareTypeRequest struct {
 	Description       string  `json:"description"`
 	Rate              float64 `json:"rate"`
 	Mandatory         int     `json:"mandatory"`
-	HasShareValue     string  `json:"has_share_value"`
+	HasShareValue     int     `json:"has_share_value"`
 	RepayMethod       string  `json:"repay_method"`
 	CalculatingMethod string  `json:"calculating_method"`
 	ShareValue        float64 `json:"share_value"`
