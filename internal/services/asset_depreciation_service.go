@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -100,7 +99,7 @@ func (s *AssetDepreciationService) CreateEntry(req dtos.CreateAssetDepreciationR
 			SubAccountID:    rule.DebitSubAccountID,
 			Debit:           req.DepreciationAmount,
 			Credit:          0.00,
-			TransactionDate: time.Now(),
+			TransactionDate: utils.Now(),
 			Description:     "Monthly depreciation expense",
 		}
 		if err := tx.Create(debitGL).Error; err != nil {
@@ -114,7 +113,7 @@ func (s *AssetDepreciationService) CreateEntry(req dtos.CreateAssetDepreciationR
 			SubAccountID:    rule.CreditSubAccountID,
 			Debit:           0.00,
 			Credit:          req.DepreciationAmount,
-			TransactionDate: time.Now(),
+			TransactionDate: utils.Now(),
 			Description:     "Accumulated depreciation posting",
 		}
 		if err := tx.Create(creditGL).Error; err != nil {
@@ -127,7 +126,7 @@ func (s *AssetDepreciationService) CreateEntry(req dtos.CreateAssetDepreciationR
 			"accumulated_depreciation": newAccumulatedDepreciation,
 			"book_value":               newBookValue,
 			"depreciation_rate":        depreciationRateForAssetUpdate,
-			"updated_at":               time.Now(),
+			"updated_at":               utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -194,7 +193,7 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 			"accumulated_depreciation": newAssetAccumulatedDepreciation,
 			"book_value":               newAssetBookValue,
 			"notes":                    req.Notes,
-			"updated_at":               time.Now(),
+			"updated_at":               utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -203,7 +202,7 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 		if err := tx.Model(&models.Transaction{}).Where("id = ?", oldEntry.TransactionID).Updates(map[string]interface{}{
 			"transaction_date": depreciationDate,
 			"description":      req.Notes, // Assuming notes can update transaction description
-			"updated_at":       time.Now(),
+			"updated_at":       utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -211,9 +210,9 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 		// 3. Update General Ledger Debit Entry
 		if err := tx.Model(&models.GeneralLedgerEntry{}).Where("transaction_id = ? AND debit > 0", oldEntry.TransactionID).Updates(map[string]interface{}{
 			"debit":            req.DepreciationAmount,
-			"transaction_date": time.Now(),
+			"transaction_date": utils.Now(),
 			"description":      "Asset depreciation expense (updated)",
-			"updated_at":       time.Now(),
+			"updated_at":       utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -221,9 +220,9 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 		// 4. Update General Ledger Credit Entry
 		if err := tx.Model(&models.GeneralLedgerEntry{}).Where("transaction_id = ? AND credit > 0", oldEntry.TransactionID).Updates(map[string]interface{}{
 			"credit":           req.DepreciationAmount,
-			"transaction_date": time.Now(),
+			"transaction_date": utils.Now(),
 			"description":      "Accumulated depreciation posting (updated)",
-			"updated_at":       time.Now(),
+			"updated_at":       utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -234,7 +233,7 @@ func (s *AssetDepreciationService) UpdateEntry(id string, req dtos.UpdateAssetDe
 			"accumulated_depreciation": newAssetAccumulatedDepreciation,
 			"book_value":               newAssetBookValue,
 			"depreciation_rate":        depreciationRateForAssetUpdate,
-			"updated_at":               time.Now(),
+			"updated_at":               utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -339,7 +338,7 @@ func (s *AssetDepreciationService) DeleteEntry(id string) error {
 			"accumulated_depreciation": newAssetAccumulatedDepreciation,
 			"book_value":               newAssetBookValue,
 			"depreciation_rate":        depreciationRateForAssetUpdate,
-			"updated_at":               time.Now(),
+			"updated_at":               utils.Now(),
 		}).Error; err != nil {
 			return err
 		}

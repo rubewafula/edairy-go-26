@@ -13,6 +13,9 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	memberTypeController := controllers.NewMemberTypeController()
 	memberNextOfKinController := controllers.NewMemberNextOfKinController()
 
+	memberPayrollController := controllers.NewMemberPayrollController()
+	memberPayDateRangeController := controllers.NewMemberPayDateRangeController()
+
 	// Member Registration Routes
 	api.POST("/members", memberController.CreateMember)
 	api.GET("/members", memberController.GetMembers)
@@ -49,5 +52,20 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/member-next-of-kins/:id", memberNextOfKinController.GetMemberNextOfKin)
 	api.PUT("/member-next-of-kins/:id", memberNextOfKinController.UpdateMemberNextOfKin)
 	api.DELETE("/member-next-of-kins/:id", memberNextOfKinController.DeleteMemberNextOfKin)
+
+	// Member Pay Date Range Routes
+	api.POST("/member-pay-date-ranges", memberPayDateRangeController.Create)
+	api.GET("/member-pay-date-ranges", memberPayDateRangeController.List)
+	api.GET("/member-pay-date-ranges/next", memberPayDateRangeController.GetNextRange)
+	api.GET("/member-pay-date-ranges/:id", memberPayDateRangeController.Get)
+	api.PUT("/member-pay-date-ranges/:id", memberPayDateRangeController.Update)
+	api.DELETE("/member-pay-date-ranges/:id", memberPayDateRangeController.Delete)
+
+	// Member Payroll Routes
+	api.POST("/member-payrolls", memberPayrollController.Create)
+	api.GET("/member-payrolls", memberPayrollController.List)
+	api.GET("/member-payrolls/:id", memberPayrollController.Get)
+	api.PUT("/member-payrolls/:id/confirm", memberPayrollController.Confirm)
+	api.PUT("/member-payrolls/:id/approve", memberPayrollController.Approve)
 
 }

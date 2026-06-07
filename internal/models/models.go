@@ -378,16 +378,6 @@ func (ProductGrade) TableName() string {
 	return "product_grades"
 }
 
-type DefaultMilkRate struct {
-	BaseModel
-	Rate    float64 `gorm:"column:rate"`
-	RouteID uint64  `gorm:"index;column:route_id"`
-}
-
-func (DefaultMilkRate) TableName() string {
-	return "default_milk_rates"
-}
-
 type ProductPrice struct {
 	BaseModel
 	ProductID     uint64    `gorm:"index;column:product_id"`
@@ -461,8 +451,8 @@ type Bank struct {
 
 type BankBranch struct {
 	BaseModel
-	Name     string `gorm:"column:name"`
-	BankId   uint64 `gorm:"column:bank_id"`
+	Name     string `gorm:"column:branch_name"`
+	BankID   uint64 `gorm:"column:bank_id"`
 	Location string `gorm:"column:location"`
 }
 

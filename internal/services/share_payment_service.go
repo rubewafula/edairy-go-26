@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -253,7 +252,7 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 			"transaction_date": transactionDate,
 			"description":      payment.Description,
 			"status":           payment.Status,
-			"updated_at":       time.Now(),
+			"updated_at":       utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -275,7 +274,7 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 				"credit":           0.00,
 				"balance_after":    prevBalance + req.AmountPaid,
 				"transaction_date": transactionDate,
-				"updated_at":       time.Now(),
+				"updated_at":       utils.Now(),
 			}).Error; err != nil {
 			return err
 		}
@@ -289,7 +288,7 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 				"debit":            payment.AmountPaid,
 				"transaction_date": transactionDate,
 				"description":      fmt.Sprintf("Share contribution by member %d (updated) - %s", payment.MemberID, req.Description),
-				"updated_at":       time.Now(),
+				"updated_at":       utils.Now(),
 			}).Error; err != nil {
 			return err
 		}
@@ -303,7 +302,7 @@ func (s *SharePaymentService) UpdateSharePayment(id string, req dtos.UpdateShare
 				"credit":           payment.AmountPaid,
 				"transaction_date": transactionDate,
 				"description":      fmt.Sprintf("Share contribution by member %d (updated) - %s", payment.MemberID, req.Description),
-				"updated_at":       time.Now(),
+				"updated_at":       utils.Now(),
 			}).Error; err != nil {
 			return err
 		}

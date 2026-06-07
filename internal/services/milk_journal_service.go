@@ -209,7 +209,7 @@ func (s *MilkJournalService) UpdateMilkJournal(id string, req dtos.UpdateMilkJou
 	var journalDate *time.Time
 
 	if req.JournalDate != "" {
-		jd := utils.ParseDate(req.JournalDate)
+		jd := utils.ParseFlexibleDate(req.JournalDate)
 		journalDate = &jd
 	} else {
 		journalDate = nil
@@ -357,7 +357,7 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 		return
 	}
 
-	importID := uint64(time.Now().UnixNano())
+	importID := uint64(utils.Now().UnixNano())
 
 	var wg sync.WaitGroup
 	jobs := make(chan []string, totalRows)
@@ -439,7 +439,7 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 									MilkDeliveryShiftID: shift.ID,
 									RouteID:             route.ID,
 									UserID:              userID,
-									Confirmed:           false,
+									Confirmed:           false, //
 								}
 								if err := tx.Create(&journal).Error; err != nil {
 									return err

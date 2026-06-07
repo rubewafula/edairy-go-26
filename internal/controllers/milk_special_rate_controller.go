@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
@@ -11,39 +10,38 @@ import (
 	"gorm.io/gorm"
 )
 
-type MemberPayDateRangeController struct {
-	service *services.MemberPayDateRangeService
+type MilkSpecialRateController struct {
+	service *services.MilkSpecialRateService
 }
 
-func NewMemberPayDateRangeController() *MemberPayDateRangeController {
-	return &MemberPayDateRangeController{
-		service: services.NewMemberPayDateRangeService(),
+func NewMilkSpecialRateController() *MilkSpecialRateController {
+	return &MilkSpecialRateController{
+		service: services.NewMilkSpecialRateService(),
 	}
 }
 
-func (c *MemberPayDateRangeController) Create(ctx *gin.Context) {
-	var req dtos.CreateMemberPayDateRangeRequest
+func (c *MilkSpecialRateController) Create(ctx *gin.Context) {
+	var req dtos.CreateMilkSpecialRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
-
 	res, err := c.service.Create(req, userID)
 	if err != nil {
-		log.Printf("[MemberPayDateRangeController.Create] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, res)
 }
 
-func (c *MemberPayDateRangeController) List(ctx *gin.Context) {
+func (c *MilkSpecialRateController) List(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	payDateRangeID := ctx.Query("pay_date_range_id")
 
-	res, total, err := c.service.List(page, limit)
+	res, total, err := c.service.List(payDateRangeID, page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -51,12 +49,12 @@ func (c *MemberPayDateRangeController) List(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
 }
 
-func (c *MemberPayDateRangeController) Get(ctx *gin.Context) {
+func (c *MilkSpecialRateController) Get(ctx *gin.Context) {
 	id := ctx.Param("id")
 	res, err := c.service.Get(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member pay date range not found"})
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Rate not found"})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -65,43 +63,27 @@ func (c *MemberPayDateRangeController) Get(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
-func (c *MemberPayDateRangeController) Update(ctx *gin.Context) {
+func (c *MilkSpecialRateController) Update(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var req dtos.UpdateMemberPayDateRangeRequest
+	var req dtos.UpdateMilkSpecialRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
-
 	if err := c.service.Update(id, req, userID); err != nil {
-		log.Printf("[MemberPayDateRangeController.Update] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Member pay date range updated successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Rate updated successfully"})
 }
 
-func (c *MemberPayDateRangeController) Delete(ctx *gin.Context) {
+func (c *MilkSpecialRateController) Delete(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if err := c.service.Delete(id); err != nil {
-		log.Printf("[MemberPayDateRangeController.Delete] Error deleting range %s: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Member pay date range deleted successfully"})
-}
-
-func (c *MemberPayDateRangeController) GetNextRange(ctx *gin.Context) {
-	startDate, endDate, err := c.service.GetNextPayDateRange()
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{
-		"start_date": startDate,
-		"end_date":   endDate,
-	})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Rate deleted successfully"})
 }

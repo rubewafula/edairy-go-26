@@ -115,7 +115,7 @@ func (s *StoreService) processStoreStockRowsInBackground(data [][]string, userID
 		return
 	}
 
-	importID := uint64(time.Now().UnixNano())
+	importID := uint64(utils.Now().UnixNano())
 	var wg sync.WaitGroup
 	jobs := make(chan []string, totalRows)
 	errorChan := make(chan error, totalRows)
@@ -211,7 +211,7 @@ func (s *StoreService) processStoreStockRowsInBackground(data [][]string, userID
 							Reference:       fmt.Sprintf("STK-IMP-%d-%s", importID, item.SKU),
 							TransactionName: "STORE STOCK IMPORT",
 							TransactionType: "STORES",
-							TransactionDate: time.Now(),
+							TransactionDate: utils.Now(),
 							Description:     fmt.Sprintf("Bulk stock import for %s in %s", itemName, storeName),
 							Status:          "POSTED",
 							BaseModel:       models.BaseModel{CreatedBy: userID},
@@ -271,11 +271,11 @@ func (s *StoreService) processStoreStockRowsInBackground(data [][]string, userID
 							// Use generic STOCK_IMPORT rule for inventory valuation vs opening balances/suspense
 							rule := "STOCK_IMPORT"
 							// Debit side
-							if err := s.postGLEntry(tx, transaction.ID, rule, true, glAmount, "Inventory adjustment via import", time.Now(), userID); err != nil {
+							if err := s.postGLEntry(tx, transaction.ID, rule, true, glAmount, "Inventory adjustment via import", utils.Now(), userID); err != nil {
 								return err
 							}
 							// Credit side
-							if err := s.postGLEntry(tx, transaction.ID, rule, false, glAmount, "Inventory adjustment via import", time.Now(), userID); err != nil {
+							if err := s.postGLEntry(tx, transaction.ID, rule, false, glAmount, "Inventory adjustment via import", utils.Now(), userID); err != nil {
 								return err
 							}
 						}

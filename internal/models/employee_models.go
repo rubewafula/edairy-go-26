@@ -177,6 +177,7 @@ type EmployeeBankAccount struct {
 	BaseModel
 	EmployeeID    uint64 `gorm:"index;column:employee_id"`
 	BankID        uint64 `gorm:"index;column:bank_id"`
+	BranchID      uint64 `gorm:"index;column:branch_id"`
 	AccountNumber string `gorm:"column:account_number"`
 	AccountName   string `gorm:"column:account_name"`
 }

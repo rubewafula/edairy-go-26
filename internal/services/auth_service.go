@@ -14,6 +14,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
 )
 
 type AuthService struct{}
@@ -48,7 +49,7 @@ func (s *AuthService) generateToken(
 		"email":       email,
 		"roles":       roles,
 		"permissions": permissions,
-		"exp":         time.Now().Add(time.Duration(expiryHours) * time.Hour).Unix(),
+		"exp":         utils.Now().Add(time.Duration(expiryHours) * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -148,7 +149,7 @@ func (s *AuthService) ForgotPassword(email string) error {
 	}
 
 	token := uuid.NewString()
-	exp := time.Now().Add(1 * time.Hour)
+	exp := utils.Now().Add(1 * time.Hour)
 
 	user.ResetToken = token
 	user.ResetTokenExpiry = &exp
@@ -163,7 +164,7 @@ func (s *AuthService) ResetPassword(token, password string) error {
 		return err
 	}
 
-	if user.ResetTokenExpiry == nil || user.ResetTokenExpiry.Before(time.Now()) {
+	if user.ResetTokenExpiry == nil || user.ResetTokenExpiry.Before(utils.Now()) {
 		return errors.New("reset token has expired or is invalid")
 	}
 

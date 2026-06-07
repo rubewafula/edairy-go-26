@@ -177,7 +177,6 @@ type Transporter struct {
 	EmailAddress  string                 `gorm:"column:email_address"`
 	Status        string                 `gorm:"column:status;default:'ACTIVE'"`
 	Restricted    bool                   `gorm:"column:restricted;default:0"`
-	RouteID       uint64                 `gorm:"column:route_id"`
 	Individual    *IndividualTransporter `gorm:"foreignKey:TransporterID"`
 	Company       *CompanyTransporter    `gorm:"foreignKey:TransporterID"`
 }
@@ -191,17 +190,17 @@ type IndividualTransporter struct {
 	TransporterID     uint64     `gorm:"column:transporter_id"`
 	FirstName         string     `gorm:"column:first_name"`
 	LastName          string     `gorm:"column:last_name"`
-	OtherNames        string     `gorm:"column:other_names"`
-	Gender            string     `gorm:"column:gender"`
+	OtherNames        *string    `gorm:"column:other_names"`
+	Gender            *string    `gorm:"column:gender"`
 	DateOfBirth       *time.Time `gorm:"column:date_of_birth"`
-	NationalIDNo      string     `gorm:"column:national_id_no"`
-	KraPin            string     `gorm:"column:kra_pin"`
-	MaritalStatus     string     `gorm:"column:marital_status"`
-	NextOfKinFullName string     `gorm:"column:next_of_kin_full_name"`
-	NextOfKinPhone    string     `gorm:"column:next_of_kin_phone"`
-	PassportPhoto     string     `gorm:"column:passport_photo"`
-	IDFrontPhoto      string     `gorm:"column:id_front_photo"`
-	IDBackPhoto       string     `gorm:"column:id_back_photo"`
+	NationalIDNo      *string    `gorm:"column:national_id_no"`
+	KraPin            *string    `gorm:"column:kra_pin"`
+	MaritalStatus     *string    `gorm:"column:marital_status"`
+	NextOfKinFullName *string    `gorm:"column:next_of_kin_full_name"`
+	NextOfKinPhone    *string    `gorm:"column:next_of_kin_phone"`
+	PassportPhoto     *string    `gorm:"column:passport_photo"`
+	IDFrontPhoto      *string    `gorm:"column:id_front_photo"`
+	IDBackPhoto       *string    `gorm:"column:id_back_photo"`
 }
 
 func (IndividualTransporter) TableName() string {
@@ -212,14 +211,14 @@ type CompanyTransporter struct {
 	BaseModel
 	TransporterID              uint64       `gorm:"column:transporter_id"`
 	CompanyName                string       `gorm:"column:company_name"`
-	RegistrationNo             string       `gorm:"column:registration_no"`
-	KraPin                     string       `gorm:"column:kra_pin"`
-	ContactPersonName          string       `gorm:"column:contact_person_name"`
-	ContactPersonPhone         string       `gorm:"column:contact_person_phone"`
-	PostalAddress              string       `gorm:"column:postal_address"`
-	PostalCode                 string       `gorm:"column:postal_code"`
-	Town                       string       `gorm:"column:town"`
-	CertificateOfIncorporation string       `gorm:"column:certificate_of_incorporation"`
+	RegistrationNo             *string      `gorm:"column:registration_no"`
+	KraPin                     *string      `gorm:"column:kra_pin"`
+	ContactPersonName          *string      `gorm:"column:contact_person_name"`
+	ContactPersonPhone         *string      `gorm:"column:contact_person_phone"`
+	PostalAddress              *string      `gorm:"column:postal_address"`
+	PostalCode                 *string      `gorm:"column:postal_code"`
+	Town                       *string      `gorm:"column:town"`
+	CertificateOfIncorporation *string      `gorm:"column:certificate_of_incorporation"`
 	Transporter                *Transporter `gorm:"foreignKey:TransporterID"`
 }
 

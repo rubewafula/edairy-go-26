@@ -105,12 +105,14 @@ type EmployeeSalaryResponse struct {
 type CreateEmployeeBankAccountRequest struct {
 	EmployeeID    uint64 `json:"employee_id" validate:"required"`
 	BankID        uint64 `json:"bank_id" validate:"required"`
+	BranchID      uint64 `json:"branch_id"`
 	AccountNumber string `json:"account_number" validate:"required"`
 	AccountName   string `json:"account_name" validate:"required"`
 }
 
 type UpdateEmployeeBankAccountRequest struct {
 	BankID        uint64 `json:"bank_id"`
+	BranchID      uint64 `json:"branch_id"`
 	AccountNumber string `json:"account_number"`
 	AccountName   string `json:"account_name"`
 }

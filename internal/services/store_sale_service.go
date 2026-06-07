@@ -112,7 +112,7 @@ func (s *StoreSaleService) CreateSale(req dtos.CreateStoreSaleRequest, userID ui
 				TransactionID:   transaction.ID,
 				StoreID:         req.StoreID,
 				StoreItemID:     itemReq.ItemID,
-				TransactionType: "SALES",
+				TransactionType: "SALE",
 				Quantity:        float64(itemReq.Quantity),
 				UnitCost:        stock.BuyingPrice,
 				SellingPrice:    itemReq.UnitPrice,

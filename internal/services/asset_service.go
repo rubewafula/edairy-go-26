@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/jung-kurt/gofpdf"
 
@@ -230,7 +229,7 @@ func (s *AssetService) processAssetRowsInBackground(data [][]string, userID uint
 		return
 	}
 
-	importID := uint64(time.Now().UnixNano())
+	importID := uint64(utils.Now().UnixNano())
 
 	var wg sync.WaitGroup
 	jobs := make(chan []string, totalRows)
@@ -451,7 +450,7 @@ func (s *AssetService) GenerateReport(format, assetCode, assetName, categoryID, 
 
 	org := s.getOrgInfo()
 	filterSummary := s.getFilterSummary(assetCode, assetName, categoryID, fromDate, toDate)
-	filename := fmt.Sprintf("assets_report_%d.%s", time.Now().Unix(), format)
+	filename := fmt.Sprintf("assets_report_%d.%s", utils.Now().Unix(), format)
 
 	if format == "csv" {
 		content, err := s.generateCSV(results, org, filterSummary)
@@ -518,7 +517,7 @@ func (s *AssetService) generateCSV(data []dtos.AssetResponse, org map[string]str
 	writer.Write([]string{fmt.Sprintf("P.O Box %s, %s, %s", org["address"], org["code"], org["town"])})
 	writer.Write([]string{fmt.Sprintf("Phone: %s | Email: %s", org["phone"], org["email"])})
 	writer.Write([]string{"Fixed Assets Report"})
-	writer.Write([]string{"Report generated on " + time.Now().Format("02/01/2006 15:04:05")})
+	writer.Write([]string{"Report generated on " + utils.Now().Format("02/01/2006 15:04:05")})
 	writer.Write([]string{fmt.Sprintf("Showing (%d) asset records", len(data))})
 	writer.Write([]string{filters})
 	writer.Write([]string{})
@@ -549,7 +548,7 @@ func (s *AssetService) generatePDF(data []dtos.AssetResponse, org map[string]str
 	pdf.Cell(0, 10, "Fixed Assets Report")
 	pdf.Ln(6)
 	pdf.SetFont("Arial", "I", 9)
-	pdf.Cell(0, 10, "Report generated on "+time.Now().Format("02/01/2006 15:04:05"))
+	pdf.Cell(0, 10, "Report generated on "+utils.Now().Format("02/01/2006 15:04:05"))
 	pdf.Ln(5)
 	pdf.Cell(0, 10, fmt.Sprintf("Showing (%d) asset records", len(data)))
 	pdf.Ln(5)

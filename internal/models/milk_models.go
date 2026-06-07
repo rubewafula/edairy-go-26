@@ -18,11 +18,26 @@ type MilkReject struct {
 
 type MilkSpecialRate struct {
 	BaseModel
-	MemberID              uint64  `gorm:"index;column:member_id"`
-	RouteID               uint64  `gorm:"index;column:route_id"`
+	MemberID              *uint64 `gorm:"index;column:member_id"`
+	RouteID               *uint64 `gorm:"index;column:route_id"`
 	Rate                  float64 `gorm:"column:rate"`
-	MonthlyPayDateRangeID uint64  `gorm:"index;column:monthly_pay_date_range_id"`
-	Confirmed             bool    `gorm:"column:confirmed"`
+	MonthlyPayDateRangeID uint64  `gorm:"index;column:pay_date_range_id"`
+	Confirmed             int     `gorm:"column:confirmed"`
+}
+
+func (MilkSpecialRate) TableName() string {
+	return "milk_special_rates"
+}
+
+type DefaultMilkRate struct {
+	BaseModel
+	RouteID  *uint64 `gorm:"column:route_id"`
+	MemberID *uint64 `gorm:"column:member_id"`
+	Rate     float64 `gorm:"column:rate"`
+}
+
+func (DefaultMilkRate) TableName() string {
+	return "default_milk_rates"
 }
 
 type MilkCooler struct {

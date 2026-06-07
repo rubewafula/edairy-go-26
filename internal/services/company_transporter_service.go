@@ -4,6 +4,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -45,14 +46,14 @@ func (s *CompanyTransporterService) UpdateCompanyTransporter(id string, req dtos
 	}
 
 	company.CompanyName = req.CompanyName
-	company.RegistrationNo = req.RegistrationNo
-	company.KraPin = req.KraPin
-	company.ContactPersonName = req.ContactPersonName
-	company.ContactPersonPhone = req.ContactPersonPhone
-	company.PostalAddress = req.PostalAddress
-	company.PostalCode = req.PostalCode
-	company.Town = req.Town
-	company.CertificateOfIncorporation = req.CertificateOfIncorporation
+	company.RegistrationNo = utils.StringPtr(req.RegistrationNo)
+	company.KraPin = utils.StringPtr(req.KraPin)
+	company.ContactPersonName = utils.StringPtr(req.ContactPersonName)
+	company.ContactPersonPhone = utils.StringPtr(req.ContactPersonPhone)
+	company.PostalAddress = utils.StringPtr(req.PostalAddress)
+	company.PostalCode = utils.StringPtr(req.PostalCode)
+	company.Town = utils.StringPtr(req.Town)
+	company.CertificateOfIncorporation = utils.StringPtr(req.CertificateOfIncorporation)
 
 	return db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&company).Error; err != nil {
@@ -68,13 +69,13 @@ func (s *CompanyTransporterService) toResponse(c models.CompanyTransporter) dtos
 		ID:                         c.ID,
 		TransporterID:              c.TransporterID,
 		CompanyName:                c.CompanyName,
-		RegistrationNo:             c.RegistrationNo,
-		KraPin:                     c.KraPin,
-		ContactPersonName:          c.ContactPersonName,
-		ContactPersonPhone:         c.ContactPersonPhone,
-		PostalAddress:              c.PostalAddress,
-		PostalCode:                 c.PostalCode,
-		Town:                       c.Town,
-		CertificateOfIncorporation: c.CertificateOfIncorporation,
+		RegistrationNo:             utils.StringValue(c.RegistrationNo),
+		KraPin:                     utils.StringValue(c.KraPin),
+		ContactPersonName:          utils.StringValue(c.ContactPersonName),
+		ContactPersonPhone:         utils.StringValue(c.ContactPersonPhone),
+		PostalAddress:              utils.StringValue(c.PostalAddress),
+		PostalCode:                 utils.StringValue(c.PostalCode),
+		Town:                       utils.StringValue(c.Town),
+		CertificateOfIncorporation: utils.StringValue(c.CertificateOfIncorporation),
 	}
 }

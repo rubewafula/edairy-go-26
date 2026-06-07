@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -24,7 +23,7 @@ func (s *CustomerPaymentService) CreatePayment(req dtos.CreateCustomerPaymentReq
 		},
 		CustomerID:    req.CustomerID,
 		InvoiceID:     req.InvoiceID,
-		ReceiptNumber: fmt.Sprintf("RCP-%d", time.Now().Unix()),
+		ReceiptNumber: fmt.Sprintf("RCP-%d", utils.Now().Unix()),
 		PaymentDate:   utils.ParseDate(req.PaymentDate),
 		Amount:        req.Amount,
 		PaymentMethod: req.PaymentMethod,

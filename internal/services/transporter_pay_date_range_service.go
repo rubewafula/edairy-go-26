@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -22,8 +24,7 @@ func (s *TransporterPayDateRangeService) Create(req dtos.CreateTransporterPayDat
 		Name:      req.Name,
 		StartDate: utils.ParseDate(req.StartDate),
 		EndDate:   utils.ParseDate(req.EndDate),
-		PayMonth:  req.PayMonth,
-		PayYear:   req.PayYear,
+		Confirmed: 0,
 	}
 
 	if err := db.DB.Create(dateRange).Error; err != nil {
@@ -61,17 +62,21 @@ func (s *TransporterPayDateRangeService) Update(id string, req dtos.UpdateTransp
 		return err
 	}
 
+	if dateRange.Confirmed == 1 {
+		return fmt.Errorf("Connot edit confirmed date range")
+	}
+
 	updates := map[string]interface{}{
 		"name":       req.Name,
-		"pay_month":  req.PayMonth,
-		"pay_year":   req.PayYear,
 		"updated_by": userID,
 	}
-	if req.StartDate != "" {
-		updates["start_date"] = utils.ParseDate(req.StartDate)
-	}
+
 	if req.EndDate != "" {
 		updates["end_date"] = utils.ParseDate(req.EndDate)
+	}
+
+	if req.Confirmed == 1 {
+		updates["confirmed"] = req.Confirmed
 	}
 
 	return db.DB.Model(&dateRange).Updates(updates).Error

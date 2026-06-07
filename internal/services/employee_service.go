@@ -1,6 +1,16 @@
 package services
 
 import (
+	"bytes"
+	"encoding/csv"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/jung-kurt/gofpdf"
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -8,10 +18,14 @@ import (
 	"gorm.io/gorm"
 )
 
-type EmployeeService struct{}
+type EmployeeService struct {
+	notificationService *UINotificationService
+}
 
 func NewEmployeeService() *EmployeeService {
-	return &EmployeeService{}
+	return &EmployeeService{
+		notificationService: NewUINotificationService(),
+	}
 }
 
 func (s *EmployeeService) CreateEmployee(req dtos.CreateEmployeeRequest, userID uint64) (*models.Employee, error) {
@@ -148,4 +162,143 @@ func (s *EmployeeService) CreateSalary(req dtos.CreateEmployeeSalaryRequest, use
 	}
 	err := db.DB.Create(salary).Error
 	return salary, err
+}
+
+// ExportEmployees initiates a background process to export employee data to CSV or PDF.
+func (s *EmployeeService) ExportEmployees(userID uint64, status, format string) error {
+	go s.processEmployeeExportInBackground(userID, status, format)
+	return nil
+}
+
+type employeeExportQueryResult struct {
+	EmployeeNo    string     `gorm:"column:employee_no"`
+	IdNo          string     `gorm:"column:id_no"`
+	FullName      string     `gorm:"column:full_name"`
+	DateOfBirth   *time.Time `gorm:"column:date_of_birth"`
+	Gender        string     `gorm:"column:gender"`
+	MaritalStatus string     `gorm:"column:marital_status"`
+	PositionName  string     `gorm:"column:position_name"`
+}
+
+func (s *EmployeeService) processEmployeeExportInBackground(userID uint64, status, format string) {
+	var results []employeeExportQueryResult
+
+	// Query to fetch employee details with job position join for requested columns
+	query := `
+		SELECT 
+			e.employee_no, 
+			e.id_no, 
+			CONCAT(e.first_name, ' ', COALESCE(e.middle_name, ''), ' ', e.surname) as full_name,
+			e.date_of_birth, 
+			e.gender, 
+			e.marital_status, 
+			jp.name as position_name
+		FROM employees e
+		LEFT JOIN job_positions jp ON e.job_position_id = jp.id
+		WHERE e.deleted_at IS NULL`
+
+	if status != "" {
+		query += fmt.Sprintf(" AND e.status = '%s'", status)
+	}
+
+	if err := db.DB.Raw(query).Scan(&results).Error; err != nil {
+		log.Printf("[EmployeeService] Export query error: %v", err)
+		return
+	}
+
+	var fileData []byte
+	var err error
+	ext := "csv"
+
+	if strings.ToLower(format) == "pdf" {
+		ext = "pdf"
+		fileData, err = s.generateEmployeePDF(results, status)
+	} else {
+		buf := new(bytes.Buffer)
+		writer := csv.NewWriter(buf)
+		writer.Write([]string{"Employee NO", "ID NO", "Employee Names", "Dob", "Gender", "Marital Status", "Position"})
+
+		for _, e := range results {
+			dob := ""
+			if e.DateOfBirth != nil {
+				dob = e.DateOfBirth.Format("2006-01-02")
+			}
+			writer.Write([]string{e.EmployeeNo, e.IdNo, e.FullName, dob, e.Gender, e.MaritalStatus, e.PositionName})
+		}
+		writer.Flush()
+		fileData = buf.Bytes()
+		err = writer.Error()
+	}
+
+	if err != nil {
+		log.Printf("[EmployeeService] Error generating export: %v", err)
+		return
+	}
+
+	exportDir := "./storage/exports"
+	os.MkdirAll(exportDir, 0755)
+	filename := fmt.Sprintf("employees_export_%d.%s", time.Now().UnixNano(), ext)
+	filePath := filepath.Join(exportDir, filename)
+	if err := os.WriteFile(filePath, fileData, 0644); err != nil {
+		log.Printf("[EmployeeService] Error saving export file: %v", err)
+		return
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            fmt.Sprintf("Employee Export (%s) Ready", strings.ToUpper(ext)),
+		Message:          fmt.Sprintf("Your employee data %s export is ready for download.", ext),
+		NotificationType: "SUCCESS",
+		DownloadLink:     fmt.Sprintf("/api/employees/export/download/%s", filename),
+	})
+}
+
+func (s *EmployeeService) generateEmployeePDF(results []employeeExportQueryResult, status string) ([]byte, error) {
+	var org struct {
+		RegisteredName string `gorm:"column:registered_name"`
+		Address        string `gorm:"column:address"`
+		Phone          string `gorm:"column:phone"`
+		Email          string `gorm:"column:email"`
+	}
+	db.DB.Table("organization_details").First(&org)
+
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 16)
+	pdf.CellFormat(0, 10, org.RegisteredName, "", 1, "C", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(0, 5, org.Address, "", 1, "C", false, 0, "")
+	pdf.CellFormat(0, 5, fmt.Sprintf("Phone: %s | Email: %s", org.Phone, org.Email), "", 1, "C", false, 0, "")
+	pdf.Ln(5)
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(0, 10, "EMPLOYEE REGISTER", "", 1, "C", false, 0, "")
+	pdf.Ln(5)
+
+	pdf.SetFont("Arial", "B", 8)
+	headers := []string{"Emp-No", "ID No", "Full Name", "DOB", "Gender", "Marital Status", "Position"}
+	widths := []float64{25, 25, 70, 25, 20, 30, 45}
+
+	for i, h := range headers {
+		pdf.CellFormat(widths[i], 8, h, "1", 0, "C", false, 0, "")
+	}
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 8)
+	for _, e := range results {
+		dob := ""
+		if e.DateOfBirth != nil {
+			dob = e.DateOfBirth.Format("2006-01-02")
+		}
+		pdf.CellFormat(widths[0], 8, e.EmployeeNo, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[1], 8, e.IdNo, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[2], 8, e.FullName, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[3], 8, dob, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[4], 8, e.Gender, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(widths[5], 8, e.MaritalStatus, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(widths[6], 8, e.PositionName, "1", 0, "L", false, 0, "")
+		pdf.Ln(-1)
+	}
+
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	return buf.Bytes(), err
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rubewafula/edairy-go-26/internal/initializers"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,6 +24,10 @@ func GetUniqueRouteIDs(m map[uint64]uint64) []uint64 {
 		result = append(result, routeID)
 	}
 	return result
+}
+
+func Now() time.Time {
+	return time.Now().In(initializers.EAT)
 }
 
 // ParseDate parses a string into a time.Time object.
@@ -109,4 +114,20 @@ func ParseFloat(s string) (float64, error) {
 		return 0, nil
 	}
 	return strconv.ParseFloat(strings.TrimSpace(s), 64)
+}
+
+// StringValue returns the value of a string pointer, or an empty string if nil.
+func StringValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// StringPtr returns a pointer to the string, or nil if the string is empty.
+func StringPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

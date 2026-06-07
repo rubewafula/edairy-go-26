@@ -4,17 +4,21 @@ import "time"
 
 type ShareType struct {
 	BaseModel
-	ShareCode         string  `gorm:"column:share_code"`
-	ShareType         string  `gorm:"column:share_type"`
-	Description       string  `gorm:"column:description"`
-	Rate              float64 `gorm:"column:rate"`
-	Mandatory         int     `gorm:"column:madatory"` // Matches 'madatory' in schema
-	HasShareValue     int     `gorm:"column:has_share_value"`
-	RepayMethod       string  `gorm:"column:repay_method"`
-	CalculatingMethod string  `gorm:"column:calculating_method"`
-	ShareValue        float64 `gorm:"column:share_value"`
-	DeductionTypeID   uint64  `gorm:"column:deduction_type_id"`
-	Priority          int     `gorm:"column:priority"`
+	ShareCode          string  `gorm:"column:share_code"`
+	ShareType          string  `gorm:"column:share_type"`
+	Description        string  `gorm:"column:description"`
+	Rate               float64 `gorm:"column:rate"`
+	Mandatory          int     `gorm:"column:madatory"` // Matches 'madatory' in schema
+	HasShareValue      int     `gorm:"column:has_share_value"`
+	CalculatingMethod  string  `gorm:"column:calculating_method"`
+	ShareValue         float64 `gorm:"column:share_value"`
+	DeductionTypeID    uint64  `gorm:"column:deduction_type_id"`
+	Priority           int     `gorm:"column:priority"`
+	IsPayrollDeduction int     `gorm:"column:is_payroll_deduction;default:0"`
+	EarnsDividend      int     `gorm:"column:earns_dividend;default:0"`
+	IsTransferable     int     `gorm:"column:is_transferable;default:0"`
+	MinimumShares      float64 `gorm:"column:minimum_shares"`
+	MaxmumShares       float64 `gorm:"column:maxmum_shares"`
 }
 
 func (ShareType) TableName() string {

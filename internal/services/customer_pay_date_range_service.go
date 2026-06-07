@@ -29,7 +29,7 @@ func (s *CustomerPayDateRangeService) CreateCustomerPayDateRange(req dtos.Create
 // CatchUpRanges ensures that billing cycles are generated up to the current date.
 // It creates missing 7-day ranges sequentially until the latest range encompasses or nears today.
 func (s *CustomerPayDateRangeService) CatchUpRanges(userID uint64) error {
-	now := time.Now()
+	now := utils.Now()
 	for {
 		var lastRange models.CustomerPayDateRange
 		err := db.DB.Where("deleted_at IS NULL").Order("end_date DESC").First(&lastRange).Error
@@ -67,7 +67,7 @@ func (s *CustomerPayDateRangeService) GenerateNextPayDateRange(userID uint64) (*
 	var newStartDate time.Time
 	if err != nil && err == gorm.ErrRecordNotFound {
 		// No previous range, start from the 1st of the current month
-		now := time.Now()
+		now := utils.Now()
 		newStartDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	} else if err != nil {
 		return nil, fmt.Errorf("failed to retrieve last pay date range: %w", err)

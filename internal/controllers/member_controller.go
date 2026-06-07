@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -26,10 +28,30 @@ func NewMemberController() *MemberController {
 	}
 }
 
+func (c *MemberController) logRawRequest(ctx *gin.Context) {
+
+	body, _ := io.ReadAll(ctx.Request.Body)
+
+	log.Printf(`
+	Method: %s
+	URL: %s
+	Headers: %+v
+	Body: %s
+	`,
+		ctx.Request.Method,
+		ctx.Request.URL.String(),
+		ctx.Request.Header,
+		string(body),
+	)
+
+	ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+}
+
 // POST /users
 func (c *MemberController) CreateMember(ctx *gin.Context) {
 
 	log.Printf("Received Content-Type: %s", ctx.ContentType())
+	//c.logRawRequest(ctx)
 	var req dtos.CreateMemberRequest
 
 	if err := ctx.ShouldBind(&req); err != nil {

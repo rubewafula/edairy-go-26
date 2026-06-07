@@ -47,22 +47,24 @@ func (s *IndividualTransporterService) UpdateIndividualTransporter(id string, re
 
 	individual.FirstName = req.FirstName
 	individual.LastName = req.LastName
-	individual.OtherNames = req.OtherNames
-	individual.Gender = req.Gender
+	individual.OtherNames = utils.StringPtr(req.OtherNames)
+	individual.Gender = utils.StringPtr(req.Gender)
 
 	if req.DateOfBirth != "" {
 		t := utils.ParseDate(req.DateOfBirth)
-		individual.DateOfBirth = &t
+		if !t.IsZero() {
+			individual.DateOfBirth = &t
+		}
 	}
 
-	individual.NationalIDNo = req.NationalIDNo
-	individual.KraPin = req.KraPin
-	individual.MaritalStatus = req.MaritalStatus
-	individual.NextOfKinFullName = req.NextOfKinFullName
-	individual.NextOfKinPhone = req.NextOfKinPhone
-	individual.PassportPhoto = req.PassportPhoto
-	individual.IDFrontPhoto = req.IDFrontPhoto
-	individual.IDBackPhoto = req.IDBackPhoto
+	individual.NationalIDNo = utils.StringPtr(req.NationalIDNo)
+	individual.KraPin = utils.StringPtr(req.KraPin)
+	individual.MaritalStatus = utils.StringPtr(req.MaritalStatus)
+	individual.NextOfKinFullName = utils.StringPtr(req.NextOfKinFullName)
+	individual.NextOfKinPhone = utils.StringPtr(req.NextOfKinPhone)
+	individual.PassportPhoto = utils.StringPtr(req.PassportPhoto)
+	individual.IDFrontPhoto = utils.StringPtr(req.IDFrontPhoto)
+	individual.IDBackPhoto = utils.StringPtr(req.IDBackPhoto)
 
 	return db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&individual).Error; err != nil {
@@ -80,16 +82,16 @@ func (s *IndividualTransporterService) toResponse(i models.IndividualTransporter
 		TransporterID:     i.TransporterID,
 		FirstName:         i.FirstName,
 		LastName:          i.LastName,
-		OtherNames:        i.OtherNames,
-		Gender:            i.Gender,
+		OtherNames:        utils.StringValue(i.OtherNames),
+		Gender:            utils.StringValue(i.Gender),
 		DateOfBirth:       i.DateOfBirth,
-		NationalIDNo:      i.NationalIDNo,
-		KraPin:            i.KraPin,
-		MaritalStatus:     i.MaritalStatus,
-		NextOfKinFullName: i.NextOfKinFullName,
-		NextOfKinPhone:    i.NextOfKinPhone,
-		PassportPhoto:     i.PassportPhoto,
-		IDFrontPhoto:      i.IDFrontPhoto,
-		IDBackPhoto:       i.IDBackPhoto,
+		NationalIDNo:      utils.StringValue(i.NationalIDNo),
+		KraPin:            utils.StringValue(i.KraPin),
+		MaritalStatus:     utils.StringValue(i.MaritalStatus),
+		NextOfKinFullName: utils.StringValue(i.NextOfKinFullName),
+		NextOfKinPhone:    utils.StringValue(i.NextOfKinPhone),
+		PassportPhoto:     utils.StringValue(i.PassportPhoto),
+		IDFrontPhoto:      utils.StringValue(i.IDFrontPhoto),
+		IDBackPhoto:       utils.StringValue(i.IDBackPhoto),
 	}
 }

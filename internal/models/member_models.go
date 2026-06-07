@@ -282,10 +282,8 @@ type MemberPayDateRange struct {
 	Name      string    `gorm:"column:name"`
 	StartDate time.Time `gorm:"column:start_date"`
 	EndDate   time.Time `gorm:"column:end_date"`
-	PayMonth  string    `gorm:"column:pay_month"`
-	PayYear   string    `gorm:"column:pay_year"`
 	Processed bool      `gorm:"column:processed;default:0"`
-	Confirmed bool      `gorm:"column:confirmed"`
+	Confirmed int       `gorm:"column:confirmed"`
 }
 
 func (MemberPayDateRange) TableName() string {

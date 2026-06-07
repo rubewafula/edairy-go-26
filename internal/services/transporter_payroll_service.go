@@ -99,8 +99,8 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 	}
 
 	// Pre-fetch Transporter details (especially RouteID for rate calculation)
-	var transporters []models.Transporter
-	db.DB.Select("id, route_id").Where("id IN ?", transporterIDs).Find(&transporters)
+	var transporters []models.TransporterRouteAssignment
+	db.DB.Select("id, route_id").Where("transporter_id IN ?", transporterIDs).Find(&transporters)
 	transporterRouteMap := make(map[uint64]uint64)
 	for _, t := range transporters {
 		transporterRouteMap[t.ID] = t.RouteID

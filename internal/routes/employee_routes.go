@@ -34,6 +34,8 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.GET("/employees/:id", employeeController.GetEmployee)
 	api.PUT("/employees/:id", employeeController.UpdateEmployee)
 	api.DELETE("/employees/:id", employeeController.DeleteEmployee)
+	api.GET("/employees/export", employeeController.ExportEmployees)
+	api.GET("/employees/export/download/:filename", employeeController.DownloadExportFile)
 
 	// Employee Salary Routes (now using dedicated controller)
 	api.POST("/employee-salaries", employeeSalaryController.Create)
@@ -48,6 +50,10 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.GET("/employee-bank-accounts/:id", employeeBankAccountController.Get)
 	api.PUT("/employee-bank-accounts/:id", employeeBankAccountController.Update)
 	api.DELETE("/employee-bank-accounts/:id", employeeBankAccountController.Delete)
+	api.GET("/employee-bank-accounts/export", employeeBankAccountController.ExportAccounts)
+	api.GET("/employee-bank-accounts/export/download/:filename", employeeBankAccountController.DownloadExportFile)
+	api.POST("/employee-bank-accounts/import", employeeBankAccountController.ImportAccounts)
+	api.GET("/employee-bank-accounts/import-errors/:id", employeeBankAccountController.GetImportErrors)
 
 	// Employee Benefits
 	api.POST("/employee-benefits", employeeBenefitController.CreateEmployeeBenefit)
@@ -83,6 +89,8 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.GET("/employee-leave-applications/:id", employeeLeaveApplicationController.Get)
 	api.PUT("/employee-leave-applications/:id", employeeLeaveApplicationController.Update)
 	api.DELETE("/employee-leave-applications/:id", employeeLeaveApplicationController.Delete)
+	api.GET("/employee-leave-applications/export", employeeLeaveApplicationController.Export)
+	api.GET("/employee-leave-applications/export/download/:filename", employeeLeaveApplicationController.DownloadExportFile)
 
 	// Employee Leave Assignments
 	api.POST("/employee-leave-assignments", employeeLeaveAssignmentController.Create)

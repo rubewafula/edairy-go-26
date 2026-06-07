@@ -15,7 +15,7 @@ func NewBankBranchService() *BankBranchService {
 func (s *BankBranchService) CreateBankBranch(req dtos.CreateBankBranchRequest) (*models.BankBranch, error) {
 	branch := &models.BankBranch{
 		Name:     req.Name,
-		BankId:   req.BankID,
+		BankID:   req.BankID,
 		Location: req.Location,
 	}
 
@@ -48,7 +48,7 @@ func (s *BankBranchService) UpdateBankBranch(id string, req dtos.UpdateBankBranc
 	}
 
 	branch.Name = req.Name
-	branch.BankId = req.BankID
+	branch.BankID = req.BankID
 	branch.Location = req.Location
 
 	return db.DB.Save(&branch).Error

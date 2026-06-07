@@ -61,7 +61,7 @@ type SupplierBankAccount struct {
 	BaseModel
 	SupplierID    uint64 `gorm:"column:supplier_id"`
 	BankID        uint64 `gorm:"column:bank_id"`
-	BankBranchID  uint64 `gorm:"column:bank_branch_id"`
+	BankBranchID  uint64 `gorm:"column:branch_id"`
 	AccountName   string `gorm:"column:account_name"`
 	AccountNumber string `gorm:"column:account_number"`
 	AccountType   string `gorm:"type:enum('bank','mobile_money');default:'bank';column:account_type"`

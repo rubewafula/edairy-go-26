@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -130,7 +129,7 @@ func (s *ShareTransferService) CreateShareTransfer(req dtos.CreateShareTransferR
 			SubAccountID:    rule.DebitSubAccountID,
 			Debit:           transferAmount,
 			Credit:          0.00,
-			TransactionDate: time.Now(),
+			TransactionDate: utils.Now(),
 			Description:     fmt.Sprintf("Share transfer received by member %d", req.ToMemberID),
 		}
 		if err := tx.Create(debitGL).Error; err != nil {
@@ -144,7 +143,7 @@ func (s *ShareTransferService) CreateShareTransfer(req dtos.CreateShareTransferR
 			SubAccountID:    rule.CreditSubAccountID,
 			Debit:           0.00,
 			Credit:          transferAmount,
-			TransactionDate: time.Now(),
+			TransactionDate: utils.Now(),
 			Description:     fmt.Sprintf("Share transfer issued by member %d", req.FromMemberID),
 		}
 		if err := tx.Create(creditGL).Error; err != nil {
@@ -288,7 +287,7 @@ func (s *ShareTransferService) UpdateShareTransfer(id string, req dtos.UpdateSha
 			"transaction_date": transactionDate,
 			"description":      fmt.Sprintf("Transfer of %.2f shares from member %d to member %d (updated)", req.ShareUnits, transfer.FromMemberID, transfer.ToMemberID),
 			"status":           "POSTED",
-			"updated_at":       time.Now(),
+			"updated_at":       utils.Now(),
 		}).Error; err != nil {
 			return err
 		}
@@ -308,7 +307,7 @@ func (s *ShareTransferService) UpdateShareTransfer(id string, req dtos.UpdateSha
 				"credit":           transferAmount,
 				"balance_after":    fromPrevBalance - transferAmount,
 				"transaction_date": transactionDate,
-				"updated_at":       time.Now(),
+				"updated_at":       utils.Now(),
 			}).Error; err != nil {
 			return err
 		}
@@ -327,7 +326,7 @@ func (s *ShareTransferService) UpdateShareTransfer(id string, req dtos.UpdateSha
 				"debit":            transferAmount,
 				"balance_after":    toPrevBalance + transferAmount,
 				"transaction_date": transactionDate,
-				"updated_at":       time.Now(),
+				"updated_at":       utils.Now(),
 			}).Error; err != nil {
 			return err
 		}
@@ -335,12 +334,12 @@ func (s *ShareTransferService) UpdateShareTransfer(id string, req dtos.UpdateSha
 		// 7. Update General Ledger Entries
 		// Update Debit GL entry (Receiver)
 		tx.Model(&models.GeneralLedgerEntry{}).Where("transaction_id = ? AND debit > 0", transfer.TransactionID).Updates(map[string]interface{}{
-			"debit": transferAmount, "description": fmt.Sprintf("Share transfer received by member %d (updated)", transfer.ToMemberID), "transaction_date": transactionDate, "updated_at": time.Now(),
+			"debit": transferAmount, "description": fmt.Sprintf("Share transfer received by member %d (updated)", transfer.ToMemberID), "transaction_date": transactionDate, "updated_at": utils.Now(),
 		})
 
 		// Update Credit GL entry (Sender)
 		tx.Model(&models.GeneralLedgerEntry{}).Where("transaction_id = ? AND credit > 0", transfer.TransactionID).Updates(map[string]interface{}{
-			"credit": transferAmount, "description": fmt.Sprintf("Share transfer issued by member %d (updated)", transfer.FromMemberID), "transaction_date": transactionDate, "updated_at": time.Now(),
+			"credit": transferAmount, "description": fmt.Sprintf("Share transfer issued by member %d (updated)", transfer.FromMemberID), "transaction_date": transactionDate, "updated_at": utils.Now(),
 		})
 
 		// 8. Update Member Share Account Balances

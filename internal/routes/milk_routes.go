@@ -17,6 +17,7 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	defaultMilkRateController := controllers.NewDefaultMilkRateController()
 	milkCanController := controllers.NewMilkCanController()
 	canMovementController := controllers.NewCanMovementController()
+	specialRateController := controllers.NewMilkSpecialRateController()
 
 	api.POST("/milk-delivery-shifts", milkDeliveryShiftController.CreateShift)
 	api.GET("/milk-delivery-shifts", milkDeliveryShiftController.GetShifts)
@@ -71,6 +72,12 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	api.GET("/default-milk-rates/:id", defaultMilkRateController.GetRate)
 	api.PUT("/default-milk-rates/:id", defaultMilkRateController.UpdateRate)
 	api.DELETE("/default-milk-rates/:id", defaultMilkRateController.DeleteRate)
+
+	api.POST("/milk-special-rates", specialRateController.Create)
+	api.GET("/milk-special-rates", specialRateController.List)
+	api.GET("/milk-special-rates/:id", specialRateController.Get)
+	api.PUT("/milk-special-rates/:id", specialRateController.Update)
+	api.DELETE("/milk-special-rates/:id", specialRateController.Delete)
 
 	api.POST("/milk-cans", milkCanController.CreateMilkCan)
 	api.GET("/milk-cans", milkCanController.GetMilkCans)

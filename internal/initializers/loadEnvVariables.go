@@ -3,6 +3,7 @@ package initializers
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -21,4 +22,14 @@ func GetEnv(key, fallback string) string {
 		return val
 	}
 	return fallback
+}
+
+var EAT *time.Location
+
+func InitTimezone() {
+	var err error
+	EAT, err = time.LoadLocation("Africa/Nairobi")
+	if err != nil {
+		log.Fatalf("failed to load timezone: %v", err)
+	}
 }

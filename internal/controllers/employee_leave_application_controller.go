@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -28,16 +29,19 @@ func (c *EmployeeLeaveApplicationController) Create(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	if err := validator.Validate.Struct(req); err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
+
 	userID := ctx.GetUint64("user_id")
 	res, err := c.service.CreateApplication(req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusCreated, res)
 }
 
@@ -51,6 +55,7 @@ func (c *EmployeeLeaveApplicationController) List(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"data":  results,
 		"total": total,
@@ -64,7 +69,7 @@ func (c *EmployeeLeaveApplicationController) Get(ctx *gin.Context) {
 	res, err := c.service.GetApplication(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "Leave application not found"})
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -80,20 +85,47 @@ func (c *EmployeeLeaveApplicationController) Update(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateApplication(id, req, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Leave application updated successfully"})
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Application updated successfully"})
 }
 
 func (c *EmployeeLeaveApplicationController) Delete(ctx *gin.Context) {
 	id := ctx.Param("id")
 	userID := ctx.GetUint64("user_id")
+
 	if err := c.service.DeleteApplication(id, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Leave application deleted successfully"})
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Application deleted successfully"})
+}
+
+func (c *EmployeeLeaveApplicationController) Export(ctx *gin.Context) {
+	status := ctx.Query("status")
+	format := ctx.DefaultQuery("format", "csv")
+	userID := ctx.GetUint64("user_id")
+
+	if err := c.service.ExportApplications(userID, status, format); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{
+		"message": "Export initiated. Check your notifications for the download link shortly.",
+	})
+}
+
+func (c *EmployeeLeaveApplicationController) DownloadExportFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	safeFilename := filepath.Base(filename)
+	filePath := filepath.Join("./storage/exports", safeFilename)
+
+	ctx.File(filePath)
 }

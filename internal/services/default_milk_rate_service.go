@@ -15,8 +15,17 @@ func NewDefaultMilkRateService() *DefaultMilkRateService {
 
 func (s *DefaultMilkRateService) CreateDefaultMilkRate(req dtos.CreateDefaultMilkRateRequest) (*models.DefaultMilkRate, error) {
 	rate := &models.DefaultMilkRate{
-		Rate:    req.Rate,
-		RouteID: req.RouteID,
+		Rate: req.Rate,
+	}
+
+	if req.RouteID != 0 {
+		routeID := req.RouteID
+		rate.RouteID = &routeID
+	}
+
+	if req.MemberID != 0 {
+		memberID := req.MemberID
+		rate.MemberID = &memberID
 	}
 
 	if err := db.DB.Create(rate).Error; err != nil {
@@ -34,9 +43,11 @@ func (s *DefaultMilkRateService) GetDefaultMilkRates(page, limit int) ([]dtos.De
 	query := `
 		SELECT 
 			dmr.id, dmr.rate, dmr.route_id, r.route_name,
+			concat(member_no, ' ', first_name, ' ', last_name) as member_name,
 			dmr.created_at, dmr.updated_at
 		FROM default_milk_rates dmr
 		LEFT JOIN routes r ON dmr.route_id = r.id
+		LEFT JOIN member_registrations m ON m.id = dmr.member_id
 		WHERE dmr.deleted_at IS NULL
 		ORDER BY dmr.id DESC
 		LIMIT ? OFFSET ?
@@ -49,10 +60,12 @@ func (s *DefaultMilkRateService) GetDefaultMilkRate(id string) (*dtos.DefaultMil
 	var result dtos.DefaultMilkRateResponse
 	query := `
 		SELECT 
-			dmr.id, dmr.rate, dmr.route_id, r.route_name,
+			dmr.id, dmr.rate, dmr.route_id, r.route_name, 
+			concat(member_no, ' ', first_name, ' ', last_name) as member_name,
 			dmr.created_at, dmr.updated_at
 		FROM default_milk_rates dmr
 		LEFT JOIN routes r ON dmr.route_id = r.id
+		LEFT JOIN member_registrations m ON m.id = dmr.member_id
 		WHERE dmr.id = ? AND dmr.deleted_at IS NULL
 		LIMIT 1
 	`
@@ -72,7 +85,21 @@ func (s *DefaultMilkRateService) UpdateDefaultMilkRate(id string, req dtos.Updat
 		return err
 	}
 	rate.Rate = req.Rate
-	rate.RouteID = req.RouteID
+
+	if req.RouteID != 0 {
+		routeID := req.RouteID
+		rate.RouteID = &routeID
+	} else {
+		rate.RouteID = nil
+	}
+
+	if req.MemberID != 0 {
+		memberID := req.MemberID
+		rate.MemberID = &memberID
+	} else {
+		rate.MemberID = nil
+	}
+
 	return db.DB.Save(&rate).Error
 }
 

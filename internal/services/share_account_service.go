@@ -38,7 +38,7 @@ func (s *ShareAccountService) CreateAccount(req dtos.CreateShareAccountRequest) 
 		status = "ACTIVE"
 	}
 
-	openedAt := time.Now()
+	openedAt := utils.Now()
 	if req.OpenedAt != "" {
 		openedAt = utils.ParseDate(req.OpenedAt)
 	}
@@ -184,7 +184,7 @@ func (s *ShareAccountService) processShareAccountRowsInBackground(data [][]strin
 	}
 
 	log.Printf("[ShareAccountService] Starting background import for %d rows.", totalRows)
-	importID := uint64(time.Now().UnixNano())
+	importID := uint64(utils.Now().UnixNano())
 
 	var wg sync.WaitGroup
 	jobs := make(chan []string, totalRows)
@@ -268,7 +268,7 @@ func (s *ShareAccountService) processShareAccountRowsInBackground(data [][]strin
 							ShareUnits:  units,
 							ShareAmount: amount,
 							Status:      status,
-							OpenedAt:    time.Now(),
+							OpenedAt:    utils.Now(),
 						}
 
 						if err := tx.Create(&account).Error; err != nil {
@@ -281,7 +281,7 @@ func (s *ShareAccountService) processShareAccountRowsInBackground(data [][]strin
 							Reference:       fmt.Sprintf("SHR-IMP-%d-%s", importID, member.MemberNo),
 							TransactionName: "SHARE ACCOUNT IMPORT",
 							TransactionType: "SHARE",
-							TransactionDate: time.Now(),
+							TransactionDate: utils.Now(),
 							Description:     fmt.Sprintf("Bulk share account import for member %s", member.MemberNo),
 							Status:          "POSTED",
 						}
@@ -300,7 +300,7 @@ func (s *ShareAccountService) processShareAccountRowsInBackground(data [][]strin
 							Debit:           amount,
 							Credit:          0,
 							BalanceAfter:    amount,
-							TransactionDate: time.Now(),
+							TransactionDate: utils.Now(),
 						}
 						if err := tx.Create(&shareTx).Error; err != nil {
 							return err
@@ -310,10 +310,12 @@ func (s *ShareAccountService) processShareAccountRowsInBackground(data [][]strin
 						if amount > 0 {
 							rule := "SHARES_IMPORT"
 							desc := fmt.Sprintf("Opening balance for share account: %s", st.ShareType)
-							if err := s.postGLEntry(tx, transaction.ID, rule, true, amount, desc, time.Now(), userID); err != nil {
+
+							if err := s.postGLEntry(tx, transaction.ID, rule, true, amount, desc, utils.Now(), userID); err != nil {
 								return err
 							}
-							if err := s.postGLEntry(tx, transaction.ID, rule, false, amount, desc, time.Now(), userID); err != nil {
+
+							if err := s.postGLEntry(tx, transaction.ID, rule, false, amount, desc, utils.Now(), userID); err != nil {
 								return err
 							}
 						}
@@ -485,7 +487,7 @@ func (s *ShareAccountService) processShareAccountExportInBackground(userID uint6
 
 	exportDir := "./storage/exports"
 	os.MkdirAll(exportDir, 0755)
-	filename := fmt.Sprintf("share_accounts_export_%d.%s", time.Now().UnixNano(), ext)
+	filename := fmt.Sprintf("share_accounts_export_%d.%s", utils.Now().UnixNano(), ext)
 	filePath := filepath.Join(exportDir, filename)
 
 	if err := os.WriteFile(filePath, fileData, 0644); err != nil {

@@ -106,14 +106,14 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 
 	// 3. Pre-fetch Rate Resolution Maps
 	var specialRates []models.MilkSpecialRate
-	db.DB.Where("monthly_pay_date_range_id = ? AND deleted_at IS NULL", req.PayDateRangeID).Find(&specialRates)
+	db.DB.Where("pay_date_range_id = ? AND deleted_at IS NULL", req.PayDateRangeID).Find(&specialRates)
 	memberRateMap := make(map[uint64]float64)
 	routePeriodRateMap := make(map[uint64]float64)
 	for _, r := range specialRates {
-		if r.MemberID != 0 {
-			memberRateMap[r.MemberID] = r.Rate
-		} else if r.RouteID != 0 {
-			routePeriodRateMap[r.RouteID] = r.Rate
+		if r.MemberID != nil {
+			memberRateMap[*r.MemberID] = r.Rate
+		} else if r.RouteID != nil {
+			routePeriodRateMap[*r.RouteID] = r.Rate
 		}
 	}
 
@@ -122,8 +122,8 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 	defaultRouteRateMap := make(map[uint64]float64)
 	var globalDefault float64
 	for _, r := range defaultRates {
-		if r.RouteID != 0 {
-			defaultRouteRateMap[r.RouteID] = r.Rate
+		if r.RouteID != nil {
+			defaultRouteRateMap[*r.RouteID] = r.Rate
 		} else {
 			globalDefault = r.Rate
 		}
@@ -312,7 +312,7 @@ func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr
 		"total_deductions": totalDeductions,
 		"status":           status,
 		"updated_by":       userID,
-		"updated_at":       time.Now(),
+		"updated_at":       utils.Now(),
 	})
 }
 
@@ -423,7 +423,7 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 		return
 	}
 
-	now := time.Now()
+	now := utils.Now()
 
 	// 2. Fetch Account Posting Rules
 	var grossRule, loanRule, shareRule models.TransactionPostingRule
@@ -653,7 +653,7 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 		"updated_by":  userID,
 		"posted_at":   &now,
 		"posted_by":   &userID,
-		"updated_at":  time.Now(),
+		"updated_at":  utils.Now(),
 	})
 }
 
@@ -669,7 +669,7 @@ func (s *MemberPayrollService) Confirm(payrollID uint64, userID uint64) (*models
 			return fmt.Errorf("payroll must be in 'draft' status to be confirmed, current status: %s", payroll.Status)
 		}
 
-		now := time.Now()
+		now := utils.Now()
 		// Update the main payroll record
 		if err := tx.Model(&payroll).Updates(map[string]interface{}{
 			"status":       "confirmed",

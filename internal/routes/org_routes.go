@@ -12,6 +12,8 @@ func registerOrgRoutes(api *gin.RouterGroup) {
 	organizationLeadershipController := controllers.NewOrganizationLeadershipController()
 	organizationWalletController := controllers.NewOrganizationWalletController()
 	organizationKybCommentController := controllers.NewOrganizationKybCommentController()
+	userStoreAssignmentController := controllers.NewUserStoreAssignmentController()
+	paymentPeriodController := controllers.NewPaymentPeriodController()
 
 	// Organization Address Routes
 	api.POST("/organization-addresses", organizationAddressController.CreateAddress)
@@ -57,4 +59,18 @@ func registerOrgRoutes(api *gin.RouterGroup) {
 	api.PUT("/organization-kyb-comments/:id", organizationKybCommentController.UpdateComment)
 	api.DELETE("/organization-kyb-comments/:id", organizationKybCommentController.DeleteComment)
 	api.GET("/organization-kyb-comments/iteration/:iteration", organizationKybCommentController.GetCommentsByIteration)
+
+	// User Store Assignment Routes
+	api.POST("/user-store-assignments", userStoreAssignmentController.CreateAssignment)
+	api.GET("/user-store-assignments", userStoreAssignmentController.GetAssignments)
+	api.GET("/user-store-assignments/:id", userStoreAssignmentController.GetAssignment)
+	api.PUT("/user-store-assignments/:id", userStoreAssignmentController.UpdateAssignment)
+	api.DELETE("/user-store-assignments/:id", userStoreAssignmentController.DeleteAssignment)
+
+	// Payment Period Routes
+	api.POST("/payment-periods", paymentPeriodController.Create)
+	api.GET("/payment-periods", paymentPeriodController.List)
+	api.GET("/payment-periods/:id", paymentPeriodController.Get)
+	api.PUT("/payment-periods/:id", paymentPeriodController.Update)
+	api.DELETE("/payment-periods/:id", paymentPeriodController.Delete)
 }

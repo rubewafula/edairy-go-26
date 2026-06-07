@@ -27,6 +27,11 @@ func registerSupplierRoutes(api *gin.RouterGroup) {
 	// Supplier Routes
 	api.POST("/suppliers", supplierController.CreateSupplier)
 	api.GET("/suppliers", supplierController.GetSuppliers)
+	// Supplier Import/Export
+	api.POST("/suppliers/import", supplierController.ImportSuppliers)
+	api.GET("/suppliers/export", supplierController.ExportSuppliers)
+	api.GET("/suppliers/export/download/:filename", supplierController.DownloadExportFile)
+	api.GET("/suppliers/import-errors/:id", supplierController.GetImportErrors)
 	api.GET("/suppliers/:id", supplierController.GetSupplier)
 	api.POST("/suppliers/:id/contacts", supplierController.CreateContact)
 	api.GET("/suppliers/:id/contacts", supplierController.GetSupplierContacts)

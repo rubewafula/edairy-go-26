@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,8 @@ func (c *CustomerController) CreateCustomer(ctx *gin.Context) {
 		return
 	}
 
-	customer, err := c.service.CreateCustomer(req)
+	userID := ctx.GetUint64("user_id")
+	customer, err := c.service.CreateCustomer(req, userID)
 	if err != nil {
 		log.Printf("[CustomerController.CreateCustomer] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -76,7 +78,8 @@ func (c *CustomerController) UpdateCustomer(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.service.UpdateCustomer(ctx.Param("id"), req); err != nil {
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.UpdateCustomer(ctx.Param("id"), req, userID); err != nil {
 		log.Printf("[CustomerController.UpdateCustomer] Error updating customer %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -106,4 +109,47 @@ func (c *CustomerController) ImportCustomers(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusAccepted, gin.H{"message": "Import started in background"})
+}
+
+// ExportCustomers triggers the background generation of a customer export.
+func (c *CustomerController) ExportCustomers(ctx *gin.Context) {
+	status := ctx.Query("status")
+	format := ctx.Query("format")
+	userID := ctx.GetUint64("user_id")
+
+	if err := c.service.ExportCustomers(userID, status, format); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{
+		"message": "Export initiated. Check your notifications for the download link shortly.",
+	})
+}
+
+// DownloadExportFile serves the generated CSV or PDF file for download.
+func (c *CustomerController) DownloadExportFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	safeFilename := filepath.Base(filename)
+	filePath := filepath.Join("./storage/exports", safeFilename)
+
+	ctx.File(filePath)
+}
+
+// GetImportErrors returns the validation/processing errors for a specific import ID.
+func (c *CustomerController) GetImportErrors(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	importID, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid import session ID"})
+		return
+	}
+
+	errors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, errors)
 }

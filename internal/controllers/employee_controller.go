@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -97,4 +98,29 @@ func (c *EmployeeController) DeleteEmployee(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Employee deleted successfully"})
+}
+
+// ExportEmployees triggers the background generation of an employee export.
+func (c *EmployeeController) ExportEmployees(ctx *gin.Context) {
+	status := ctx.Query("status")
+	format := ctx.DefaultQuery("format", "csv")
+	userID := ctx.GetUint64("user_id")
+
+	if err := c.service.ExportEmployees(userID, status, format); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{
+		"message": "Export initiated. Check your notifications for the download link shortly.",
+	})
+}
+
+// DownloadExportFile serves the generated CSV or PDF file for download.
+func (c *EmployeeController) DownloadExportFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	safeFilename := filepath.Base(filename)
+	filePath := filepath.Join("./storage/exports", safeFilename)
+
+	ctx.File(filePath)
 }

@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -34,7 +33,7 @@ func (s *CustomerInvoiceService) CreateInvoice(req dtos.CreateCustomerInvoiceReq
 		},
 		CustomerID:  req.CustomerID,
 		BillingID:   req.BillingID,
-		InvoiceNo:   fmt.Sprintf("INV-%d", time.Now().Unix()),
+		InvoiceNo:   fmt.Sprintf("INV-%d", utils.Now().Unix()),
 		InvoiceDate: utils.ParseDate(req.InvoiceDate),
 		DueDate:     utils.ParseDate(req.DueDate),
 		GrossAmount: req.GrossAmount,

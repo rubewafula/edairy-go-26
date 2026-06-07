@@ -27,10 +27,14 @@ func (s *RouteService) CreateRoute(req dtos.CreateRouteRequest) (*models.Route, 
 	return route, nil
 }
 
-func (s *RouteService) GetRoutes() ([]dtos.RouteResponse, int64, error) {
+func (s *RouteService) GetRoutes(page, limit int) ([]dtos.RouteResponse, int64, error) {
 	var results []dtos.RouteResponse
 	var total int64
-	db.DB.Model(&models.Route{}).Count(&total)
+
+	queryBuilder := db.DB.Model(&models.Route{}).Where("deleted_at IS NULL")
+	queryBuilder.Count(&total)
+
+	offset := (page - 1) * limit
 
 	query := `
 		SELECT 
@@ -40,8 +44,9 @@ func (s *RouteService) GetRoutes() ([]dtos.RouteResponse, int64, error) {
 		FROM routes r
 		LEFT JOIN locations l ON r.location_id = l.id
 		WHERE r.deleted_at IS NULL
+		ORDER BY r.id DESC LIMIT ? OFFSET ?
 	`
-	err := db.DB.Raw(query).Scan(&results).Error
+	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
 	return results, total, err
 }
 

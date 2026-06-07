@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
 	validator "github.com/rubewafula/edairy-go-26/internal/validators"
+	"gorm.io/gorm"
 )
 
 type RouteController struct {
@@ -41,7 +43,10 @@ func (c *RouteController) CreateRoute(ctx *gin.Context) {
 }
 
 func (c *RouteController) GetRoutes(ctx *gin.Context) {
-	routes, total, err := c.service.GetRoutes()
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	routes, total, err := c.service.GetRoutes(page, limit)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -52,7 +57,11 @@ func (c *RouteController) GetRoutes(ctx *gin.Context) {
 func (c *RouteController) GetRoute(ctx *gin.Context) {
 	route, err := c.service.GetRoute(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Route not found"})
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Route not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, route)

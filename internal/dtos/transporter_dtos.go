@@ -15,8 +15,7 @@ type UpdateTransporterPayDateRangeRequest struct {
 	Name      string `json:"name"`
 	StartDate string `json:"start_date"`
 	EndDate   string `json:"end_date"`
-	PayMonth  string `json:"pay_month"`
-	PayYear   string `json:"pay_year"`
+	Confirmed int    `json:"confirmed"`
 }
 
 type TransporterPayDateRangeResponse struct {
@@ -24,10 +23,8 @@ type TransporterPayDateRangeResponse struct {
 	Name      string    `json:"name"`
 	StartDate time.Time `json:"start_date"`
 	EndDate   time.Time `json:"end_date"`
-	PayMonth  string    `json:"pay_month"`
-	PayYear   string    `json:"pay_year"`
-	Processed bool      `json:"processed"`
-	Confirmed bool      `json:"confirmed"`
+	Processed int       `json:"processed"`
+	Confirmed int       `json:"confirmed"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

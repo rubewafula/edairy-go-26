@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"runtime"
 
@@ -40,6 +39,13 @@ func (s *MemberService) CreateMember(
 	ctx context.Context,
 	req dtos.CreateMemberRequest,
 	userID uint64) (*models.Member, error) {
+
+	// Validate ID number uniqueness before processing files or starting transaction
+	var count int64
+	db.DB.Model(&models.Member{}).Where("id_no = ?", req.IDNo).Count(&count)
+	if count > 0 {
+		return nil, fmt.Errorf("a member with ID number %s is already registered", req.IDNo)
+	}
 
 	memberNo := req.MemberNo
 	if memberNo == "" {
@@ -84,7 +90,7 @@ func (s *MemberService) CreateMember(
 		MaritalStatus:  req.MaritalStatus, //
 		Title:          req.Title,         //
 		Status:         "PENDING",         //
-		DateRegistered: time.Now(),        //
+		DateRegistered: utils.Now(),       //
 	}
 
 	if req.IDDateOfIssue != "" {
@@ -159,7 +165,9 @@ func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memb
 	// Base query for data
 	baseQuery := `
 		SELECT 
-			m.id, m.member_no, m.member_type_id, mt.name AS member_type_name,
+			m.id, m.member_no, 
+			m.id_no, 
+			m.member_type_id, mt.name AS member_type_name,
 			m.first_name, m.last_name, m.other_names, m.route_id, r.route_name,
 			m.date_of_birth, m.id_no, m.gender, m.birth_city,
 			m.primary_phone, m.secondary_phone, m.email, m.number_of_cows,
@@ -242,6 +250,31 @@ func (s *MemberService) GetMember(id string) (*dtos.MemberResponse, error) {
 	if result.ID == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
+
+	// Fetch associated Next of Kins
+	db.DB.Raw(`
+		SELECT 
+			mnok.*, 
+			m.member_no, 
+			CONCAT(m.first_name, ' ', m.last_name, ' ', COALESCE(m.other_names, '')) AS member_full_name
+		FROM member_next_of_kins mnok
+		JOIN member_registrations m ON mnok.member_id = m.id
+		WHERE mnok.member_id = ? AND mnok.deleted_at IS NULL
+	`, result.ID).Scan(&result.NextOfKins)
+
+	// Fetch associated Bank Accounts
+	db.DB.Raw(`
+		SELECT 
+			mba.id, mba.member_id, m.member_no, m.first_name, m.last_name,
+			mba.bank_id, b.bank_name, mba.bank_branch_id,
+			mba.account_number, mba.account_name, mba.status,
+			mba.created_at, mba.updated_at
+		FROM member_bank_accounts mba
+		LEFT JOIN member_registrations m ON mba.member_id = m.id
+		LEFT JOIN banks b ON mba.bank_id = b.id
+		WHERE mba.member_id = ? AND mba.deleted_at IS NULL
+	`, result.ID).Scan(&result.BankAccounts)
+
 	return &result, nil
 }
 
@@ -430,7 +463,7 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 
 	log.Printf("[MemberService.processMemberRowsInBackground] Starting background member import for %d rows.", totalRows)
 
-	importID := uint64(time.Now().UnixNano())
+	importID := uint64(utils.Now().UnixNano())
 
 	var wg sync.WaitGroup
 	jobs := make(chan []string, totalRows)
@@ -761,7 +794,7 @@ func (s *MemberService) processMemberExportInBackground(userID uint64, memberNo,
 	}
 
 	// Generate a unique filename for the exported CSV.
-	filename := fmt.Sprintf("members_export_%d.%s", time.Now().UnixNano(), ext)
+	filename := fmt.Sprintf("members_export_%d.%s", utils.Now().UnixNano(), ext)
 	filePath := filepath.Join(exportDir, filename)
 	if err := os.WriteFile(filePath, fileData, 0644); err != nil {
 		log.Printf("[MemberService.processMemberExportInBackground] Failed to save exported CSV: %v", err)

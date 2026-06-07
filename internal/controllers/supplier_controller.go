@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -119,4 +120,67 @@ func (c *SupplierController) GetSupplierBankAccounts(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": accounts})
+}
+
+// ImportSuppliers handles the bulk upload of suppliers.
+func (c *SupplierController) ImportSuppliers(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Excel or CSV file is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ImportSuppliers(file, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{
+		"message": "Supplier import started in the background. You will be notified upon completion.",
+	})
+}
+
+// ExportSuppliers triggers the background generation of a supplier CSV export.
+func (c *SupplierController) ExportSuppliers(ctx *gin.Context) {
+	categoryID := ctx.Query("supplier_category_id")
+	supplierType := ctx.Query("supplier_type")
+	status := ctx.Query("status")
+	userID := ctx.GetUint64("user_id")
+
+	if err := c.service.ExportSuppliers(userID, categoryID, supplierType, status); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{
+		"message": "Export initiated. Check your notifications for the download link shortly.",
+	})
+}
+
+// DownloadExportFile serves the generated CSV file for download.
+func (c *SupplierController) DownloadExportFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	safeFilename := filepath.Base(filename)
+	filePath := filepath.Join("./storage/exports", safeFilename)
+
+	ctx.File(filePath)
+}
+
+// GetImportErrors returns the validation/processing errors for a specific import ID.
+func (c *SupplierController) GetImportErrors(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	importID, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid import session ID"})
+		return
+	}
+
+	errors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, errors)
 }

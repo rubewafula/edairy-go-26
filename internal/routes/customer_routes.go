@@ -13,12 +13,14 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	customerPaymentController := controllers.NewCustomerPaymentController()
 	customerMilkRateController := controllers.NewCustomerMilkRateController()
 	customerPayDateRangeController := controllers.NewCustomerPayDateRangeController()
-	memberPayrollController := controllers.NewMemberPayrollController()
-	memberPayDateRangeController := controllers.NewMemberPayDateRangeController()
 
 	// Customer Routes
 	api.POST("/customers", customerController.CreateCustomer)
 	api.GET("/customers", customerController.GetCustomers)
+	api.POST("/customers/import", customerController.ImportCustomers)
+	api.GET("/customers/export", customerController.ExportCustomers)
+	api.GET("/customers/export/download/:filename", customerController.DownloadExportFile)
+	api.GET("/customers/import-errors/:id", customerController.GetImportErrors)
 	api.GET("/customers/:id", customerController.GetCustomer)
 	api.PUT("/customers/:id", customerController.UpdateCustomer)
 	api.DELETE("/customers/:id", customerController.DeleteCustomer)
@@ -65,17 +67,4 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	api.PUT("/customer-pay-date-ranges/:id", customerPayDateRangeController.UpdateCustomerPayDateRange)
 	api.DELETE("/customer-pay-date-ranges/:id", customerPayDateRangeController.DeleteCustomerPayDateRange)
 
-	// Member Pay Date Range Routes
-	api.POST("/member-pay-date-ranges", memberPayDateRangeController.Create)
-	api.GET("/member-pay-date-ranges", memberPayDateRangeController.List)
-	api.GET("/member-pay-date-ranges/:id", memberPayDateRangeController.Get)
-	api.PUT("/member-pay-date-ranges/:id", memberPayDateRangeController.Update)
-	api.DELETE("/member-pay-date-ranges/:id", memberPayDateRangeController.Delete)
-
-	// Member Payroll Routes
-	api.POST("/member-payrolls", memberPayrollController.Create)
-	api.GET("/member-payrolls", memberPayrollController.List)
-	api.GET("/member-payrolls/:id", memberPayrollController.Get)
-	api.PUT("/member-payrolls/:id/confirm", memberPayrollController.Confirm)
-	api.PUT("/member-payrolls/:id/approve", memberPayrollController.Approve)
 }
