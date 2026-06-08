@@ -123,3 +123,38 @@ func (c *MemberPayrollController) Get(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, res)
 }
+
+func (c *MemberPayrollController) GetGenerationErrors(ctx *gin.Context) {
+	payrollIDStr := ctx.Param("payrollID")
+	payrollID, err := strconv.ParseUint(payrollIDStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid payroll ID",
+		})
+		return
+	}
+
+	errors, err := c.service.GetGenerationErrors(payrollID)
+	if err != nil {
+		log.Printf("[MemberPayrollController.GetGenerationErrors] Error fetching generation errors for payroll %d: %v", payrollID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch payroll generation errors"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": errors})
+}
+
+func (c *MemberPayrollController) GetApprovalErrors(ctx *gin.Context) {
+	payrollIDStr := ctx.Param("payrollID")
+	payrollID, err := strconv.ParseUint(payrollIDStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payroll ID"})
+		return
+	}
+	errors, err := c.service.GetApprovalErrors(payrollID)
+	if err != nil {
+		log.Printf("[MemberPayrollController.GetApprovalErrors] Error fetching approval errors for payroll %d: %v", payrollID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch payroll approval errors"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": errors})
+}

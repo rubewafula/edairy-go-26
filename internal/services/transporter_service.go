@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -32,6 +33,12 @@ func NewTransporterService() *TransporterService {
 	}
 }
 
+// sanitizeNumericString removes all non-digit characters from a string.
+func sanitizeNumericString(s string) string {
+	reg := regexp.MustCompile(`[^0-9]+`)
+	return reg.ReplaceAllString(s, "")
+}
+
 func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest) (*dtos.TransporterResponse, error) {
 	status := req.Status
 	if status == "" {
@@ -53,19 +60,30 @@ func (s *TransporterService) CreateTransporter(req dtos.CreateTransporterRequest
 		}
 
 		if req.Category == "INDIVIDUAL" {
-			passportPath, _ := utils.SaveFile(req.PassportPhoto, "transporters")
-			idFrontPath, _ := utils.SaveFile(req.IDFrontPhoto, "transporters")
-			idBackPath, _ := utils.SaveFile(req.IDBackPhoto, "transporters")
+			passportPath, err := utils.SaveFile(req.PassportPhoto, "transporters")
+			if err != nil {
+				return fmt.Errorf("failed to save passport photo: %w", err)
+			}
+			idFrontPath, err := utils.SaveFile(req.IDFrontPhoto, "transporters")
+			if err != nil {
+				return fmt.Errorf("failed to save ID front photo: %w", err)
+			}
+			idBackPath, err := utils.SaveFile(req.IDBackPhoto, "transporters")
+			if err != nil {
+				return fmt.Errorf("failed to save ID back photo: %w", err)
+			}
 
+			nationalIDNoSanitized := sanitizeNumericString(req.NationalIDNo)
+			kraPinSanitized := sanitizeNumericString(req.KraPin)
 			individual := &models.IndividualTransporter{
 				TransporterID:     transporter.ID,
 				FirstName:         req.FirstName,
 				LastName:          req.LastName,
 				OtherNames:        utils.StringPtr(req.OtherNames),
 				Gender:            utils.StringPtr(req.Gender),
-				NationalIDNo:      utils.StringPtr(req.NationalIDNo),
-				KraPin:            utils.StringPtr(req.KraPin),
+				NationalIDNo:      utils.StringPtr(nationalIDNoSanitized),
 				MaritalStatus:     utils.StringPtr(req.MaritalStatus),
+				KraPin:            utils.StringPtr(kraPinSanitized), // KRA PIN is common to both individual and company
 				NextOfKinFullName: utils.StringPtr(req.NextOfKinFullName),
 				NextOfKinPhone:    utils.StringPtr(req.NextOfKinPhone),
 				PassportPhoto:     utils.StringPtr(passportPath),
@@ -206,7 +224,100 @@ func (s *TransporterService) UpdateTransporter(id string, req dtos.UpdateTranspo
 	transporter.Status = req.Status
 	transporter.Restricted = req.Restricted
 
-	return db.DB.Save(&transporter).Error
+	return db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&transporter).Error; err != nil {
+			return err
+		}
+
+		// Update individual or company details based on category
+		if transporter.Category == "INDIVIDUAL" {
+			var individual models.IndividualTransporter
+			if err := tx.Where("transporter_id = ?", transporter.ID).First(&individual).Error; err != nil {
+				return fmt.Errorf("individual transporter details not found: %w", err)
+			}
+
+			individual.FirstName = req.FirstName
+			individual.LastName = req.LastName
+			individual.OtherNames = utils.StringPtr(req.OtherNames)
+			individual.Gender = utils.StringPtr(req.Gender)
+			individual.MaritalStatus = utils.StringPtr(req.MaritalStatus)
+			individual.NextOfKinFullName = utils.StringPtr(req.NextOfKinFullName)
+			individual.NextOfKinPhone = utils.StringPtr(req.NextOfKinPhone)
+
+			// Sanitize and update NationalIDNo and KraPin
+			nationalIDNoSanitized := sanitizeNumericString(req.NationalIDNo)
+			kraPinSanitized := sanitizeNumericString(req.KraPin)
+			individual.NationalIDNo = utils.StringPtr(nationalIDNoSanitized)
+			individual.KraPin = utils.StringPtr(kraPinSanitized)
+
+			if req.DateOfBirth != "" {
+				t := utils.ParseDate(req.DateOfBirth)
+				individual.DateOfBirth = &t
+			}
+
+			// Handle file uploads for individual
+			if req.PassportPhoto != nil {
+				passportPath, err := utils.SaveFile(req.PassportPhoto, "transporters")
+				if err != nil {
+					return fmt.Errorf("failed to save passport photo: %w", err)
+				}
+				if passportPath != "" { // Only update if a new file was successfully saved
+					individual.PassportPhoto = utils.StringPtr(passportPath)
+				}
+			}
+			if req.IDFrontPhoto != nil {
+				idFrontPath, err := utils.SaveFile(req.IDFrontPhoto, "transporters")
+				if err != nil {
+					return fmt.Errorf("failed to save ID front photo: %w", err)
+				}
+				if idFrontPath != "" { // Only update if a new file was successfully saved
+					individual.IDFrontPhoto = utils.StringPtr(idFrontPath)
+				}
+			}
+			if req.IDBackPhoto != nil {
+				idBackPath, err := utils.SaveFile(req.IDBackPhoto, "transporters")
+				if err != nil {
+					return fmt.Errorf("failed to save ID back photo: %w", err)
+				}
+				if idBackPath != "" { // Only update if a new file was successfully saved
+					individual.IDBackPhoto = utils.StringPtr(idBackPath)
+				}
+			}
+
+			return tx.Save(&individual).Error
+		} else if transporter.Category == "COMPANY" {
+			var company models.CompanyTransporter
+			if err := tx.Where("transporter_id = ?", transporter.ID).First(&company).Error; err != nil {
+				return fmt.Errorf("company transporter details not found: %w", err)
+			}
+
+			company.CompanyName = req.CompanyName
+			company.ContactPersonName = utils.StringPtr(req.ContactPersonName)
+			company.ContactPersonPhone = utils.StringPtr(req.ContactPersonPhone)
+			company.PostalAddress = utils.StringPtr(req.PostalAddress)
+			company.PostalCode = utils.StringPtr(req.PostalCode)
+			company.Town = utils.StringPtr(req.Town)
+
+			// Sanitize and update RegistrationNo and KraPin
+			registrationNoSanitized := sanitizeNumericString(req.RegistrationNo)
+			kraPinCompanySanitized := sanitizeNumericString(req.KraPin)
+			company.RegistrationNo = utils.StringPtr(registrationNoSanitized)
+			company.KraPin = utils.StringPtr(kraPinCompanySanitized)
+
+			// Handle file upload for company
+			if req.CertificateOfIncorporation != nil {
+				certificatePath, err := utils.SaveFile(req.CertificateOfIncorporation, "transporters")
+				if err != nil {
+					return fmt.Errorf("failed to save certificate of incorporation: %w", err)
+				}
+				if certificatePath != "" { // Only update if a new file was successfully saved
+					company.CertificateOfIncorporation = utils.StringPtr(certificatePath)
+				}
+			}
+			return tx.Save(&company).Error
+		}
+		return nil // No specific individual/company update needed or category not matched
+	})
 }
 
 func (s *TransporterService) DeleteTransporter(id string) error {

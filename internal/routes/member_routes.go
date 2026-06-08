@@ -15,6 +15,8 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 
 	memberPayrollController := controllers.NewMemberPayrollController()
 	memberPayDateRangeController := controllers.NewMemberPayDateRangeController()
+	memberPayslipController := controllers.NewMemberPayslipController()
+	memberPayrollDeductionController := controllers.NewMemberPayrollDeductionController()
 
 	// Member Registration Routes
 	api.POST("/members", memberController.CreateMember)
@@ -67,5 +69,20 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/member-payrolls/:id", memberPayrollController.Get)
 	api.PUT("/member-payrolls/:id/confirm", memberPayrollController.Confirm)
 	api.PUT("/member-payrolls/:id/approve", memberPayrollController.Approve)
+	api.GET("/member-payrolls/generation-errors/:payrollID", memberPayrollController.GetGenerationErrors)
+	api.GET("/member-payrolls/approval-errors/:payrollID", memberPayrollController.GetApprovalErrors)
+
+	// Member Payslip Routes
+	api.GET("/member-payslips", memberPayslipController.GetPayslips)
+	api.GET("/member-payslips/statements/:payslip_id/:member_id", memberPayslipController.ExportStatements)
+	api.GET("/member-payslips/export", memberPayslipController.ExportPayslips)
+	api.GET("/member-payslips/export/download/:filename", memberPayslipController.DownloadExportFile)
+	api.GET("/member-payslips/:id", memberPayslipController.GetPayslip)
+
+	// Member Payroll Deduction Routes
+	api.GET("/member-payroll-deductions", memberPayrollDeductionController.GetMemberPayrollDeductions)
+	api.GET("/member-payroll-deductions/export", memberPayrollDeductionController.ExportDeductions)
+	api.GET("/member-payroll-deductions/export/download/:filename", memberPayrollDeductionController.DownloadExportFile)
+	api.GET("/member-payroll-deductions/:id", memberPayrollDeductionController.GetMemberPayrollDeduction)
 
 }

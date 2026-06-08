@@ -11,8 +11,8 @@ import (
 )
 
 func SaveFile(file *multipart.FileHeader, folder string) (string, error) {
-	if file == nil || file.Filename == "" || file.Size == 0 {
-		return "", fmt.Errorf("invalid or empty file provided for folder %s", folder)
+	if file == nil || file.Size == 0 { // If no file is provided or it's empty, return empty path and no error
+		return "", nil
 	}
 
 	src, err := file.Open()

@@ -13,7 +13,7 @@ type MemberResponse struct {
 	OtherNames        string                      `json:"other_names"`
 	RouteID           uint64                      `json:"route_id"`
 	RouteName         string                      `json:"route_name"` // From routes table
-	DateOfBirth       string                      `json:"date_of_birth"`
+	DOB               string                      `json:"date_of_birth"`
 	Gender            string                      `json:"gender"`
 	BirthCity         string                      `json:"birth_city"`
 	PrimaryPhone      string                      `json:"primary_phone"`

@@ -196,7 +196,7 @@ type MemberPayroll struct {
 	PayDateRangeID  *uint64    `gorm:"column:pay_date_range_id"`
 	DateClosed      *time.Time `gorm:"column:date_closed"`
 	Closed          string     `gorm:"column:closed"`
-	PhysicalPeriod  string     `gorm:"column:physical_period"`
+	FiscalPeriod    string     `gorm:"column:fiscal_period"`
 	GrossKilos      float64    `gorm:"column:gross_kilos;default:0.00"`
 	RejectKilos     float64    `gorm:"column:reject_kilos;default:0.00"`
 	NetKilos        float64    `gorm:"column:net_kilos;default:0.00"`
@@ -220,6 +220,7 @@ type MemberPayslip struct {
 	DateOpened      *time.Time `gorm:"column:date_opened"`
 	Description     string     `gorm:"column:description"`
 	Status          string     `gorm:"type:enum('processing','draft','confirmed','approved','closed','cancelled','incomplete');default:'draft';column:status"`
+	RateUsed        string     `gorm:"type:enum('default','special');default:'special';column:rate_used"`
 	PostedAt        *time.Time `gorm:"column:posted_at"`
 	PostedBy        *uint64    `gorm:"column:posted_by"`
 	ConfirmedAt     *time.Time `gorm:"column:confirmed_at"`
@@ -229,7 +230,7 @@ type MemberPayslip struct {
 	PayDateRangeID  *uint64    `gorm:"column:pay_date_range_id"`
 	DateClosed      *time.Time `gorm:"column:date_closed"`
 	Closed          bool       `gorm:"column:closed"`
-	PhysicalPeriod  string     `gorm:"column:physical_period"`
+	FiscalPeriod    string     `gorm:"column:fiscal_period"`
 	GrossKilos      float64    `gorm:"column:gross_kilos"`
 	RejectKilos     float64    `gorm:"column:reject_kilos"`
 	NetKilos        float64    `gorm:"column:net_kilos"`
@@ -245,23 +246,30 @@ func (MemberPayslip) TableName() string {
 	return "member_payslips"
 }
 
+// MemberPayrollDeduction represents a record in the member_payroll_deductions table.
 type MemberPayrollDeduction struct {
 	BaseModel
-	MemberID        int64     `gorm:"column:member_id"`
-	DeductionMonth  string    `gorm:"column:deduction_month"`
-	FiscalYear      int       `gorm:"column:fiscal_year"`
-	DeductionTypeID uint64    `gorm:"column:deduction_type_id"`
-	Amount          float64   `gorm:"column:amount"` // Varchar in schema
-	Priority        int       `gorm:"column:priority"`
-	Settled         string    `gorm:"column:settled"`
-	TransactionDate time.Time `gorm:"column:transaction_date"`
-	DateCaptured    time.Time `gorm:"column:date_captured"`
-	Confirmed       string    `gorm:"column:confirmed;default:'0'"`
-	PayrollID       uint64    `gorm:"column:payroll_id"`
-	Reference       string    `gorm:"column:reference"`
-	SettlementType  string    `gorm:"column:settlement_type"`
+	MemberID        uint64     `gorm:"column:member_id"`
+	DeductionMonth  string     `gorm:"column:deduction_month"`
+	FiscalYear      int        `gorm:"column:fiscal_year"`
+	DeductionTypeID uint64     `gorm:"column:deduction_type_id"`
+	Amount          string     `gorm:"column:amount"` // Stored as varchar in DB
+	Priority        int        `gorm:"column:priority"`
+	Settled         string     `gorm:"column:settled"` // Stored as varchar in DB, likely "0" or "1"
+	TransactionDate *time.Time `gorm:"column:transaction_date"`
+	DateCaptured    *time.Time `gorm:"column:date_captured"`
+	Confirmed       string     `gorm:"column:confirmed"` // Stored as varchar in DB, likely "0" or "1"
+	PayrollID       uint64     `gorm:"column:payroll_id"`
+	Reference       string     `gorm:"column:reference"`
+	SettlementType  string     `gorm:"column:settlement_type"`
+
+	// Relations (assuming these models exist)
+	Member        Member        `gorm:"foreignKey:MemberID"`
+	DeductionType DeductionType `gorm:"foreignKey:DeductionTypeID"`
+	MemberPayroll MemberPayroll `gorm:"foreignKey:PayrollID"`
 }
 
+// TableName specifies the table name for MemberPayrollDeduction.
 func (MemberPayrollDeduction) TableName() string {
 	return "member_payroll_deductions"
 }

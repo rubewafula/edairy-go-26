@@ -231,7 +231,7 @@ func (s *MemberService) GetMember(id string) (*dtos.MemberResponse, error) {
 		SELECT 
 			m.id, m.member_no, m.member_type_id, mt.name AS member_type_name,
 			m.first_name, m.last_name, m.other_names, m.route_id, r.route_name,
-			m.date_of_birth, m.id_no, m.gender, m.birth_city,
+			m.dob, m.id_no, m.gender, m.birth_city,
 			m.primary_phone, m.secondary_phone, m.email, m.number_of_cows,
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,

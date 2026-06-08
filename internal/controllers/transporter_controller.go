@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"bytes"
+	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -22,20 +25,42 @@ func NewTransporterController() *TransporterController {
 	}
 }
 
+func (c *TransporterController) logRawRequest(ctx *gin.Context) {
+
+	body, _ := io.ReadAll(ctx.Request.Body)
+
+	log.Printf(`
+	Method: %s
+	URL: %s
+	Headers: %+v
+	Body: %s
+	`,
+		ctx.Request.Method,
+		ctx.Request.URL.String(),
+		ctx.Request.Header,
+		string(body),
+	)
+
+	ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+}
+
 func (c *TransporterController) CreateTransporter(ctx *gin.Context) {
 	var req dtos.CreateTransporterRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBind(&req); err != nil {
+		log.Println("Error binding JSON: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Println("Error validating binding JSON: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	transporter, err := c.service.CreateTransporter(req)
 	if err != nil {
+		log.Println("Error Creating transporter: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

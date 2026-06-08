@@ -70,8 +70,7 @@ func (s *IndividualTransporterService) UpdateIndividualTransporter(id string, re
 		if err := tx.Save(&individual).Error; err != nil {
 			return err
 		}
-		// Update the RouteID on the parent Transporter record
-		return tx.Model(&models.Transporter{}).Where("id = ?", individual.TransporterID).Update("route_id", req.RouteID).Error
+		return nil
 	})
 }
 

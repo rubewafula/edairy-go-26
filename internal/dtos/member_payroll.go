@@ -6,7 +6,7 @@ type CreateMemberPayrollRequest struct {
 	DateOpened     string `json:"date_opened" validate:"required"`
 	Description    string `json:"description"`
 	PayDateRangeID uint64 `json:"pay_date_range_id" validate:"required"`
-	PhysicalPeriod string `json:"physical_period" validate:"required"`
+	FiscalPeriod   string `json:"fiscal_period" validate:"required"`
 }
 
 type UpdateMemberPayrollRequest struct {

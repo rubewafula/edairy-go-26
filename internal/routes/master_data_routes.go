@@ -9,6 +9,7 @@ func registerMasterDataRoutes(api *gin.RouterGroup) {
 	cattleBreedController := controllers.NewCattleBreedController()
 	deductionTypeController := controllers.NewDeductionTypeController()
 	deductionPricingRuleController := controllers.NewDeductionPricingRuleController()
+	recurrentDeductionController := controllers.NewRecurrentDeductionController()
 	paymentModeController := controllers.NewPaymentModeController()
 
 	activityLogController := controllers.NewActivityLogController()
@@ -44,5 +45,11 @@ func registerMasterDataRoutes(api *gin.RouterGroup) {
 	// Activity Log Routes
 	api.GET("/activity-logs", activityLogController.GetLogs)
 	api.GET("/activity-logs/:id", activityLogController.GetLog)
+
+	// Recurrent Deduction Routes
+	api.GET("/member-deductions", recurrentDeductionController.GetRecurrentDeductions)
+	api.GET("/member-deductions/:id", recurrentDeductionController.GetRecurrentDeduction)
+	api.GET("/member-deductions/export", recurrentDeductionController.ExportRecurrentDeductions)
+	api.GET("/member-deductions/export/download/:filename", recurrentDeductionController.DownloadExportFile)
 
 }

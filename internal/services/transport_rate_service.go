@@ -45,7 +45,7 @@ func (s *TransportRateService) GetTransportRates(page, limit int, transporterNo,
 			tr.id, m.member_no, m.first_name AS member_first_name, m.last_name AS member_last_name,
 			r.route_name,
 			t.transporter_no,
-			tr.transport_rate AS rate, tr.status, 
+			tr.rate, tr.status, 
 			tr.created_at, tr.updated_at
 		FROM transport_rates tr
 		LEFT JOIN member_registrations m ON tr.member_id = m.id

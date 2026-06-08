@@ -59,7 +59,7 @@ func (s *CompanyTransporterService) UpdateCompanyTransporter(id string, req dtos
 		if err := tx.Save(&company).Error; err != nil {
 			return err
 		}
-		return tx.Model(&models.Transporter{}).Where("id = ?", company.TransporterID).Update("route_id", req.RouteID).Error
+		return nil
 	})
 }
 

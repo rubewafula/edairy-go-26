@@ -30,6 +30,12 @@ func Now() time.Time {
 	return time.Now().In(initializers.EAT)
 }
 
+// NowPtr returns a pointer to the current time in East Africa Time.
+func NowPtr() *time.Time {
+	now := Now()
+	return &now
+}
+
 // ParseDate parses a string into a time.Time object.
 func ParseDate(dateStr string) time.Time {
 	t, _ := time.Parse("2006-01-02", dateStr)
