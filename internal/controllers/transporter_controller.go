@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
 	validator "github.com/rubewafula/edairy-go-26/internal/validators"
+	"gorm.io/gorm"
 )
 
 type TransporterController struct {
@@ -82,7 +84,11 @@ func (c *TransporterController) GetTransporters(ctx *gin.Context) {
 func (c *TransporterController) GetTransporter(ctx *gin.Context) {
 	transporter, err := c.service.GetTransporter(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, transporter)
@@ -96,6 +102,10 @@ func (c *TransporterController) UpdateTransporter(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateTransporter(ctx.Param("id"), req); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -104,6 +114,10 @@ func (c *TransporterController) UpdateTransporter(ctx *gin.Context) {
 
 func (c *TransporterController) DeleteTransporter(ctx *gin.Context) {
 	if err := c.service.DeleteTransporter(ctx.Param("id")); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -329,12 +329,10 @@ func (s *EmployeePayrollService) GetEmployeePayrolls(page, limit int) ([]dtos.Em
 	query := `
 		SELECT 
 			ep.*, 
-			epdr.name as pay_date_range_name,
 			u_post.name as posted_by_name,
 			u_conf.name as confirmed_by_name,
 			u_appr.name as approved_by_name
 		FROM employee_payrolls ep
-		LEFT JOIN employee_pay_date_ranges epdr ON ep.pay_date_range_id = epdr.id
 		LEFT JOIN users u_post ON ep.posted_by = u_post.id
 		LEFT JOIN users u_conf ON ep.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON ep.approved_by = u_appr.id
@@ -351,12 +349,10 @@ func (s *EmployeePayrollService) GetEmployeePayroll(id string) (*dtos.EmployeePa
 	query := `
 		SELECT 
 			ep.*, 
-			epdr.name as pay_date_range_name,
 			u_post.name as posted_by_name,
 			u_conf.name as confirmed_by_name,
 			u_appr.name as approved_by_name
 		FROM employee_payrolls ep
-		LEFT JOIN employee_pay_date_ranges epdr ON ep.pay_date_range_id = epdr.id
 		LEFT JOIN users u_post ON ep.posted_by = u_post.id
 		LEFT JOIN users u_conf ON ep.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON ep.approved_by = u_appr.id
@@ -411,7 +407,7 @@ func (s *EmployeePayrollService) ConfirmPayroll(payrollID uint64, userID uint64)
 	return &payroll, err
 }
 
-func (s *EmployeePayrollService) ApprovePayroll(payrollID uint64, userID uint64) (*models.EmployeePayroll, error) {
+func (s *EmployeePayrollService) ApprovePayroll(payrollID uint64, userID uint64, isApproved bool) (*models.EmployeePayroll, error) {
 	var payroll models.EmployeePayroll
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -419,30 +415,70 @@ func (s *EmployeePayrollService) ApprovePayroll(payrollID uint64, userID uint64)
 			return err
 		}
 
-		if payroll.Status != "confirmed" {
-			return fmt.Errorf("payroll must be in 'confirmed' status to be approved, current status: %s", payroll.Status)
-		}
+		if !isApproved {
+			if payroll.Status != "confirmed" {
+				return fmt.Errorf("payroll must be in 'confirmed' status to be rejected, current status: %s", payroll.Status)
+			}
 
-		var errCount int64
-		tx.Model(&models.EmployeePayrollGenerationError{}).Where("error LIKE ?", "%"+payroll.PayrollMonth+" "+payroll.PayrollYear+"%").Count(&errCount)
-		if errCount > 0 {
-			return fmt.Errorf("cannot approve payroll with %d generation errors", errCount)
-		}
+			// Reject logic
+			now := time.Now()
+			if err := tx.Model(&payroll).Updates(map[string]interface{}{
+				"status":      "rejected",
+				"rejected_at": &now,
+				"rejected_by": &userID,
+				"updated_by":  userID,
+				"updated_at":  now,
+			}).Error; err != nil {
+				return err
+			}
 
-		var incompleteCount int64
-		tx.Model(&models.EmployeePayslip{}).Where("payroll_id = ? AND status = 'incomplete'", payrollID).Count(&incompleteCount)
-		if incompleteCount > 0 {
-			return fmt.Errorf("cannot approve payroll with %d incomplete payslips", incompleteCount)
-		}
+			// Mark all associated payslips as rejected
+			if err := tx.Model(&models.EmployeePayslip{}).Where("payroll_id = ?", payrollID).Update("status", "rejected").Error; err != nil {
+				return err
+			}
 
-		return tx.Model(&payroll).Update("status", "approving").Error
+			// Delete associated payroll deductions, benefits, and reliefs
+			if err := tx.Where("payroll_id = ?", payrollID).Delete(&models.EmployeePayrollDeduction{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("payroll_id = ?", payrollID).Delete(&models.EmployeePayrollBenefit{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("payroll_id = ?", payrollID).Delete(&models.EmployeePayrollRelief{}).Error; err != nil {
+				return err
+			}
+
+			log.Printf("[EmployeePayrollService.ApprovePayroll] Payroll %d rejected by user %d", payrollID, userID)
+			return nil // Transaction successful for rejection
+		} else {
+			// Approve logic (existing)
+			if payroll.Status != "confirmed" {
+				return fmt.Errorf("payroll must be in 'confirmed' status to be approved, current status: %s", payroll.Status)
+			}
+
+			var errCount int64
+			tx.Model(&models.EmployeePayrollGenerationError{}).Where("error LIKE ?", "%"+payroll.PayrollMonth+" "+payroll.PayrollYear+"%").Count(&errCount)
+			if errCount > 0 {
+				return fmt.Errorf("cannot approve payroll with %d generation errors", errCount)
+			}
+
+			var incompleteCount int64
+			tx.Model(&models.EmployeePayslip{}).Where("payroll_id = ? AND status = 'incomplete'", payrollID).Count(&incompleteCount)
+			if incompleteCount > 0 {
+				return fmt.Errorf("cannot approve payroll with %d incomplete payslips", incompleteCount)
+			}
+
+			return tx.Model(&payroll).Update("status", "approving").Error
+		}
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	go s.approvePayrollInBackground(payrollID, userID)
+	if isApproved {
+		go s.approvePayrollInBackground(payrollID, userID)
+	}
 
 	return &payroll, nil
 }

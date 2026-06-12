@@ -32,11 +32,9 @@ type TransporterPayDateRangeResponse struct {
 // TransporterPayroll DTOs
 type CreateTransporterPayrollRequest struct {
 	PayDateRangeID uint64 `json:"pay_date_range_id" validate:"required"`
-	PayrollMonth   string `json:"payroll_month" validate:"required"`
-	PayrollYear    string `json:"payroll_year" validate:"required"`
 	DateOpened     string `json:"date_opened" validate:"required"`
 	Description    string `json:"description"`
-	PhysicalPeriod string `json:"physical_period"`
+	FiscalPeriod   string `json:fiscal_period"`
 }
 
 type UpdateTransporterPayrollRequest struct {
@@ -57,7 +55,7 @@ type TransporterPayrollResponse struct {
 	PayrollYear      string     `json:"payroll_year"`
 	DateOpened       *time.Time `json:"date_opened"`
 	Description      string     `json:"description"`
-	PhysicalPeriod   string     `json:"physical_period"`
+	FiscalPeriod     string     `json:"fiscal_period"`
 	TotalKilos       float64    `json:"total_kilos"`
 	TotalDeductions  float64    `json:"total_deductions"`
 	GrossPay         float64    `json:"gross_pay"`
@@ -85,7 +83,7 @@ type TransporterPayslipResponse struct {
 	PayDateRangeID  *uint64    `json:"pay_date_range_id"`
 	PayrollMonth    string     `json:"payroll_month"`
 	PayrollYear     string     `json:"payroll_year"`
-	PhysicalPeriod  string     `json:"physical_period"`
+	FiscalPeriod    string     `json:"fiscal_period"`
 	TotalKilos      float64    `json:"total_kilos"`
 	GrossPay        float64    `json:"gross_pay"`
 	TotalDeductions float64    `json:"total_deductions"`

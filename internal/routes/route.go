@@ -92,6 +92,7 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	registerRouteRoutes(api)
 	registerMasterDataRoutes(api)
 	registerLocationRoutes(api)
+	registerHRRoutes(api)
 
 	// Auth & Dashboard
 	authController := controllers.NewAuthController()

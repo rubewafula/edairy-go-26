@@ -13,7 +13,6 @@ type SMSGroup struct {
 
 type SMSContact struct {
 	ID          uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	SMSGroupID  uint64    `gorm:"column:sms_group_id"`
 	Name        string    `gorm:"column:name"`
 	PhoneNumber string    `gorm:"column:phone_number"`
 	CreatedAt   time.Time `gorm:"column:created_at"`
@@ -21,13 +20,11 @@ type SMSContact struct {
 }
 
 type SMSMessage struct {
-	ID         uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	SMSGroupID *uint64   `gorm:"column:sms_group_id"`
-	Recipient  string    `gorm:"column:recipient"`
-	Message    string    `gorm:"column:message"`
-	Status     string    `gorm:"column:status;default:'pending'"`
-	CreatedAt  time.Time `gorm:"column:created_at"`
-	UpdatedAt  time.Time `gorm:"column:updated_at"`
+	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Message   string    `gorm:"column:message"`
+	Status    string    `gorm:"column:status;default:'pending'"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
 }
 
 type SMSQueue struct {
@@ -76,15 +73,12 @@ type SMSCampaign struct {
 	CampaignCode    string     `gorm:"uniqueIndex;column:campaign_code"`
 	CampaignName    string     `gorm:"column:campaign_name"`
 	Description     string     `gorm:"column:description"`
-	Message         string     `gorm:"column:message"`
-	SMSGroupID      *uint64    `gorm:"column:sms_group_id"`
 	TotalRecipients int        `gorm:"column:total_recipients;default:0"`
 	TotalSent       int        `gorm:"column:total_sent;default:0"`
 	TotalFailed     int        `gorm:"column:total_failed;default:0"`
 	Status          string     `gorm:"type:enum('draft','scheduled','running','completed','cancelled');default:'draft';column:status"`
 	ScheduledAt     *time.Time `gorm:"column:scheduled_at"`
 	CompletedAt     *time.Time `gorm:"column:completed_at"`
-	SiteID          *uint64    `gorm:"column:site_id"`
 }
 
 type SMSCampaignRecipient struct {

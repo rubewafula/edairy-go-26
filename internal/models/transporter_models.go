@@ -20,11 +20,9 @@ func (TransporterPayDateRange) TableName() string {
 type TransporterPayroll struct {
 	BaseModel
 	PayDateRangeID  *uint64    `gorm:"column:pay_date_range_id"`
-	PayrollMonth    string     `gorm:"column:payroll_month"`
-	PayrollYear     string     `gorm:"column:payroll_year"`
 	DateOpened      *time.Time `gorm:"column:date_opened"`
 	Description     string     `gorm:"column:description"`
-	PhysicalPeriod  string     `gorm:"column:physical_period"`
+	FiscalPeriod    string     `gorm:"column:fiscal_period"`
 	TotalKilos      float64    `gorm:"column:total_kilos;default:0.00"`
 	TotalDeductions float64    `gorm:"column:total_deductions;default:0.00"`
 	GrossPay        float64    `gorm:"column:gross_pay;default:0.00"`
@@ -53,7 +51,7 @@ type TransporterPayslip struct {
 	PayrollMonth    string     `gorm:"column:payroll_month"`
 	PayrollYear     string     `gorm:"column:payroll_year"`
 	TotalKilos      float64    `gorm:"column:total_kilos;default:0.00"`
-	PhysicalPeriod  string     `gorm:"column:physical_period"`
+	FiscalPeriod    string     `gorm:"column:fiscal_period"`
 	GrossPay        float64    `gorm:"column:gross_pay;default:0.00"`
 	TotalDeductions float64    `gorm:"column:total_deductions;default:0.00"`
 	TotalBenefits   float64    `gorm:"column:total_benefits;default:0.00"`

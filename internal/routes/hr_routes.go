@@ -5,7 +5,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/controllers"
 )
 
-func RegisterHRRoutes(api *gin.RouterGroup) {
+func registerHRRoutes(api *gin.RouterGroup) {
 	departmentController := controllers.NewDepartmentController()
 	jobPositionController := controllers.NewJobPositionController()
 

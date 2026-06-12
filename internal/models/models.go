@@ -178,9 +178,9 @@ type CashTransaction struct {
 
 type Route struct {
 	BaseModel
-	Name        string `gorm:"column:name"`
+	Name        string `gorm:"column:route_name"`
 	Description string `gorm:"column:description"`
-	Code        string `gorm:"column:code"`
+	Code        string `gorm:"column:route_code"`
 	LocationID  uint64 `gorm:"column:location_id"`
 }
 

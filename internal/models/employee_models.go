@@ -94,9 +94,10 @@ type EmployeeDeduction struct {
 
 type EmployeeLeaveDetail struct {
 	BaseModel
-	EmployeeID    uint64 `gorm:"index;column:employee_id"`
-	BalanceBF     string `gorm:"column:balance_bf"`
-	AllocatedDays int    `gorm:"column:allocated_days"`
+	EmployeeID          uint64 `gorm:"index;column:employee_id"`
+	BalanceBF           string `gorm:"column:balance_bf"`
+	AllocatedDays       int    `gorm:"column:allocated_days"`
+	EmployeeLeaveTypeID uint64 `gorm:"index;column:employee_leave_type_id"`
 }
 
 type EmployeePayrollDeduction struct {

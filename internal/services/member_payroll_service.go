@@ -45,6 +45,7 @@ func (s *MemberPayrollService) Create(req dtos.CreateMemberPayrollRequest, userI
 	allowedStatuses := map[string]bool{
 		"draft":      true,
 		"incomplete": true,
+		"rejected":   true,
 		"DRAFT":      true,
 		"INCOMPLTE":  true,
 	}
@@ -902,7 +903,7 @@ func (s *MemberPayrollService) generatePayslipPDF(results []dtos.MemberPayslipRe
 	return buf.Bytes(), err
 }
 
-func (s *MemberPayrollService) Approve(payrollID uint64, userID uint64) (*models.MemberPayroll, error) {
+func (s *MemberPayrollService) Approve(payrollID uint64, userID uint64, isApproved bool) (*models.MemberPayroll, error) {
 	var payroll models.MemberPayroll
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		// 1. Validate state and Lock payroll record
@@ -911,33 +912,65 @@ func (s *MemberPayrollService) Approve(payrollID uint64, userID uint64) (*models
 			return err
 		}
 
-		// 2. Ensure payroll is in 'confirmed' status
-		if payroll.Status != "confirmed" {
-			return fmt.Errorf("payroll must be in 'confirmed' status to be approved, current status: %s", payroll.Status)
-		}
+		if !isApproved {
+			if payroll.Status != "confirmed" {
+				return fmt.Errorf("payroll must be in 'confirmed' status to be rejected, current status: %s", payroll.Status) // Rejection is only allowed from 'confirmed' state
+			}
 
-		// 3. Validate all payslips are complete and no generation errors exist
-		var errCount int64
-		tx.Model(&models.MemberPayrollGenerationError{}).Where("payroll_id = ?", payrollID).Count(&errCount)
-		if errCount > 0 {
-			return fmt.Errorf("cannot approve payroll with %d generation errors", errCount)
-		}
+			// Reject logic
+			now := time.Now()
+			if err := tx.Model(&payroll).Updates(map[string]interface{}{
+				"status":      "rejected",
+				"rejected_at": &now,
+				"rejected_by": &userID,
+				"updated_by":  userID,
+				"updated_at":  now,
+			}).Error; err != nil {
+				return err
+			}
 
-		var incompleteCount int64
-		tx.Model(&models.MemberPayslip{}).Where("payroll_id = ? AND status = 'incomplete'", payrollID).Count(&incompleteCount)
-		if incompleteCount > 0 {
-			return fmt.Errorf("cannot approve payroll with %d incomplete payslips", incompleteCount)
-		}
+			// Mark all associated payslips as rejected
+			if err := tx.Model(&models.MemberPayslip{}).Where("payroll_id = ?", payrollID).Update("status", "rejected").Error; err != nil {
+				return err
+			}
 
-		// Update status to prevent re-triggering
-		return tx.Model(&payroll).Update("status", "approving").Error
+			// Delete associated payroll deductions
+			if err := tx.Where("payroll_id = ?", payrollID).Delete(&models.MemberPayrollDeduction{}).Error; err != nil {
+				return err
+			}
+
+			log.Printf("[MemberPayrollService.Approve] Payroll %d rejected by user %d", payrollID, userID)
+			return nil
+		} else {
+			// Approve logic (existing)
+			if payroll.Status != "confirmed" && payroll.Status != "incomplete" {
+				return fmt.Errorf("payroll must be in 'confirmed' or 'incomplete' status to be approved, current status: %s", payroll.Status)
+			}
+
+			var errCount int64
+			tx.Model(&models.MemberPayrollGenerationError{}).Where("payroll_id = ?", payrollID).Count(&errCount)
+			if errCount > 0 {
+				return fmt.Errorf("cannot approve payroll with %d generation errors", errCount)
+			}
+
+			var incompleteCount int64
+			tx.Model(&models.MemberPayslip{}).Where("payroll_id = ? AND status = 'incomplete'", payrollID).Count(&incompleteCount)
+			if incompleteCount > 0 {
+				return fmt.Errorf("cannot approve payroll with %d incomplete payslips", incompleteCount)
+			}
+
+			// Update status to prevent re-triggering
+			return tx.Model(&payroll).Update("status", "approving").Error
+		}
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	go s.approvePayrollInBackground(payrollID, userID)
+	if isApproved {
+		go s.approvePayrollInBackground(payrollID, userID)
+	}
 
 	return &payroll, nil
 }
@@ -1255,6 +1288,12 @@ func (s *MemberPayrollService) Confirm(payrollID uint64, userID uint64) (*models
 		if err := tx.Model(&models.MemberPayslip{}).Where("payroll_id = ?", payrollID).Update("status", "confirmed").Error; err != nil {
 			return err
 		}
+
+		// Clear all generation/processing errors related to this payroll on successful confirmation
+		if err := tx.Where("payroll_id = ?", payrollID).Delete(&models.MemberPayrollGenerationError{}).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 	return &payroll, err

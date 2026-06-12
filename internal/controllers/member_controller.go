@@ -88,6 +88,7 @@ func (c *MemberController) GetMembers(ctx *gin.Context) {
 	primaryPhone := ctx.Query("primary_phone")
 	memberTypeID := ctx.Query("member_type_id")
 	routeID := ctx.Query("route_id")
+	q := ctx.Query("q")
 
 	members, total, err := c.service.GetMembers(
 		page,
@@ -95,7 +96,8 @@ func (c *MemberController) GetMembers(ctx *gin.Context) {
 		memberNo,
 		primaryPhone,
 		memberTypeID,
-		routeID)
+		routeID,
+		q)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -223,6 +225,23 @@ func (c *MemberController) ExportMembers(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusAccepted, gin.H{"message": "Member export started in the background. You will receive a notification when it's ready."})
+}
+
+func (c *MemberController) ExportAGMReport(ctx *gin.Context) {
+	memberNo := ctx.Query("member_no")
+	primaryPhone := ctx.Query("primary_phone")
+	memberTypeID := ctx.Query("member_type_id")
+	routeID := ctx.Query("route_id")
+	gender := ctx.Query("gender")
+	status := ctx.Query("status")
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.ExportAGMReport(userID, memberNo, primaryPhone, memberTypeID, routeID, gender, status); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "AGM Printable Report export started in the background. You will receive a notification when it's ready."})
 }
 
 func (c *MemberController) DownloadExportFile(ctx *gin.Context) {

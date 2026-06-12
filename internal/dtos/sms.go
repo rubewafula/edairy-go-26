@@ -9,7 +9,6 @@ type CreateSMSGroupRequest struct {
 }
 
 type CreateSMSContactRequest struct {
-	SMSGroupID  uint64 `json:"sms_group_id" validate:"required"`
 	Name        string `json:"name" validate:"required"`
 	PhoneNumber string `json:"phone_number" validate:"required"`
 }
@@ -75,13 +74,13 @@ type SMSTemplateResponse struct {
 
 // SMS Campaign
 type CreateSMSCampaignRequest struct {
-	CampaignCode string `json:"campaign_code" validate:"required"`
-	CampaignName string `json:"campaign_name" validate:"required"`
-	Description  string `json:"description"`
-	Message      string `json:"message" validate:"required"`
-	SMSGroupID   uint64 `json:"sms_group_id" validate:"required"`
-	ScheduledAt  string `json:"scheduled_at" validate:"omitempty,datetime"`
-	SiteID       uint64 `json:"site_id"`
+	CampaignCode string   `json:"campaign_code" validate:"required"`
+	CampaignName string   `json:"campaign_name" validate:"required"`
+	Description  string   `json:"description"`
+	Message      string   `json:"message" validate:"required"`
+	SMSGroupIDs  []uint64 `json:"sms_group_id" validate:"required"`
+	ScheduledAt  string   `json:"scheduled_at" validate:"omitempty,datetime"`
+	ExpiryDate   uint64   `json:"expiry_date"`
 }
 
 type SMSCampaignResponse struct {
@@ -104,7 +103,6 @@ type UpdateSMSCampaignRequest struct {
 	SMSGroupID   uint64 `json:"sms_group_id"`
 	ScheduledAt  string `json:"scheduled_at" validate:"omitempty,datetime"`
 	Status       string `json:"status" validate:"omitempty,oneof=draft pending approved sent failed"`
-	SiteID       uint64 `json:"site_id"`
 }
 
 type SMSCampaignRecipientResponse struct {
@@ -136,4 +134,25 @@ type UpdateSMSCampaignRecipientRequest struct {
 	RecipientName string `json:"recipient_name"`
 	PhoneNo       string `json:"phone_no"`
 	Status        string `json:"status"`
+}
+
+// SMS In-App Configuration
+type CreateSMSInAppConfigurationRequest struct {
+	ActivityCode        string `json:"activity_code" validate:"required"`
+	ActivityDescription string `json:"activity_description"`
+	IsEnabled           bool   `json:"is_enabled"`
+}
+
+type UpdateSMSInAppConfigurationRequest struct {
+	ActivityDescription string `json:"activity_description"`
+	IsEnabled           bool   `json:"is_enabled"`
+}
+
+type SMSInAppConfigurationResponse struct {
+	ID                  uint64    `json:"id"`
+	ActivityCode        string    `json:"activity_code"`
+	ActivityDescription string    `json:"activity_description"`
+	IsEnabled           bool      `json:"is_enabled"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }

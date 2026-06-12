@@ -110,17 +110,30 @@ func (c *EmployeePayrollController) ApprovePayroll(ctx *gin.Context) {
 	}
 
 	userID := ctx.GetUint64("user_id")
-	payroll, err := c.service.ApprovePayroll(id, userID)
+
+	// Define a local struct to capture the approval flag
+	var req struct {
+		IsApproved bool `json:"is_approved"`
+	}
+
+	// Bind the JSON body
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "is_approved field is required"})
+		return
+	}
+
+	payroll, err := c.service.ApprovePayroll(id, userID, req.IsApproved)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Employee payroll not found"})
 			return
 		}
-		log.Printf("[EmployeePayrollController.ApprovePayroll] Error approving payroll %d: %v", id, err)
+		log.Printf("[EmployeePayrollController.ApprovePayroll] Error processing payroll approval/rejection %d: %v", id, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusAccepted, payroll)
+	message := "Payroll approval/rejection initiated successfully"
+	ctx.JSON(http.StatusAccepted, gin.H{"message": message, "data": payroll})
 }
 
 // GetEmployeePayrolls godoc

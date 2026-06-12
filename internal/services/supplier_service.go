@@ -87,6 +87,34 @@ func (s *SupplierService) GetSupplier(id string) (*models.Supplier, error) {
 	return &supplier, nil
 }
 
+func (s *SupplierService) UpdateSupplier(id string, req dtos.CreateSupplierRequest, userID uint64) error {
+	var supplier models.Supplier
+	if err := db.DB.First(&supplier, id).Error; err != nil {
+		return err
+	}
+
+	updates := map[string]interface{}{
+		"supplier_category_id": req.SupplierCategoryID,
+		"supplier_type":        req.SupplierType,
+		"company_name":         req.CompanyName,
+		"first_name":           req.FirstName,
+		"last_name":            req.LastName,
+		"phone_no":             req.PhoneNo,
+		"email_address":        req.EmailAddress,
+		"kra_pin":              req.KraPin,
+		"credit_limit":         req.CreditLimit,
+		"payment_terms_days":   req.PaymentTermsDays,
+		"status":               req.Status,
+		"notes":                req.Notes,
+		"updated_by":           userID,
+	}
+	return db.DB.Model(&supplier).Updates(updates).Error
+}
+
+func (s *SupplierService) DeleteSupplier(id string) error {
+	return db.DB.Delete(&models.Supplier{}, id).Error
+}
+
 func (s *SupplierService) CreateContact(req dtos.CreateSupplierContactRequest, userID uint64) (*models.SupplierContact, error) {
 	contact := &models.SupplierContact{
 		BaseModel:          models.BaseModel{CreatedBy: userID},

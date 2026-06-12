@@ -29,7 +29,7 @@ type MemberPayrollResponse struct {
 	Status           string     `json:"status"`
 	PayDateRangeID   *uint64    `json:"pay_date_range_id"`
 	PayDateRangeName string     `json:"pay_date_range_name"`
-	PhysicalPeriod   string     `json:"physical_period"`
+	FiscalPeriod     string     `json:"fiscal_period"`
 	GrossKilos       float64    `json:"gross_kilos"`
 	RejectKilos      float64    `json:"reject_kilos"`
 	NetKilos         float64    `json:"net_kilos"`

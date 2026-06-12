@@ -155,7 +155,7 @@ func (s *MemberService) CreateMember(
 }
 
 // Get all users
-func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memberTypeID, routeID string) ([]dtos.MemberResponse, int64, error) {
+func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memberTypeID, routeID, q string) ([]dtos.MemberResponse, int64, error) {
 	var results []dtos.MemberResponse
 	var total int64
 
@@ -207,6 +207,11 @@ func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memb
 	if routeID != "" {
 		whereClauses = append(whereClauses, "m.route_id = ?")
 		args = append(args, routeID)
+	}
+	if q != "" {
+		whereClauses = append(whereClauses, "(m.first_name LIKE ? OR m.last_name LIKE ? OR m.id_no LIKE ?)")
+		search := "%" + q + "%"
+		args = append(args, search, search, search)
 	}
 
 	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
@@ -931,6 +936,131 @@ func (s *MemberService) generateMemberPDF(results []memberExportQueryResult, rou
 		pdf.CellFormat(45, 8, m.MemberTypeName, "1", 0, "L", false, 0, "")
 		pdf.CellFormat(45, 8, m.RouteName, "1", 0, "L", false, 0, "")
 		pdf.CellFormat(25, 8, m.Status, "1", 0, "L", false, 0, "")
+		pdf.Ln(-1)
+	}
+
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	return buf.Bytes(), err
+}
+
+// ExportAGMReport initiates a background process to export a printable AGM attendance register.
+func (s *MemberService) ExportAGMReport(userID uint64, memberNo, primaryPhone, memberTypeID, routeID, gender, status string) error {
+	go s.processAGMReportInBackground(userID, memberNo, primaryPhone, memberTypeID, routeID, gender, status)
+	return nil
+}
+
+func (s *MemberService) processAGMReportInBackground(userID uint64, memberNo, primaryPhone, memberTypeID, routeID, gender, status string) {
+	var results []memberExportQueryResult
+
+	// Query optimized for attendance (Alphabetical sorting)
+	baseQuery := `
+		SELECT
+			m.id, m.member_no, m.id_no, m.first_name, m.last_name, m.other_names,
+			m.primary_phone, m.status, r.route_name
+		FROM member_registrations m
+		LEFT JOIN routes r ON m.route_id = r.id
+	`
+
+	var args []interface{}
+	whereClauses := []string{"m.deleted_at IS NULL"}
+
+	if memberNo != "" {
+		whereClauses = append(whereClauses, "m.member_no LIKE ?")
+		args = append(args, "%"+memberNo+"%")
+	}
+	if primaryPhone != "" {
+		primaryPhone = utils.NormalizePhone(primaryPhone)
+		whereClauses = append(whereClauses, "m.primary_phone LIKE ?")
+		args = append(args, "%"+primaryPhone+"%")
+	}
+	if memberTypeID != "" {
+		whereClauses = append(whereClauses, "m.member_type_id = ?")
+		args = append(args, memberTypeID)
+	}
+	if routeID != "" {
+		whereClauses = append(whereClauses, "m.route_id = ?")
+		args = append(args, routeID)
+	}
+	if gender != "" {
+		whereClauses = append(whereClauses, "m.gender = ?")
+		args = append(args, gender)
+	}
+	if status != "" {
+		whereClauses = append(whereClauses, "m.status = ?")
+		args = append(args, status)
+	}
+
+	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	// Sort by Name for easier lookup on a printed list
+	err := db.DB.Raw(baseQuery+whereSql+" ORDER BY m.first_name ASC, m.last_name ASC", args...).Scan(&results).Error
+	if err != nil {
+		log.Printf("[MemberService.processAGMReportInBackground] Error querying members: %v", err)
+		s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+			Title:            "AGM Report Failed",
+			Message:          fmt.Sprintf("Failed to export AGM report: %v", err),
+			NotificationType: "ERROR",
+		})
+		return
+	}
+
+	fileData, err := s.generateAGMReportPDF(results)
+	if err != nil {
+		log.Printf("[MemberService.processAGMReportInBackground] Error generating PDF: %v", err)
+		return
+	}
+
+	exportDir := "./storage/exports"
+	os.MkdirAll(exportDir, 0755)
+	filename := fmt.Sprintf("agm_attendance_%d.pdf", utils.Now().UnixNano())
+	filePath := filepath.Join(exportDir, filename)
+
+	if err := os.WriteFile(filePath, fileData, 0644); err != nil {
+		log.Printf("[MemberService.processAGMReportInBackground] Failed to save file: %v", err)
+		return
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "AGM Printable Report Ready",
+		Message:          "Your AGM attendance register is ready for download.",
+		NotificationType: "SUCCESS",
+		DownloadLink:     fmt.Sprintf("/api/members/agm-report/download/%s", filename),
+	})
+}
+
+func (s *MemberService) generateAGMReportPDF(results []memberExportQueryResult) ([]byte, error) {
+	var org struct {
+		RegisteredName string `gorm:"column:registered_name"`
+		Address        string `gorm:"column:address"`
+	}
+	db.DB.Table("organization_details").First(&org)
+
+	pdf := gofpdf.New("L", "mm", "A4", "") // Landscape gives more room for signatures
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 16)
+	pdf.CellFormat(0, 10, org.RegisteredName, "", 1, "C", false, 0, "")
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(0, 10, "AGM ATTENDANCE REGISTER", "", 1, "C", false, 0, "")
+	pdf.Ln(5)
+
+	pdf.SetFont("Arial", "B", 10)
+	headers := []string{"Member No", "ID No", "Full Names", "Phone", "____________"}
+	widths := []float64{30, 35, 90, 45, 65}
+
+	for i, h := range headers {
+		pdf.CellFormat(widths[i], 10, h, "1", 0, "C", false, 0, "")
+	}
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 10)
+	for _, m := range results {
+		fullName := strings.TrimSpace(fmt.Sprintf("%s %s %s", m.FirstName, m.LastName, m.OtherNames))
+		pdf.CellFormat(widths[0], 12, m.MemberNo, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[1], 12, m.IDNo, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[2], 12, fullName, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[3], 12, m.PrimaryPhone, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[4], 12, "", "1", 0, "C", false, 0, "")
 		pdf.Ln(-1)
 	}
 

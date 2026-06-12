@@ -321,7 +321,11 @@ func (s *TransporterService) UpdateTransporter(id string, req dtos.UpdateTranspo
 }
 
 func (s *TransporterService) DeleteTransporter(id string) error {
-	return db.DB.Delete(&models.Transporter{}, id).Error
+	var transporter models.Transporter
+	if err := db.DB.First(&transporter, id).Error; err != nil {
+		return err
+	}
+	return db.DB.Delete(&transporter).Error
 }
 
 // ImportTransporters bulk imports transporters from CSV or Excel files.

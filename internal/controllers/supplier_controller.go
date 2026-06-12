@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
 	validator "github.com/rubewafula/edairy-go-26/internal/validators"
+	"gorm.io/gorm"
 )
 
 type SupplierController struct {
@@ -58,10 +60,45 @@ func (c *SupplierController) GetSuppliers(ctx *gin.Context) {
 func (c *SupplierController) GetSupplier(ctx *gin.Context) {
 	result, err := c.service.GetSupplier(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
+}
+
+func (c *SupplierController) UpdateSupplier(ctx *gin.Context) {
+	var req dtos.CreateSupplierRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	if err := c.service.UpdateSupplier(ctx.Param("id"), req, userID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Supplier updated successfully"})
+}
+
+func (c *SupplierController) DeleteSupplier(ctx *gin.Context) {
+	if err := c.service.DeleteSupplier(ctx.Param("id")); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusNoContent, nil)
 }
 
 func (c *SupplierController) CreateContact(ctx *gin.Context) {

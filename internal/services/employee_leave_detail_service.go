@@ -15,10 +15,11 @@ func NewEmployeeLeaveDetailService() *EmployeeLeaveDetailService {
 
 func (s *EmployeeLeaveDetailService) CreateLeaveDetail(req dtos.CreateEmployeeLeaveDetailRequest, userID uint64) (*models.EmployeeLeaveDetail, error) {
 	detail := &models.EmployeeLeaveDetail{
-		BaseModel:     models.BaseModel{CreatedBy: userID},
-		EmployeeID:    req.EmployeeID,
-		BalanceBF:     req.BalanceBF,
-		AllocatedDays: req.AllocatedDays,
+		BaseModel:           models.BaseModel{CreatedBy: userID},
+		EmployeeID:          req.EmployeeID,
+		BalanceBF:           req.BalanceBF,
+		AllocatedDays:       req.AllocatedDays,
+		EmployeeLeaveTypeID: req.LeaveTypeID,
 	}
 
 	if err := db.DB.Create(detail).Error; err != nil {
@@ -39,13 +40,39 @@ func (s *EmployeeLeaveDetailService) GetLeaveDetails(employeeID string, page, li
 	queryBuilder.Count(&total)
 	offset := (page - 1) * limit
 
-	err := queryBuilder.Limit(limit).Offset(offset).Order("id DESC").Scan(&results).Error
+	query := `
+		SELECT 
+			eld.*, 
+			elt.code as leave_type_code, 
+			elt.description as leave_type_name,
+			CONCAT(e.first_name, ' ', COALESCE(e.middle_name, ''), ' ', e.surname) as employee_name
+		FROM employee_leave_details eld
+		LEFT JOIN employee_leave_types elt ON eld.employee_leave_type_id = elt.id
+		LEFT JOIN employees e ON eld.employee_id = e.id
+		WHERE eld.deleted_at IS NULL 
+		AND (? = '' OR eld.employee_id = ?)
+		ORDER BY eld.id DESC
+		LIMIT ? OFFSET ?
+	`
+	err := db.DB.Raw(query, employeeID, employeeID, limit, offset).Scan(&results).Error
 	return results, total, err
 }
 
 func (s *EmployeeLeaveDetailService) GetLeaveDetail(id string) (*dtos.EmployeeLeaveDetailResponse, error) {
 	var result dtos.EmployeeLeaveDetailResponse
-	err := db.DB.Model(&models.EmployeeLeaveDetail{}).Where("id = ? AND deleted_at IS NULL", id).First(&result).Error
+	query := `
+		SELECT 
+			eld.*, 
+			elt.code as leave_type_code, 
+			elt.description as leave_type_name,
+			CONCAT(e.first_name, ' ', COALESCE(e.middle_name, ''), ' ', e.surname) as employee_name
+		FROM employee_leave_details eld
+		LEFT JOIN employee_leave_types elt ON eld.employee_leave_type_id = elt.id
+		LEFT JOIN employees e ON eld.employee_id = e.id
+		WHERE eld.id = ? AND eld.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := db.DB.Raw(query, id).Scan(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +89,10 @@ func (s *EmployeeLeaveDetailService) UpdateLeaveDetail(id string, req dtos.Updat
 	}
 
 	updates := map[string]interface{}{
-		"balance_bf":     req.BalanceBF,
-		"allocated_days": req.AllocatedDays,
-		"updated_by":     userID,
+		"balance_bf":             req.BalanceBF,
+		"allocated_days":         req.AllocatedDays,
+		"employee_leave_type_id": req.LeaveTypeID,
+		"updated_by":             userID,
 	}
 
 	return db.DB.Model(&detail).Updates(updates).Error

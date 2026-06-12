@@ -15,14 +15,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type TransporterPayrollService struct{}
+type TransporterPayrollService struct {
+	notificationService *UINotificationService
+}
 
 func NewTransporterPayrollService() *TransporterPayrollService {
-	return &TransporterPayrollService{}
+	return &TransporterPayrollService{
+		notificationService: NewUINotificationService(),
+	}
 }
 
 func (s *TransporterPayrollService) Create(req dtos.CreateTransporterPayrollRequest, userID uint64) (*models.TransporterPayroll, error) {
-	var pdr models.TransporterPayDateRange
+	var pdr models.MemberPayDateRange
 	if err := db.DB.Where("id = ? AND deleted_at IS NULL", req.PayDateRangeID).First(&pdr).Error; err != nil {
 		return nil, fmt.Errorf("invalid pay date range: %w", err)
 	}
@@ -56,11 +60,9 @@ func (s *TransporterPayrollService) Create(req dtos.CreateTransporterPayrollRequ
 		payroll = models.TransporterPayroll{
 			BaseModel:      models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 			PayDateRangeID: &req.PayDateRangeID,
-			PayrollMonth:   req.PayrollMonth,
-			PayrollYear:    req.PayrollYear,
 			DateOpened:     &dateOpened,
 			Description:    req.Description,
-			PhysicalPeriod: req.PhysicalPeriod,
+			FiscalPeriod:   req.FiscalPeriod,
 			Status:         "processing",
 		}
 		return tx.Create(&payroll).Error
@@ -75,7 +77,7 @@ func (s *TransporterPayrollService) Create(req dtos.CreateTransporterPayrollRequ
 	return &payroll, nil
 }
 
-func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64, pdr models.TransporterPayDateRange, req dtos.CreateTransporterPayrollRequest, userID uint64) {
+func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64, pdr models.MemberPayDateRange, req dtos.CreateTransporterPayrollRequest, userID uint64) {
 	type transporterMilkSummary struct {
 		TransporterID uint64
 		TotalQuantity float64
@@ -83,10 +85,13 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 	}
 
 	var transporterSummaries []transporterMilkSummary
-	db.DB.Table("milk_transporter_cost").
+	if err := db.DB.Table("milk_transporter_cost").
 		Select("transporter_id, SUM(quantity) as total_quantity, SUM(rejects) as total_rejects").
-		Where("pay_date_range_id = ? AND payroll_month = ? AND payroll_year = ?", pdr.ID, pdr.PayMonth, pdr.PayYear).
-		Group("transporter_id").Scan(&transporterSummaries)
+		Where("pay_date_range_id = ? ", pdr.ID).
+		Group("transporter_id").Scan(&transporterSummaries).Error; err != nil {
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Generation Failed", "Failed to fetch aggregated milk summaries", err, "incomplete")
+		return
+	}
 
 	if len(transporterSummaries) == 0 {
 		db.DB.Model(&models.TransporterPayroll{}).Where("id = ?", payrollID).Update("status", "draft")
@@ -100,7 +105,11 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 
 	// Pre-fetch Transporter details (especially RouteID for rate calculation)
 	var transporters []models.TransporterRouteAssignment
-	db.DB.Select("id, route_id").Where("transporter_id IN ?", transporterIDs).Find(&transporters)
+	if err := db.DB.Select("id, route_id").Where("transporter_id IN ?", transporterIDs).Find(&transporters).Error; err != nil {
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Generation Failed", "Failed to fetch transporter assignments", err, "incomplete")
+		return
+	}
+
 	transporterRouteMap := make(map[uint64]uint64)
 	for _, t := range transporters {
 		transporterRouteMap[t.ID] = t.RouteID
@@ -108,8 +117,11 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 
 	// Pre-fetch Recurrent Deductions for transporters
 	var recurrentDeductions []models.RecurrentDeduction
-	db.DB.Where("customer_id IN ? AND settled = 0 AND customer_type = 'transporter'", transporterIDs).
-		Order("created_at ASC").Find(&recurrentDeductions)
+	if err := db.DB.Where("customer_id IN ? AND settled = 0 AND customer_type = 'transporter'", transporterIDs).
+		Order("created_at ASC").Find(&recurrentDeductions).Error; err != nil {
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Generation Failed", "Failed to fetch recurrent deductions", err, "incomplete")
+		return
+	}
 	deductionMap := make(map[uint64][]models.RecurrentDeduction)
 	for _, rd := range recurrentDeductions {
 		deductionMap[rd.CustomerID] = append(deductionMap[rd.CustomerID], rd)
@@ -117,7 +129,10 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 
 	// Pre-fetch Transporter Benefits
 	var transporterBenefits []models.TransporterBenefit
-	db.DB.Where("status = 'active' AND (route_id IS NULL OR route_id IN ?)", utils.GetUniqueRouteIDs(transporterRouteMap)).Find(&transporterBenefits)
+	if err := db.DB.Where("status = 'active' AND (route_id IS NULL OR route_id IN ?)", utils.GetUniqueRouteIDs(transporterRouteMap)).Find(&transporterBenefits).Error; err != nil {
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Generation Failed", "Failed to fetch transporter benefits", err, "incomplete")
+		return
+	}
 	benefitMap := make(map[uint64][]models.TransporterBenefit) // Map routeID to benefits, or 0 for global
 	for _, b := range transporterBenefits {
 		if b.RouteID != nil {
@@ -210,8 +225,6 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 										TransporterID:        summary.TransporterID,
 										TransporterBenefitID: benefit.ID,
 										Amount:               benefitAmount,
-										BenefitYear:          req.PayrollYear,
-										BenefitMonth:         req.PayrollMonth,
 										PayrollID:            payrollID,
 										BaseModel:            models.BaseModel{CreatedBy: userID},
 									}
@@ -260,9 +273,7 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 								TransporterID:   summary.TransporterID,
 								PayrollID:       payrollID,
 								PayDateRangeID:  &pdr.ID,
-								PayrollMonth:    req.PayrollMonth,
-								PayrollYear:     req.PayrollYear,
-								PhysicalPeriod:  req.PhysicalPeriod,
+								FiscalPeriod:    req.FiscalPeriod,
 								TotalKilos:      summary.TotalQuantity,
 								TotalRejects:    summary.TotalRejects,
 								GrossPay:        tGross,
@@ -329,6 +340,32 @@ func (s *TransporterPayrollService) generatePayrollInBackground(payrollID uint64
 		"updated_by":       userID,
 		"updated_at":       time.Now(),
 	})
+
+	// Send UI notification
+	message := fmt.Sprintf("Transporter payroll generation completed. Success: %d, Failed: %d out of %d records.", int64(len(transporterSummaries))-failedCount, failedCount, len(transporterSummaries))
+	notificationType := "SUCCESS"
+	errorLink := ""
+
+	if failedCount > 0 {
+		notificationType = "ERROR"
+		errorLink = fmt.Sprintf("/transporter-payrolls/generation-errors/%d", payrollID)
+		log.Printf("[TransporterPayrollService.generatePayrollInBackground] Transporter payroll generation completed with %d failures for payroll %d.", failedCount, payrollID)
+	} else if len(transporterSummaries) == 0 {
+		message = "Transporter payroll generation completed. No records were processed."
+		notificationType = "INFO"
+		log.Printf("[TransporterPayrollService.generatePayrollInBackground] Transporter payroll generation completed. No records were processed for payroll %d.", payrollID)
+	} else {
+		log.Printf("[TransporterPayrollService.generatePayrollInBackground] Transporter payroll generation completed successfully for payroll %d.", payrollID)
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "Transporter Payroll Generation Status",
+		Message:          message,
+		NotificationType: notificationType,
+		ErrorLink:        errorLink,
+		ReferenceID:      &payrollID,
+		ReferenceType:    utils.StringPtr("TRANSPORTER_PAYROLL"),
+	})
 }
 
 func (s *TransporterPayrollService) List(page, limit int) ([]dtos.TransporterPayrollResponse, int64, error) {
@@ -345,7 +382,7 @@ func (s *TransporterPayrollService) List(page, limit int) ([]dtos.TransporterPay
 			u_conf.name as confirmed_by_name,
 			u_appr.name as approved_by_name
 		FROM transporter_payrolls tp
-		LEFT JOIN transporter_pay_date_ranges tpdr ON tp.pay_date_range_id = tpdr.id
+		LEFT JOIN member_pay_date_ranges tpdr ON tp.pay_date_range_id = tpdr.id
 		LEFT JOIN users u_post ON tp.posted_by = u_post.id
 		LEFT JOIN users u_conf ON tp.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON tp.approved_by = u_appr.id
@@ -366,7 +403,7 @@ func (s *TransporterPayrollService) Get(id string) (*dtos.TransporterPayrollResp
 			u_conf.name as confirmed_by_name,
 			u_appr.name as approved_by_name
 		FROM transporter_payrolls tp
-		LEFT JOIN transporter_pay_date_ranges tpdr ON tp.pay_date_range_id = tpdr.id
+		LEFT JOIN member_pay_date_ranges tpdr ON tp.pay_date_range_id = tpdr.id
 		LEFT JOIN users u_post ON tp.posted_by = u_post.id
 		LEFT JOIN users u_conf ON tp.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON tp.approved_by = u_appr.id
@@ -464,24 +501,21 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 	db.DB.Where("transaction_type = ?", "TRANSPORTER_BENEFIT_EXPENSE").First(&shareRule) // Using shareRule for benefits for now, needs proper rule
 
 	if grossRule.ID == 0 {
-		log.Printf("[TransporterPayrollService] Missing posting rule for TRANSPORTER_PAYMENT_GROSS, aborting payroll %d", payrollID)
-		db.DB.Model(&payroll).Update("status", "confirmed")
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Approval Failed", "Missing posting rule for TRANSPORTER_PAYMENT_GROSS. Please check accounting configurations.", nil, "confirmed")
 		return
 	}
 	if loanRule.ID == 0 {
-		log.Printf("[TransporterPayrollService] Missing posting rule for TRANSPORTER_REPAYMENT_DEDUCTION, aborting payroll %d", payrollID)
-		db.DB.Model(&payroll).Update("status", "confirmed")
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Approval Failed", "Missing posting rule for TRANSPORTER_REPAYMENT_DEDUCTION. Please check accounting configurations.", nil, "confirmed")
 		return
 	}
 	if shareRule.ID == 0 {
-		log.Printf("[TransporterPayrollService] Missing posting rule for TRANSPORTER_BENEFIT_EXPENSE, aborting payroll %d", payrollID)
-		db.DB.Model(&payroll).Update("status", "confirmed")
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Approval Failed", "Missing posting rule for TRANSPORTER_BENEFIT_EXPENSE. Please check accounting configurations.", nil, "confirmed")
 		return
 	}
 
 	var payslips []models.TransporterPayslip
 	if err := db.DB.Where("payroll_id = ? AND status != 'approved'", payrollID).Find(&payslips).Error; err != nil {
-		log.Printf("[TransporterPayrollService] Failed to fetch payslips for payroll %d: %v", payrollID, err)
+		s.handleProcessingError(payrollID, userID, "Transporter Payroll Approval Failed", "Failed to fetch payslips from database", err, "confirmed")
 		return
 	}
 
@@ -526,10 +560,10 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 							transaction := models.Transaction{
 								BaseModel:       models.BaseModel{CreatedBy: userID},
 								Reference:       fmt.Sprintf("TPSL-%d", ps.ID),
-								TransactionName: fmt.Sprintf("Transporter Payslip Approval - %s (Transporter %d)", payroll.PayrollMonth, ps.TransporterID),
+								TransactionName: fmt.Sprintf("Transporter Payslip Approval - %s (Transporter %d)", payroll.FiscalPeriod, ps.TransporterID),
 								TransactionType: "TRANSPORTER_PAYSLIP",
 								TransactionDate: now,
-								Description:     fmt.Sprintf("Payslip for Transporter %d in Payroll %s", ps.TransporterID, payroll.PayrollMonth),
+								Description:     fmt.Sprintf("Payslip for Transporter %d in Payroll %s", ps.TransporterID, payroll.FiscalPeriod),
 								Status:          "approved",
 							}
 							if err := tx.Create(&transaction).Error; err != nil {
@@ -689,8 +723,17 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 	wg.Wait()
 
 	finalStatus := "approved"
+	notificationTitle := "Transporter Payroll Approval Status"
+	notificationMsg := fmt.Sprintf("Transporter payroll for period %s has been approved successfully.", payroll.FiscalPeriod)
+	notificationType := "SUCCESS"
+	errorLink := ""
+
 	if failedCount > 0 {
 		finalStatus = "incomplete"
+		notificationTitle = "Transporter Payroll Approval Incomplete"
+		notificationMsg = fmt.Sprintf("Transporter payroll for %s completed with %d errors. Please check the generation errors tab.", payroll.FiscalPeriod, failedCount)
+		notificationType = "ERROR"
+		errorLink = fmt.Sprintf("/transporter-payrolls/approval-errors/%d", payrollID)
 	}
 
 	db.DB.Model(&payroll).Updates(map[string]interface{}{
@@ -701,5 +744,31 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 		"posted_at":   &now,
 		"posted_by":   &userID,
 		"updated_at":  time.Now(),
+	})
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            notificationTitle,
+		Message:          notificationMsg,
+		NotificationType: notificationType,
+		ErrorLink:        errorLink,
+		ReferenceID:      &payrollID,
+		ReferenceType:    utils.StringPtr("TRANSPORTER_PAYROLL"),
+	})
+}
+
+// handleProcessingError logs a database error, updates the payroll status, and sends a UI notification.
+func (s *TransporterPayrollService) handleProcessingError(payrollID uint64, userID uint64, title, message string, err error, status string) {
+	msg := message
+	if err != nil {
+		msg = fmt.Sprintf("%s: %v", message, err)
+	}
+	log.Printf("[%s] %s for payroll %d", title, msg, payrollID)
+	db.DB.Model(&models.TransporterPayroll{}).Where("id = ?", payrollID).Update("status", status)
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            title,
+		Message:          msg,
+		NotificationType: "ERROR",
+		ReferenceID:      &payrollID,
+		ReferenceType:    utils.StringPtr("TRANSPORTER_PAYROLL"),
 	})
 }
