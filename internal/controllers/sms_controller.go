@@ -24,11 +24,14 @@ func NewSMSController() *SMSController {
 
 func (c *SMSController) CreateGroup(ctx *gin.Context) {
 	var req dtos.CreateSMSGroupRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	group, err := c.service.CreateGroup(req)
+
+	userID := ctx.GetUint64("user_id")
+
+	group, err := c.service.CreateGroup(req, req.ContactsList, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -574,4 +577,22 @@ func (c *SMSController) DeleteInAppConfig(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
+}
+
+// GetImportErrors returns the validation/processing errors for a specific SMS group import session.
+func (c *SMSController) GetImportErrors(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	importID, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid import session ID"})
+		return
+	}
+
+	importErrors, err := c.service.GetImportErrors(importID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, importErrors)
 }

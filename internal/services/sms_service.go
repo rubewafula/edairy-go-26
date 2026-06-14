@@ -2,16 +2,24 @@ package services
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"mime/multipart"
 	"net/http"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
@@ -26,12 +34,24 @@ func NewSMSService() *SMSService {
 }
 
 // Groups
-func (s *SMSService) CreateGroup(req dtos.CreateSMSGroupRequest) (*models.SMSGroup, error) {
+func (s *SMSService) CreateGroup(req dtos.CreateSMSGroupRequest, file *multipart.FileHeader, userID uint64) (*models.SMSGroup, error) {
 	group := &models.SMSGroup{
 		Name:        req.Name,
 		Description: req.Description,
 	}
+
 	err := db.DB.Create(group).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if file != nil {
+		// Process file in background after group is created
+		log.Printf("[SMSService.CreateGroup] Group %d created. Queuing background contact import from: %s", group.ID, file.Filename)
+		go s.processGroupContactsInBackground(group.ID, file, userID)
+	}
+
+	// Return the group immediately, background process will handle contacts and notifications
 	return group, err
 }
 
@@ -90,7 +110,10 @@ func (s *SMSService) GetContacts(page, limit int) ([]models.SMSContact, int64, e
 
 func (s *SMSService) GetContactsByGroup(groupID string) ([]models.SMSContact, error) {
 	var contacts []models.SMSContact
-	err := db.DB.Where("sms_group_id = ?", groupID).Find(&contacts).Error
+	err := db.DB.Table("sms_contacts").
+		Joins("JOIN sms_contact_groups ON sms_contacts.id = sms_contact_groups.sms_contact_id").
+		Where("sms_contact_groups.sms_group_id = ?", groupID).
+		Find(&contacts).Error
 	return contacts, err
 }
 
@@ -612,4 +635,188 @@ func (s *SMSService) toSMSInAppConfigurationResponse(config *models.SMSInAppConf
 		CreatedAt:           config.CreatedAt,
 		UpdatedAt:           config.UpdatedAt,
 	}
+}
+
+// processGroupContactsInBackground handles the parsing of the uploaded file and adding contacts to the group.
+func (s *SMSService) processGroupContactsInBackground(groupID uint64, file *multipart.FileHeader, userID uint64) {
+	log.Printf("[SMSService.processGroupContactsInBackground] Starting import for group %d (User: %d)", groupID, userID)
+
+	src, err := file.Open()
+	if err != nil {
+		log.Printf("[SMSService.processGroupContactsInBackground] Error opening file for group %d: %v", groupID, err)
+		s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+			Title:            "SMS Group Contact Import Failed",
+			Message:          fmt.Sprintf("Failed to open uploaded file: %v", err),
+			NotificationType: "ERROR",
+		})
+		return
+	}
+	defer src.Close()
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	var data [][]string
+
+	if ext == ".csv" {
+		log.Printf("[SMSService.processGroupContactsInBackground] Parsing CSV for group %d", groupID)
+		reader := csv.NewReader(src)
+		data, err = reader.ReadAll()
+	} else if ext == ".xlsx" || ext == ".xls" {
+		log.Printf("[SMSService.processGroupContactsInBackground] Parsing Excel for group %d", groupID)
+		f, err := excelize.OpenReader(src)
+		if err != nil {
+			log.Printf("[SMSService.processGroupContactsInBackground] Error opening excel file for group %d: %v", groupID, err)
+			s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+				Title:            "SMS Group Contact Import Failed",
+				Message:          fmt.Sprintf("Failed to open Excel file: %v", err),
+				NotificationType: "ERROR",
+			})
+			return
+		}
+		sheets := f.GetSheetList()
+		if len(sheets) == 0 {
+			err = fmt.Errorf("no sheets found in excel file")
+		} else {
+			data, err = f.GetRows(sheets[0])
+		}
+	} else {
+		err = fmt.Errorf("unsupported file format: %s", ext)
+	}
+
+	if err != nil {
+		log.Printf("[SMSService.processGroupContactsInBackground] Error reading file for group %d: %v", groupID, err)
+		s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+			Title:            "SMS Group Contact Import Failed",
+			Message:          fmt.Sprintf("Failed to read file data: %v", err),
+			NotificationType: "ERROR",
+		})
+		return
+	}
+
+	log.Printf("[SMSService.processGroupContactsInBackground] Found %d total rows in file for group %d", len(data), groupID)
+
+	totalRows := len(data) - 1 // Exclude header row
+	if totalRows < 0 {
+		s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+			Title:            "SMS Group Contact Import",
+			Message:          "No contacts found in the uploaded file.",
+			NotificationType: "INFO",
+		})
+		return
+	}
+
+	importID := uint64(time.Now().UnixNano())
+	var wg sync.WaitGroup
+	jobs := make(chan []string, totalRows)
+	errorChan := make(chan error, totalRows)
+
+	numWorkers := runtime.NumCPU() * 2
+	if numWorkers < 1 {
+		numWorkers = 1
+	}
+
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for row := range jobs {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							db.DB.Create(&models.ImportError{
+								BaseModel: models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
+								RowData:   strings.Join(row, ","),
+								Error:     fmt.Sprintf("Panic during import: %v", r),
+								ImportId:  importID,
+							})
+							errorChan <- fmt.Errorf("panic during row processing")
+						}
+					}()
+
+					err := db.DB.Transaction(func(tx *gorm.DB) error {
+						// Expected columns: [Name(0), PhoneNumber(1)]
+						if len(row) < 1 {
+							return fmt.Errorf("row has insufficient columns (found %d, need 2)", len(row))
+						}
+
+						phoneNumber := utils.NormalizePhone(row[0])
+
+						if phoneNumber == "" {
+							return fmt.Errorf("phone number is empty for contact '%s'", phoneNumber)
+						}
+
+						var contact models.SMSContact
+						if err := tx.Where("phone_number = ?", phoneNumber).First(&contact).Error; err != nil {
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								contact = models.SMSContact{Name: phoneNumber, PhoneNumber: phoneNumber}
+								if err := tx.Create(&contact).Error; err != nil {
+									return fmt.Errorf("failed to create SMS contact: %w", err)
+								}
+							} else {
+								return fmt.Errorf("failed to query SMS contact: %w", err)
+							}
+						}
+
+						// Link contact to group
+						var contactGroup models.SMSContactGroup
+						if err := tx.Where("sms_group_id = ? AND sms_contact_id = ?", groupID, contact.ID).First(&contactGroup).Error; err != nil {
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								contactGroup = models.SMSContactGroup{SMSGroupID: groupID, SMSContactID: contact.ID}
+								if err := tx.Create(&contactGroup).Error; err != nil {
+									return fmt.Errorf("failed to link contact to group: %w", err)
+								}
+							} else {
+								return fmt.Errorf("failed to query SMS contact group: %w", err)
+							}
+						}
+						return nil
+					})
+
+					if err != nil {
+						db.DB.Create(&models.ImportError{
+							BaseModel: models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
+							RowData:   strings.Join(row, ","),
+							Error:     err.Error(),
+							ImportId:  importID,
+						})
+						errorChan <- err
+					}
+				}()
+			}
+		}()
+	}
+
+	for i := 1; i < len(data); i++ { // Skip header row
+		jobs <- data[i]
+	}
+	close(jobs)
+	wg.Wait()
+	close(errorChan)
+
+	failedCount := 0
+	for err := range errorChan {
+		if err != nil {
+			failedCount++
+		}
+	}
+
+	notificationType := "SUCCESS"
+	if failedCount > 0 {
+		notificationType = "ERROR"
+	}
+
+	log.Printf("[SMSService.processGroupContactsInBackground] Import finished for group %d. Results - Success: %d, Failed: %d", groupID, totalRows-failedCount, failedCount)
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "SMS Group Contact Import Status",
+		Message:          fmt.Sprintf("Import completed for group %d. Success: %d, Failed: %d out of %d records.", groupID, totalRows-failedCount, failedCount, totalRows),
+		NotificationType: notificationType,
+		ErrorLink:        fmt.Sprintf("/sms-groups/import-errors/%d", importID),
+	})
+}
+
+// GetImportErrors retrieves the list of errors encountered during a specific SMS group contact import.
+func (s *SMSService) GetImportErrors(importID uint64) ([]models.ImportError, error) {
+	var importErrors []models.ImportError
+	err := db.DB.Where("import_id = ?", importID).Order("id DESC").Find(&importErrors).Error
+	return importErrors, err
 }

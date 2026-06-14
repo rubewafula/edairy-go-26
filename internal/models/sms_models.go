@@ -77,8 +77,10 @@ type SMSCampaign struct {
 	TotalSent       int        `gorm:"column:total_sent;default:0"`
 	TotalFailed     int        `gorm:"column:total_failed;default:0"`
 	Status          string     `gorm:"type:enum('draft','scheduled','running','completed','cancelled');default:'draft';column:status"`
+	SMSMessageID    *uint64    `gorm:"column:sms_message_id"`
 	ScheduledAt     *time.Time `gorm:"column:scheduled_at"`
 	CompletedAt     *time.Time `gorm:"column:completed_at"`
+	SMSGroups       []SMSGroup `gorm:"many2many:sms_campaign_groups;"`
 }
 
 type SMSCampaignRecipient struct {

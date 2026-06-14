@@ -1,11 +1,15 @@
 package dtos
 
-import "time"
+import (
+	"mime/multipart"
+	"time"
+)
 
 // SMS Group & Contact
 type CreateSMSGroupRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name         string                `form:"name" validate:"required"`
+	Description  string                `form:"description"`
+	ContactsList *multipart.FileHeader `form:"contacts_list"`
 }
 
 type CreateSMSContactRequest struct {
@@ -74,13 +78,13 @@ type SMSTemplateResponse struct {
 
 // SMS Campaign
 type CreateSMSCampaignRequest struct {
-	CampaignCode string   `json:"campaign_code" validate:"required"`
-	CampaignName string   `json:"campaign_name" validate:"required"`
-	Description  string   `json:"description"`
-	Message      string   `json:"message" validate:"required"`
-	SMSGroupIDs  []uint64 `json:"sms_group_id" validate:"required"`
-	ScheduledAt  string   `json:"scheduled_at" validate:"omitempty,datetime"`
-	ExpiryDate   uint64   `json:"expiry_date"`
+	CampaignCode string   `json:"campaign_code" form:"campaign_code" validate:"required"`
+	CampaignName string   `json:"campaign_name" form:"campaign_name" validate:"required"`
+	Description  string   `json:"description" form:"description"`
+	Message      string   `json:"message" form:"message" validate:"required"`
+	SMSGroupIDs  []uint64 `json:"sms_group_ids" form:"sms_group_ids" validate:"required"`
+	ScheduledAt  string   `json:"scheduled_at" form:"scheduled_at" validate:"omitempty,datetime"`
+	ExpiryDate   uint64   `json:"expiry_date" form:"expiry_date"`
 }
 
 type SMSCampaignResponse struct {

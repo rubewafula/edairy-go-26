@@ -25,7 +25,7 @@ func NewSupplierController() *SupplierController {
 }
 
 func (c *SupplierController) CreateSupplier(ctx *gin.Context) {
-	var req dtos.CreateSupplierRequest
+	var req dtos.CreateSupplierRequest // Assuming CreateSupplierRequest does not include file
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
