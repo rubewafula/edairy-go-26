@@ -5,34 +5,34 @@ import "time"
 // Accounting
 type AccountCategory struct {
 	BaseModel
-	Name          string `gorm:"column:name"`
-	Description   string `gorm:"column:description"`
-	AccountTypeID uint64 `gorm:"column:account_type_id"`
+	Name          string `gorm:"column:name" json:"name"`
+	Description   string `gorm:"column:description" json:"description"`
+	AccountTypeID uint64 `gorm:"column:account_type_id" json:"account_type_id"`
 }
 
 type AccountType struct {
 	BaseModel
-	Name string `gorm:"column:name"`
+	Name string `gorm:"column:name" json:"name"`
 }
 
 type Account struct {
 	BaseModel
-	AccountCode       string  `gorm:"uniqueIndex;column:account_code"`
-	Name              string  `gorm:"column:name"`
-	Description       string  `gorm:"column:description"`
-	AccountCategoryID uint64  `gorm:"column:account_category_id"`
-	ParentAccountID   uint64  `gorm:"column:parent_account_id"`
-	IsPostable        bool    `gorm:"column:is_postable"`
-	IsActive          bool    `gorm:"default:true;column:is_active"`
-	Balance           float64 `gorm:"column:balance"`
+	AccountCode       string  `gorm:"uniqueIndex;column:account_code" json:"account_code"`
+	Name              string  `gorm:"column:name" json:"name"`
+	Description       string  `gorm:"column:description" json:"description"`
+	AccountCategoryID uint64  `gorm:"column:account_category_id" json:"account_category_id"`
+	ParentAccountID   *uint64 `gorm:"column:parent_account_id" json:"parent_account_id"` // Changed to pointer
+	IsPostable        bool    `gorm:"column:is_postable" json:"is_postable"`
+	IsActive          bool    `gorm:"default:true;column:is_active" json:"is_active"`
+	Balance           float64 `gorm:"column:balance" json:"balance"`
 }
 
 type AccountSubAccount struct {
 	BaseModel
-	SubAccountCode string `gorm:"uniqueIndex;column:sub_account_code"`
-	Name           string `gorm:"column:name"`
-	Description    string `gorm:"column:description"`
-	AccountID      uint64 `gorm:"index;column:account_id"`
+	SubAccountCode string `gorm:"uniqueIndex;column:sub_account_code" json:"sub_account_code"`
+	Name           string `gorm:"column:name" json:"name"`
+	Description    string `gorm:"column:description" json:"description"`
+	AccountID      uint64 `gorm:"index;column:account_id" json:"account_id"`
 }
 
 type Transaction struct {

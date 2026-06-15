@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,18 +25,21 @@ func NewTrainingController() *TrainingController {
 func (c *TrainingController) CreateTraining(ctx *gin.Context) {
 	var req dtos.CreateTrainingRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TrainingController.CreateTraining] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[TrainingController.CreateTraining] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	training, err := c.service.CreateTraining(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TrainingController.CreateTraining] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create training"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, training)
@@ -52,7 +56,8 @@ func (c *TrainingController) GetTrainings(ctx *gin.Context) {
 
 	trainings, total, err := c.service.GetTrainings(page, limit, venue, topic, facilitator)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TrainingController.GetTrainings] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve trainings"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": trainings, "total": total})
@@ -61,6 +66,7 @@ func (c *TrainingController) GetTrainings(ctx *gin.Context) {
 func (c *TrainingController) GetTraining(ctx *gin.Context) {
 	training, err := c.service.GetTraining(ctx.Param("id"))
 	if err != nil {
+		log.Printf("[TrainingController.GetTraining] Service Error: %v", err)
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Training not found"})
 		return
 	}
@@ -70,17 +76,20 @@ func (c *TrainingController) GetTraining(ctx *gin.Context) {
 func (c *TrainingController) UpdateTraining(ctx *gin.Context) {
 	var req dtos.UpdateTrainingRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TrainingController.UpdateTraining] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[TrainingController.UpdateTraining] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateTraining(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TrainingController.UpdateTraining] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update training"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Training updated successfully"})
@@ -88,7 +97,8 @@ func (c *TrainingController) UpdateTraining(ctx *gin.Context) {
 
 func (c *TrainingController) DeleteTraining(ctx *gin.Context) {
 	if err := c.service.DeleteTraining(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TrainingController.DeleteTraining] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete training"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Training deleted successfully"})

@@ -162,18 +162,27 @@ func (JobPosition) TableName() string {
 }
 
 type CashTransaction struct {
-	BaseModel
-	ReferenceNumber        string    `gorm:"column:reference_number"`
-	TransactionDescription string    `gorm:"column:transaction_description"`
-	TransactionType        string    `gorm:"column:transaction_type"`
-	TransactionDate        time.Time `gorm:"column:transaction_date"`
-	PaidBy                 string    `gorm:"column:paid_by"`
-	TransactionAmount      float64   `gorm:"column:transaction_amount"`
-	CustomerType           string    `gorm:"column:customer_type"`
-	CustomerID             uint64    `gorm:"column:customer_id"`
-	PaymentModeID          uint64    `gorm:"column:payment_mode_id"`
-	PaymentType            string    `gorm:"column:payment_type"`
-	TransactionID          uint64    `gorm:"column:transaction_id"`
+	ID                     uint64         `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	ReferenceNumber        string         `gorm:"column:reference_number;not null" json:"reference_number"`
+	TransactionDescription string         `gorm:"column:transaction_description;not null" json:"transaction_description"`
+	TransactionType        string         `gorm:"column:transaction_type;not null" json:"transaction_type"`
+	CreatedAt              string         `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt              *string        `gorm:"column:updated_at;default:CURRENT_TIMESTAMP" json:"updated_at"`
+	CreatedBy              *uint64        `gorm:"column:created_by" json:"created_by"`
+	UpdatedBy              *uint64        `gorm:"column:updated_by" json:"updated_by"`
+	DeletedAt              gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
+	TransactionDate        string         `gorm:"column:transaction_date;not null;default:CURRENT_TIMESTAMP" json:"transaction_date"`
+	PaidBy                 *string        `gorm:"column:paid_by;size:45" json:"paid_by"`
+	TransactionAmount      *string        `gorm:"column:transaction_amount" json:"transaction_amount"`
+	CustomerType           *string        `gorm:"column:customer_type;type:enum('customer','member','transporter','supplier','guest','vendor','employee')" json:"customer_type"`
+	CustomerID             *uint64        `gorm:"column:customer_id" json:"customer_id"`
+	PaymentModeID          *uint64        `gorm:"column:payment_mode_id" json:"payment_mode_id"`
+	PaymentType            *string        `gorm:"column:payment_type;size:45" json:"payment_type"`
+	TransactionID          *int64         `gorm:"column:transaction_id" json:"transaction_id"`
+}
+
+func (CashTransaction) TableName() string {
+	return "cash_transactions"
 }
 
 type Route struct {

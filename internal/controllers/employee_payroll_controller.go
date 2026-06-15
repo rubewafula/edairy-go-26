@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -212,4 +213,70 @@ func (c *EmployeePayrollController) DeleteEmployeePayroll(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Employee payroll deleted successfully"})
+}
+
+// ExportStatement godoc
+// @Summary Export employee payslip statement
+// @Description Initiates background generation of a detailed payslip statement (PDF/CSV)
+// @Tags Employee Payrolls
+// @Produce json
+// @Param employee_id path string true "Employee ID"
+// @Param payroll_id path string true "Payroll ID"
+// @Param report_type query string false "Report type (pdf/csv)" default(pdf)
+// @Success 202 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /employee-payslips/statements/{employee_id}/{payroll_id} [get]
+func (c *EmployeePayrollController) ExportStatement(ctx *gin.Context) {
+	employeeID := ctx.Param("employee_id")
+	payrollID := ctx.Param("payroll_id")
+	reportType := ctx.DefaultQuery("report_type", "pdf")
+	userID := ctx.GetUint64("user_id")
+
+	if err := c.service.ExportPayslipStatement(userID, employeeID, payrollID, reportType); err != nil {
+		log.Printf("[EmployeePayrollController.ExportStatement] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate payslip export"})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Payslip statement generation started. You will be notified when the download is ready."})
+}
+
+func (c *EmployeePayrollController) DownloadExportFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	filePath := filepath.Join("./storage/exports", filename)
+	ctx.File(filePath)
+}
+
+// ExportPayslips godoc
+// @Summary Export employee payslips list
+// @Description Initiates background generation of a list of employee payslips (PDF/CSV) based on filters
+// @Tags Employee Payrolls
+// @Produce json
+// @Param payroll_id query string false "Payroll ID filter"
+// @Param payroll_month query string false "Month filter"
+// @Param payroll_year query string false "Year filter"
+// @Param format query string false "Report format (pdf/csv)" default(csv)
+// @Success 202 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /employee-payslips/export [get]
+func (c *EmployeePayrollController) ExportPayslips(ctx *gin.Context) {
+	format := ctx.DefaultQuery("format", "csv")
+	userID := ctx.GetUint64("user_id")
+
+	filters := make(map[string]string)
+	if ctx.Query("payroll_id") != "" {
+		filters["payroll_id"] = ctx.Query("payroll_id")
+	}
+	if ctx.Query("payroll_month") != "" {
+		filters["payroll_month"] = ctx.Query("payroll_month")
+	}
+	if ctx.Query("payroll_year") != "" {
+		filters["payroll_year"] = ctx.Query("payroll_year")
+	}
+
+	if err := c.service.ExportPayslips(userID, filters, format); err != nil {
+		log.Printf("[EmployeePayrollController.ExportPayslips] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate payslips export"})
+		return
+	}
+	ctx.JSON(http.StatusAccepted, gin.H{"message": "Employee payslips export started. You will be notified when the download is ready."})
 }

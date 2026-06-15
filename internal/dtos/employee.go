@@ -288,7 +288,7 @@ type EmployeeLeaveTypeResponse struct {
 type CreateEmployeePayrollRequest struct {
 	PayrollMonth    string  `json:"payroll_month" validate:"required"`
 	PayrollYear     string  `json:"payroll_year" validate:"required"`
-	DateOpened      string  `json:"date_opened" validate:"required,datetime"`
+	DateOpened      string  `json:"date_opened"`
 	TotalDeductions float64 `json:"total_deductions"`
 	GrossPay        float64 `json:"gross_pay"`
 	NetPay          float64 `json:"net_pay"`
@@ -327,6 +327,7 @@ type EmployeePayrollResponse struct {
 	TotalDeductions float64   `json:"total_deductions"`
 	GrossPay        float64   `json:"gross_pay"`
 	NetPay          float64   `json:"net_pay"`
+	Status          string    `json:"status"`
 	Complete        string    `json:"complete"`
 	Confirmed       string    `json:"confirmed"`
 	Approved        string    `json:"approved"`
@@ -339,4 +340,50 @@ type EmployeePayrollResponse struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 	CreatedBy       uint64    `json:"created_by"`
 	UpdatedBy       uint64    `json:"updated_by"`
+}
+
+type EmployeePayslipResponse struct {
+	ID              uint64    `json:"id"`
+	EmployeeID      uint64    `json:"employee_id"`
+	PayrollMonth    string    `json:"payroll_month"`
+	PayrollYear     string    `json:"payroll_year"`
+	GrossPay        float64   `json:"gross_pay"`
+	NetPay          float64   `json:"net_pay"`
+	TotalDeductions float64   `json:"total_deductions"`
+	TotalBenefits   float64   `json:"total_benefits"`
+	BasicSalary     float64   `json:"basic_salary"`
+	PayrollID       uint64    `json:"payroll_id"`
+	TotalTax        float64   `json:"total_tax"`
+	TotalRelief     float64   `json:"total_relief"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type EmployeePayrollBenefitResponse struct {
+	ID          uint64  `json:"id"`
+	BenefitID   uint64  `json:"benefit_id"`
+	BenefitName string  `json:"benefit_name"`
+	Amount      float64 `json:"amount"`
+}
+
+type EmployeePayrollDeductionResponse struct {
+	ID            uint64  `json:"id"`
+	DeductionID   uint64  `json:"deduction_id"`
+	DeductionName string  `json:"deduction_name"`
+	Amount        float64 `json:"amount"`
+}
+
+type EmployeePayrollReliefResponse struct {
+	ID         uint64  `json:"id"`
+	ReliefID   uint64  `json:"relief_id"`
+	ReliefName string  `json:"relief_name"`
+	Amount     float64 `json:"amount"`
+}
+
+type EmployeePayslipStatementResponse struct {
+	Payslip    EmployeePayslipResponse            `json:"payslip"`
+	Employee   EmployeeResponse                   `json:"employee"`
+	Benefits   []EmployeePayrollBenefitResponse   `json:"benefits"`
+	Deductions []EmployeePayrollDeductionResponse `json:"deductions"`
+	Reliefs    []EmployeePayrollReliefResponse    `json:"reliefs"`
 }

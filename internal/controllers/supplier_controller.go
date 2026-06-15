@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -27,11 +28,13 @@ func NewSupplierController() *SupplierController {
 func (c *SupplierController) CreateSupplier(ctx *gin.Context) {
 	var req dtos.CreateSupplierRequest // Assuming CreateSupplierRequest does not include file
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.CreateSupplier] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[SupplierController.CreateSupplier] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -39,7 +42,8 @@ func (c *SupplierController) CreateSupplier(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	supplier, err := c.service.CreateSupplier(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.CreateSupplier] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create supplier"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, supplier)
@@ -51,7 +55,8 @@ func (c *SupplierController) GetSuppliers(ctx *gin.Context) {
 
 	results, total, err := c.service.GetSuppliers(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.GetSuppliers] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve suppliers"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -64,7 +69,8 @@ func (c *SupplierController) GetSupplier(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.GetSupplier] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve supplier details"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -73,7 +79,8 @@ func (c *SupplierController) GetSupplier(ctx *gin.Context) {
 func (c *SupplierController) UpdateSupplier(ctx *gin.Context) {
 	var req dtos.CreateSupplierRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.UpdateSupplier] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
@@ -83,7 +90,8 @@ func (c *SupplierController) UpdateSupplier(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.UpdateSupplier] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update supplier"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Supplier updated successfully"})
@@ -95,7 +103,8 @@ func (c *SupplierController) DeleteSupplier(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.DeleteSupplier] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete supplier"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -104,11 +113,13 @@ func (c *SupplierController) DeleteSupplier(ctx *gin.Context) {
 func (c *SupplierController) CreateContact(ctx *gin.Context) {
 	var req dtos.CreateSupplierContactRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.CreateContact] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[SupplierController.CreateContact] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -116,7 +127,8 @@ func (c *SupplierController) CreateContact(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	_, err := c.service.CreateContact(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.CreateContact] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create supplier contact"})
 		return
 	}
 
@@ -128,7 +140,8 @@ func (c *SupplierController) CreateContact(ctx *gin.Context) {
 func (c *SupplierController) GetSupplierContacts(ctx *gin.Context) {
 	contacts, err := c.service.GetSupplierContacts(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.GetSupplierContacts] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve contacts"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": contacts})
@@ -137,14 +150,16 @@ func (c *SupplierController) GetSupplierContacts(ctx *gin.Context) {
 func (c *SupplierController) CreateBankAccount(ctx *gin.Context) {
 	var req dtos.CreateSupplierBankAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.CreateBankAccount] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	account, err := c.service.CreateBankAccount(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.CreateBankAccount] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create bank account"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, account)
@@ -153,7 +168,8 @@ func (c *SupplierController) CreateBankAccount(ctx *gin.Context) {
 func (c *SupplierController) GetSupplierBankAccounts(ctx *gin.Context) {
 	accounts, err := c.service.GetSupplierBankAccounts(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.GetSupplierBankAccounts] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve bank accounts"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": accounts})
@@ -169,7 +185,8 @@ func (c *SupplierController) ImportSuppliers(ctx *gin.Context) {
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.ImportSuppliers(file, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.ImportSuppliers] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start supplier import"})
 		return
 	}
 
@@ -186,7 +203,8 @@ func (c *SupplierController) ExportSuppliers(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
 	if err := c.service.ExportSuppliers(userID, categoryID, supplierType, status); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.ExportSuppliers] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start supplier export"})
 		return
 	}
 
@@ -215,7 +233,8 @@ func (c *SupplierController) GetImportErrors(ctx *gin.Context) {
 
 	errors, err := c.service.GetImportErrors(importID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierController.GetImportErrors] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve import errors"})
 		return
 	}
 

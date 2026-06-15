@@ -13,28 +13,6 @@ func NewEmployeePayslipService() *EmployeePayslipService {
 	return &EmployeePayslipService{}
 }
 
-func (s *EmployeePayslipService) CreatePayslip(req dtos.CreateEmployeePayslipRequest, userID uint64) (*models.EmployeePayslip, error) {
-	payslip := &models.EmployeePayslip{
-		BaseModel:       models.BaseModel{CreatedBy: userID},
-		EmployeeID:      req.EmployeeID,
-		PayrollMonth:    req.PayrollMonth,
-		PayrollYear:     req.PayrollYear,
-		GrossPay:        req.GrossPay,
-		NetPay:          req.NetPay,
-		TotalDeductions: req.TotalDeductions,
-		TotalBenefits:   req.TotalBenefits,
-		BasicSalary:     req.BasicSalary,
-		PayrollID:       req.PayrollID,
-		TotalTax:        req.TotalTax,
-		TotalRelief:     req.TotalRelief,
-	}
-
-	if err := db.DB.Create(payslip).Error; err != nil {
-		return nil, err
-	}
-	return payslip, nil
-}
-
 func (s *EmployeePayslipService) GetPayslips(employeeID string, payrollID string, page, limit int) ([]dtos.EmployeePayslipResponse, int64, error) {
 	var results []dtos.EmployeePayslipResponse
 	var total int64
@@ -83,26 +61,6 @@ func (s *EmployeePayslipService) GetPayslip(id string) (*dtos.EmployeePayslipRes
 		return nil, gorm.ErrRecordNotFound
 	}
 	return &result, nil
-}
-
-func (s *EmployeePayslipService) UpdatePayslip(id string, req dtos.UpdateEmployeePayslipRequest, userID uint64) error {
-	var payslip models.EmployeePayslip
-	if err := db.DB.First(&payslip, id).Error; err != nil {
-		return err
-	}
-
-	updates := map[string]interface{}{
-		"gross_pay":        req.GrossPay,
-		"net_pay":          req.NetPay,
-		"total_deductions": req.TotalDeductions,
-		"total_benefits":   req.TotalBenefits,
-		"basic_salary":     req.BasicSalary,
-		"total_tax":        req.TotalTax,
-		"total_relief":     req.TotalRelief,
-		"updated_by":       userID,
-	}
-
-	return db.DB.Model(&payslip).Updates(updates).Error
 }
 
 func (s *EmployeePayslipService) DeletePayslip(id string, userID uint64) error {

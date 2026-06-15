@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,7 +26,8 @@ func (c *UINotificationController) GetMyNotifications(ctx *gin.Context) {
 
 	notifications, total, err := c.service.GetUserNotifications(userID, page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UINotificationController.GetMyNotifications] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve notifications"})
 		return
 	}
 
@@ -42,7 +44,8 @@ func (c *UINotificationController) MarkAsRead(ctx *gin.Context) {
 	id, _ := strconv.ParseUint(ctx.Param("id"), 10, 64)
 
 	if err := c.service.MarkAsRead(id, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UINotificationController.MarkAsRead] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Notification marked as read"})
@@ -51,7 +54,8 @@ func (c *UINotificationController) MarkAsRead(ctx *gin.Context) {
 func (c *UINotificationController) MarkAllAsRead(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.MarkAllAsRead(userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UINotificationController.MarkAllAsRead] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark all notifications as read"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "All notifications marked as read"})
@@ -64,7 +68,8 @@ func (c *UINotificationController) GetUnread(ctx *gin.Context) {
 
 	notifications, total, err := c.service.GetUserUnreadNotifications(userID, page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UINotificationController.GetUnread] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve unread notifications"})
 		return
 	}
 

@@ -26,10 +26,12 @@ func NewTransporterPayrollController() *TransporterPayrollController {
 func (c *TransporterPayrollController) Create(ctx *gin.Context) {
 	var req dtos.CreateTransporterPayrollRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransporterPayrollController.Create] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[TransporterPayrollController.Create] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -38,7 +40,7 @@ func (c *TransporterPayrollController) Create(ctx *gin.Context) {
 	res, err := c.service.Create(req, userID)
 	if err != nil {
 		log.Printf("[TransporterPayrollController.Create] Error: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transporter payroll"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, res)
@@ -50,7 +52,8 @@ func (c *TransporterPayrollController) List(ctx *gin.Context) {
 
 	res, total, err := c.service.List(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterPayrollController.List] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve payroll list"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
@@ -64,7 +67,8 @@ func (c *TransporterPayrollController) Get(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter payroll not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterPayrollController.Get] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve payroll details"})
 		return
 	}
 	ctx.JSON(http.StatusOK, res)
@@ -86,7 +90,7 @@ func (c *TransporterPayrollController) Confirm(ctx *gin.Context) {
 			return
 		}
 		log.Printf("[TransporterPayrollController.Confirm] Error confirming payroll %d: %v", id, err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Confirmation failed. Ensure payroll is in draft status."})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Transporter payroll confirmed successfully", "payroll": payroll})
@@ -108,7 +112,7 @@ func (c *TransporterPayrollController) Approve(ctx *gin.Context) {
 			return
 		}
 		log.Printf("[TransporterPayrollController.Approve] Error approving payroll %d: %v", id, err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Approval failed. Ensure payroll is confirmed and has no errors."})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Transporter payroll approval initiated", "payroll": payroll})

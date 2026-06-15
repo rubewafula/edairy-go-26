@@ -25,7 +25,8 @@ func NewSMSController() *SMSController {
 func (c *SMSController) CreateGroup(ctx *gin.Context) {
 	var req dtos.CreateSMSGroupRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateGroup] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
@@ -33,7 +34,8 @@ func (c *SMSController) CreateGroup(ctx *gin.Context) {
 
 	group, err := c.service.CreateGroup(req, req.ContactsList, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateGroup] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS group"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, group)
@@ -47,7 +49,8 @@ func (c *SMSController) GetGroup(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS group not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetGroup] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS group"})
 		return
 	}
 	ctx.JSON(http.StatusOK, group)
@@ -58,7 +61,8 @@ func (c *SMSController) GetGroups(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "50"))
 	results, total, err := c.service.GetGroups(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetGroups] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS groups"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -67,7 +71,8 @@ func (c *SMSController) GetGroups(ctx *gin.Context) {
 func (c *SMSController) UpdateGroup(ctx *gin.Context) {
 	var req dtos.CreateSMSGroupRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateGroup] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
@@ -76,7 +81,8 @@ func (c *SMSController) UpdateGroup(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS group not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateGroup] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SMS group"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS group updated successfully"})
@@ -88,7 +94,8 @@ func (c *SMSController) DeleteGroup(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS group not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteGroup] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SMS group"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -97,12 +104,14 @@ func (c *SMSController) DeleteGroup(ctx *gin.Context) {
 func (c *SMSController) CreateContact(ctx *gin.Context) {
 	var req dtos.CreateSMSContactRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateContact] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	contact, err := c.service.CreateContact(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateContact] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS contact"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, contact)
@@ -113,7 +122,8 @@ func (c *SMSController) GetContacts(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 	results, total, err := c.service.GetContacts(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetContacts] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS contacts"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -127,7 +137,8 @@ func (c *SMSController) GetContact(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS contact not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetContact] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS contact"})
 		return
 	}
 	ctx.JSON(http.StatusOK, contact)
@@ -136,7 +147,8 @@ func (c *SMSController) GetContact(ctx *gin.Context) {
 func (c *SMSController) UpdateContact(ctx *gin.Context) {
 	var req dtos.CreateSMSContactRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateContact] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	if err := c.service.UpdateContact(ctx.Param("id"), req); err != nil {
@@ -144,7 +156,8 @@ func (c *SMSController) UpdateContact(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS contact not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateContact] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SMS contact"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS contact updated successfully"})
@@ -156,7 +169,8 @@ func (c *SMSController) DeleteContact(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS contact not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteContact] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SMS contact"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -165,7 +179,8 @@ func (c *SMSController) DeleteContact(ctx *gin.Context) {
 func (c *SMSController) GetContactsByGroup(ctx *gin.Context) {
 	contacts, err := c.service.GetContactsByGroup(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetContactsByGroup] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve contacts for this group"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": contacts})
@@ -174,12 +189,14 @@ func (c *SMSController) GetContactsByGroup(ctx *gin.Context) {
 func (c *SMSController) SendMessage(ctx *gin.Context) {
 	var req dtos.SendSMSRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.SendMessage] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	msg, err := c.service.SendSMS(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.SendMessage] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send SMS"})
 		return
 	}
 	ctx.JSON(http.StatusOK, msg)
@@ -190,7 +207,8 @@ func (c *SMSController) GetQueue(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 	results, total, err := c.service.GetQueue(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetQueue] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS queue"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -199,11 +217,13 @@ func (c *SMSController) GetQueue(ctx *gin.Context) {
 func (c *SMSController) CreateProvider(ctx *gin.Context) {
 	var req dtos.CreateSMSProviderRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateProvider] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[SMSController.CreateProvider] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -211,7 +231,8 @@ func (c *SMSController) CreateProvider(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	provider, err := c.service.CreateProvider(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateProvider] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS provider"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, provider)
@@ -220,13 +241,15 @@ func (c *SMSController) CreateProvider(ctx *gin.Context) {
 func (c *SMSController) CreateTemplate(ctx *gin.Context) {
 	var req dtos.CreateSMSTemplateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateTemplate] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	userID := ctx.GetUint64("user_id")
 	tpl, err := c.service.CreateTemplate(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateTemplate] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS template"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, tpl)
@@ -239,8 +262,8 @@ func (c *SMSController) GetTemplate(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS template not found"})
 			return
 		}
-		log.Printf("GetTemplate Error getting template: [id %s, error: %s]", ctx.Param("id"), err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetTemplate] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS template"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -249,11 +272,13 @@ func (c *SMSController) GetTemplate(ctx *gin.Context) {
 func (c *SMSController) UpdateTemplate(ctx *gin.Context) {
 	var req dtos.CreateSMSTemplateRequest // Assuming CreateSMSTemplateRequest is reused for update
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateTemplate] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[SMSController.UpdateTemplate] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -264,8 +289,8 @@ func (c *SMSController) UpdateTemplate(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS template not found"})
 			return
 		}
-		log.Printf("UpdateTemplate Error updating template: [id %s, error: %s]", ctx.Param("id"), err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateTemplate] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SMS template"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS template updated successfully"})
@@ -280,8 +305,8 @@ func (c *SMSController) DeleteTemplate(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS template not found"})
 			return
 		}
-		log.Printf("DeleteTemplate Error deleting template: [id %s, error: %s]", id, err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteTemplate] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SMS template"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -294,7 +319,8 @@ func (c *SMSController) DeleteTemplate(ctx *gin.Context) {
 func (c *SMSController) GetProviders(ctx *gin.Context) {
 	results, err := c.service.GetProviders()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetProviders] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS providers"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results})
@@ -303,12 +329,12 @@ func (c *SMSController) GetProviders(ctx *gin.Context) {
 func (c *SMSController) GetProvider(ctx *gin.Context) {
 	result, err := c.service.GetProvider(ctx.Param("id"))
 	if err != nil {
-		log.Println("GetProvider Error getting provider:[id %s, error:%s", ctx.Param("id"), err.Error())
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS provider not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetProvider] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS provider"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -318,19 +344,19 @@ func (c *SMSController) UpdateProvider(ctx *gin.Context) {
 	var req dtos.CreateSMSProviderRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateProvider] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateProvider(ctx.Param("id"), req, userID); err != nil {
-		log.Println("UpdateProvider Error getting provider:[id %s, error:%s", ctx.Param("id"), err.Error())
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS provider not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateProvider] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SMS provider"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS provider updated successfully"})
@@ -342,7 +368,8 @@ func (c *SMSController) DeleteProvider(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS provider not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteProvider] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SMS provider"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -353,7 +380,8 @@ func (c *SMSController) GetMessages(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 	results, total, err := c.service.GetMessages(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetMessages] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS messages"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -367,7 +395,8 @@ func (c *SMSController) GetMessage(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS message not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetMessage] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS message"})
 		return
 	}
 	ctx.JSON(http.StatusOK, msg)
@@ -376,12 +405,14 @@ func (c *SMSController) GetMessage(ctx *gin.Context) {
 func (c *SMSController) CreateMessage(ctx *gin.Context) {
 	var req dtos.SendSMSRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateMessage] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	msg, err := c.service.CreateMessage(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateMessage] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS message"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, msg)
@@ -390,7 +421,8 @@ func (c *SMSController) CreateMessage(ctx *gin.Context) {
 func (c *SMSController) UpdateMessage(ctx *gin.Context) {
 	var req dtos.SendSMSRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateMessage] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	if err := c.service.UpdateMessage(ctx.Param("id"), req); err != nil {
@@ -398,7 +430,8 @@ func (c *SMSController) UpdateMessage(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS message not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateMessage] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SMS message"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS message updated successfully"})
@@ -410,7 +443,8 @@ func (c *SMSController) DeleteMessage(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS message not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteMessage] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SMS message"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -419,7 +453,8 @@ func (c *SMSController) DeleteMessage(ctx *gin.Context) {
 func (c *SMSController) GetTemplates(ctx *gin.Context) {
 	results, err := c.service.GetTemplates()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetTemplates] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS templates"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results})
@@ -428,7 +463,8 @@ func (c *SMSController) GetTemplates(ctx *gin.Context) {
 func (c *SMSController) GetOutboxesByCampaign(ctx *gin.Context) {
 	results, err := c.service.GetSMSOutboxesByCampaign(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetOutboxesByCampaign] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve campaign outbox"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results})
@@ -437,13 +473,15 @@ func (c *SMSController) GetOutboxesByCampaign(ctx *gin.Context) {
 func (c *SMSController) CreateOutbox(ctx *gin.Context) {
 	var req dtos.CreateSMSOutboxRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateOutbox] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	userID := ctx.GetUint64("user_id")
 	outbox, err := c.service.CreateSMSOutbox(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateOutbox] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS outbox entry"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, outbox)
@@ -454,7 +492,8 @@ func (c *SMSController) GetAllOutboxes(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 	results, total, err := c.service.GetAllSMSOutboxes(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetAllOutboxes] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS outboxes"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -468,7 +507,8 @@ func (c *SMSController) GetOutbox(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS outbox not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetOutbox] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS outbox entry"})
 		return
 	}
 	ctx.JSON(http.StatusOK, outbox)
@@ -477,7 +517,8 @@ func (c *SMSController) GetOutbox(ctx *gin.Context) {
 func (c *SMSController) UpdateOutbox(ctx *gin.Context) {
 	var req dtos.UpdateSMSOutboxRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateOutbox] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	userID := ctx.GetUint64("user_id")
@@ -486,7 +527,8 @@ func (c *SMSController) UpdateOutbox(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS outbox not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateOutbox] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SMS outbox"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS outbox updated successfully"})
@@ -498,7 +540,8 @@ func (c *SMSController) DeleteOutbox(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS outbox not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteOutbox] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SMS outbox"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -511,7 +554,8 @@ func (c *SMSController) GetInAppConfigs(ctx *gin.Context) {
 
 	results, total, err := c.service.GetInAppConfigs(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetInAppConfigs] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve in-app configurations"})
 		return
 	}
 
@@ -530,7 +574,8 @@ func (c *SMSController) GetInAppConfig(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Configuration not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetInAppConfig] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve configuration"})
 		return
 	}
 	ctx.JSON(http.StatusOK, config)
@@ -540,14 +585,16 @@ func (c *SMSController) GetInAppConfig(ctx *gin.Context) {
 func (c *SMSController) CreateInAppConfig(ctx *gin.Context) {
 	var req dtos.CreateSMSInAppConfigurationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateInAppConfig] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	config, err := c.service.CreateInAppConfig(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.CreateInAppConfig] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create configuration"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, config)
@@ -557,13 +604,15 @@ func (c *SMSController) CreateInAppConfig(ctx *gin.Context) {
 func (c *SMSController) UpdateInAppConfig(ctx *gin.Context) {
 	var req dtos.UpdateSMSInAppConfigurationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateInAppConfig] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateInAppConfig(ctx.Param("id"), req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.UpdateInAppConfig] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update configuration"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Configuration updated successfully"})
@@ -573,7 +622,8 @@ func (c *SMSController) UpdateInAppConfig(ctx *gin.Context) {
 func (c *SMSController) DeleteInAppConfig(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.DeleteInAppConfig(ctx.Param("id"), userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.DeleteInAppConfig] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete configuration"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -590,7 +640,8 @@ func (c *SMSController) GetImportErrors(ctx *gin.Context) {
 
 	importErrors, err := c.service.GetImportErrors(importID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSController.GetImportErrors] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve import errors"})
 		return
 	}
 

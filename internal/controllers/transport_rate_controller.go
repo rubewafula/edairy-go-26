@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,18 +25,21 @@ func NewTransportRateController() *TransportRateController {
 func (c *TransportRateController) CreateRate(ctx *gin.Context) {
 	var req dtos.CreateTransportRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransportRateController.CreateRate] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[TransportRateController.CreateRate] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	rate, err := c.service.CreateTransportRate(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransportRateController.CreateRate] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transport rate"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, rate)
@@ -51,7 +55,8 @@ func (c *TransportRateController) GetRates(ctx *gin.Context) {
 
 	rates, total, err := c.service.GetTransportRates(page, limit, transporterNo, routeID, memberNo)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransportRateController.GetRates] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve transport rates"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": rates, "total": total})
@@ -60,6 +65,7 @@ func (c *TransportRateController) GetRates(ctx *gin.Context) {
 func (c *TransportRateController) GetRate(ctx *gin.Context) {
 	rate, err := c.service.GetTransportRate(ctx.Param("id"))
 	if err != nil {
+		log.Printf("[TransportRateController.GetRate] Service Error: %v", err)
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Transport rate not found"})
 		return
 	}
@@ -69,17 +75,20 @@ func (c *TransportRateController) GetRate(ctx *gin.Context) {
 func (c *TransportRateController) UpdateRate(ctx *gin.Context) {
 	var req dtos.UpdateTransportRateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransportRateController.UpdateRate] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[TransportRateController.UpdateRate] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateTransportRate(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransportRateController.UpdateRate] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transport rate"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Transport rate updated successfully"})
@@ -87,7 +96,8 @@ func (c *TransportRateController) UpdateRate(ctx *gin.Context) {
 
 func (c *TransportRateController) DeleteRate(ctx *gin.Context) {
 	if err := c.service.DeleteTransportRate(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransportRateController.DeleteRate] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete transport rate"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Transport rate deleted successfully"})

@@ -25,13 +25,13 @@ func NewStoreStockMovementController() *StoreStockMovementController {
 func (c *StoreStockMovementController) CreateMovement(ctx *gin.Context) {
 	var req dtos.CreateStoreStockMovementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Printf("Store CreateMovement error cannot parse json: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StoreStockMovementController.CreateMovement] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		log.Printf("Store CreateMovement error cannot validate json: %s", err.Error())
+		log.Printf("[StoreStockMovementController.CreateMovement] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -40,7 +40,7 @@ func (c *StoreStockMovementController) CreateMovement(ctx *gin.Context) {
 
 	movement, err := c.service.CreateMovement(req, userID)
 	if err != nil {
-		log.Printf("Store CreateMovement error cannot create func: %s", err.Error())
+		log.Printf("[StoreStockMovementController.CreateMovement] Service Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -53,7 +53,8 @@ func (c *StoreStockMovementController) GetMovements(ctx *gin.Context) {
 
 	results, total, err := c.service.GetMovements(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreStockMovementController.GetMovements] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve stock movements"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -62,7 +63,8 @@ func (c *StoreStockMovementController) GetMovements(ctx *gin.Context) {
 func (c *StoreStockMovementController) GetMovement(ctx *gin.Context) {
 	result, err := c.service.GetMovement(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Stock movement record not found"})
+		log.Printf("[StoreStockMovementController.GetMovement] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Stock movement record not found"}) // Specific not found is fine
 		return
 	}
 	ctx.JSON(http.StatusOK, result)

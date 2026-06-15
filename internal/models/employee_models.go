@@ -222,21 +222,20 @@ type EmployeeRelief struct {
 
 type EmployeePayroll struct { // Renamed from Payroll to avoid conflict and represent the header
 	BaseModel
-	PayrollMonth    string    `gorm:"column:payroll_month"`
-	PayrollYear     string    `gorm:"column:payroll_year"`
-	DateOpened      time.Time `gorm:"column:date_opened"`
-	TotalDeductions float64   `gorm:"column:total_deductions"`
-	GrossPay        float64   `gorm:"column:gross_pay"`
-	NetPay          float64   `gorm:"column:net_pay"`
-	Complete        string    `gorm:"column:complete"`
-	Confirmed       string    `gorm:"column:confirmed"`
-	Approved        string    `gorm:"column:approved"`
-	TotalBenefits   float64   `gorm:"column:total_benefits"`
-	TotalTax        float64   `gorm:"column:total_tax"`
-	TotalRelief     float64   `gorm:"column:total_relief"`
-	Period          string    `gorm:"column:period"`
-	Status          string    `gorm:"column:status"`
-	PaidAt          time.Time `gorm:"column:paid_at"`
+	PayrollMonth    string     `gorm:"column:payroll_month"`
+	PayrollYear     string     `gorm:"column:payroll_year"`
+	DateOpened      time.Time  `gorm:"column:date_opened"`
+	TotalDeductions float64    `gorm:"column:total_deductions"`
+	GrossPay        float64    `gorm:"column:gross_pay"`
+	NetPay          float64    `gorm:"column:net_pay"`
+	Complete        string     `gorm:"column:complete"`
+	Confirmed       string     `gorm:"column:confirmed"`
+	Approved        string     `gorm:"column:approved"`
+	TotalBenefits   float64    `gorm:"column:total_benefits"`
+	TotalTax        float64    `gorm:"column:total_tax"`
+	TotalRelief     float64    `gorm:"column:total_relief"`
+	Status          string     `gorm:"column:status"`
+	PaidAt          *time.Time `gorm:"column:paid_at"`
 }
 
 type EmployeePayslip struct {
@@ -257,10 +256,10 @@ type EmployeePayslip struct {
 
 type EmployeePayrollRelief struct {
 	BaseModel
-	ReliefID   uint64 `gorm:"index;column:relief_id"`
-	EmployeeID uint64 `gorm:"index;column:employee_id"`
-	Amount     string `gorm:"column:amount"`
-	PayrollID  uint64 `gorm:"index;column:payroll_id"`
+	ReliefID   uint64  `gorm:"index;column:relief_id"`
+	EmployeeID uint64  `gorm:"index;column:employee_id"`
+	Amount     float64 `gorm:"column:amount"`
+	PayrollID  uint64  `gorm:"index;column:payroll_id"`
 }
 
 type JobCategory struct {

@@ -5,10 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
-	"github.com/rubewafula/edairy-go-26/internal/utils"
-	validator "github.com/rubewafula/edairy-go-26/internal/validators"
 	"gorm.io/gorm"
 )
 
@@ -20,28 +17,6 @@ func NewEmployeePayslipController() *EmployeePayslipController {
 	return &EmployeePayslipController{
 		service: services.NewEmployeePayslipService(),
 	}
-}
-
-func (c *EmployeePayslipController) Create(ctx *gin.Context) {
-	var req dtos.CreateEmployeePayslipRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := validator.Validate.Struct(req); err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
-		return
-	}
-
-	userID := ctx.GetUint64("user_id")
-	res, err := c.service.CreatePayslip(req, userID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, res)
 }
 
 func (c *EmployeePayslipController) List(ctx *gin.Context) {
@@ -76,23 +51,6 @@ func (c *EmployeePayslipController) Get(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, res)
-}
-
-func (c *EmployeePayslipController) Update(ctx *gin.Context) {
-	id := ctx.Param("id")
-	var req dtos.UpdateEmployeePayslipRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	userID := ctx.GetUint64("user_id")
-	if err := c.service.UpdatePayslip(id, req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"message": "Payslip updated successfully"})
 }
 
 func (c *EmployeePayslipController) Delete(ctx *gin.Context) {

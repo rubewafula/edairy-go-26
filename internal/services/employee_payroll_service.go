@@ -1,25 +1,36 @@
 package services
 
 import (
+	"bytes"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/jung-kurt/gofpdf"
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
+	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type EmployeePayrollService struct{}
+type EmployeePayrollService struct {
+	notificationService *UINotificationService
+}
 
 func NewEmployeePayrollService() *EmployeePayrollService {
-	return &EmployeePayrollService{}
+	return &EmployeePayrollService{
+		notificationService: NewUINotificationService(),
+	}
 }
 
 func (s *EmployeePayrollService) CreatePayroll(req dtos.CreateEmployeePayrollRequest, userID uint64) error {
@@ -42,6 +53,7 @@ func (s *EmployeePayrollService) CreatePayroll(req dtos.CreateEmployeePayrollReq
 			tx.Where("payroll_id IN ?", payrollIDs).Delete(&models.EmployeePayrollDeduction{})
 			tx.Where("payroll_id IN ?", payrollIDs).Delete(&models.EmployeePayrollBenefit{})
 			tx.Where("payroll_id IN ?", payrollIDs).Delete(&models.EmployeePayrollRelief{})
+			tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.EmployeePayrollGenerationError{})
 			tx.Where("id IN ?", payrollIDs).Delete(&models.EmployeePayroll{})
 		}
 		return nil
@@ -67,11 +79,15 @@ func (s *EmployeePayrollService) generatePayrollInBackground(req dtos.CreateEmpl
 	// 1. Fetch all active employees
 	var employees []models.Employee
 	if err := db.DB.Where("status = 'ACTIVE' AND deleted_at IS NULL").Find(&employees).Error; err != nil {
-		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Error fetching employees: %v", err)
+		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Critical Error fetching employees: %v", err)
+		s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+			Title:            "Employee Payroll Generation Failed",
+			Message:          fmt.Sprintf("Could not fetch active employees: %v", err),
+			NotificationType: "ERROR",
+		})
 		return
 	}
 
-	// 2. Preload necessary data for all employees
 	employeeIDs := make([]uint64, len(employees))
 	for i, emp := range employees {
 		employeeIDs[i] = emp.ID
@@ -107,6 +123,20 @@ func (s *EmployeePayrollService) generatePayrollInBackground(req dtos.CreateEmpl
 		statutoryConfigMap[sc.DeductionID] = sc
 	}
 
+	var empReliefs []models.EmployeeRelief
+	db.DB.Where("employee_id IN ? AND status = 'ACTIVE' AND deleted_at IS NULL", employeeIDs).Find(&empReliefs)
+	reliefMap := make(map[uint64][]models.EmployeeRelief)
+	for _, r := range empReliefs {
+		reliefMap[r.EmployeeID] = append(reliefMap[r.EmployeeID], r)
+	}
+
+	var reliefConfigs []models.EmployeePayrollRelief
+	db.DB.Where("deleted_at IS NULL").Find(&reliefConfigs)
+	reliefConfigMap := make(map[uint64]models.EmployeePayrollRelief)
+	for _, rc := range reliefConfigs {
+		reliefConfigMap[rc.ID] = rc
+	}
+
 	// 3. Create Payroll Header
 	payrollHeader := models.EmployeePayroll{
 		BaseModel:    models.BaseModel{CreatedBy: userID},
@@ -114,9 +144,10 @@ func (s *EmployeePayrollService) generatePayrollInBackground(req dtos.CreateEmpl
 		PayrollYear:  req.PayrollYear,
 		DateOpened:   time.Now(),
 		Status:       "processing",
+		PaidAt:       nil,
 	}
 	if err := db.DB.Create(&payrollHeader).Error; err != nil {
-		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Error creating payroll header: %v", err)
+		s.handleProcessingError(0, userID, "Employee Payroll Header Error", "Failed to create payroll header record", err, "incomplete")
 		return
 	}
 
@@ -160,6 +191,8 @@ func (s *EmployeePayrollService) generatePayrollInBackground(req dtos.CreateEmpl
 						benefitMap[emp.ID],
 						deductionMap[emp.ID],
 						statutoryConfigMap,
+						reliefMap[emp.ID],
+						reliefConfigMap,
 					)
 					if err != nil {
 						log.Printf("[EmployeePayrollService.generatePayrollInBackground] Error processing payroll for employee %d: %v", emp.ID, err)
@@ -193,10 +226,34 @@ func (s *EmployeePayrollService) generatePayrollInBackground(req dtos.CreateEmpl
 	finalPayrollStatus := "draft"
 	if failedEmployeeCount > 0 {
 		finalPayrollStatus = "incomplete"
-		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Completed payroll generation for %s %s with %d failures.", req.PayrollMonth, req.PayrollYear, failedEmployeeCount)
-	} else {
-		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Completed payroll generation for %s %s successfully.", req.PayrollMonth, req.PayrollYear)
 	}
+
+	// Send UI notification
+	totalProcessed := len(employees)
+	successCount := totalProcessed - failedEmployeeCount
+	message := fmt.Sprintf("Employee payroll generation completed. Success: %d, Failed: %d out of %d records.", successCount, failedEmployeeCount, totalProcessed)
+	notificationType := "SUCCESS"
+	errorLink := ""
+
+	if failedEmployeeCount > 0 {
+		notificationType = "ERROR"
+		errorLink = fmt.Sprintf("/employee-payrolls/generation-errors/%d", payrollHeader.ID)
+		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Completed with %d failures for payroll %d", failedEmployeeCount, payrollHeader.ID)
+	} else if totalProcessed == 0 {
+		message = "Employee payroll generation completed. No active employees were found to process."
+		notificationType = "INFO"
+	} else {
+		log.Printf("[EmployeePayrollService.generatePayrollInBackground] Completed successfully for payroll %d", payrollHeader.ID)
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "Employee Payroll Generation Status",
+		Message:          message,
+		NotificationType: notificationType,
+		ErrorLink:        errorLink,
+		ReferenceID:      &payrollHeader.ID,
+		ReferenceType:    utils.StringPtr("EMPLOYEE_PAYROLL"),
+	})
 
 	db.DB.Model(&payrollHeader).Where("id = ?", payrollHeader.ID).Updates(map[string]interface{}{
 		"status":     finalPayrollStatus,
@@ -214,8 +271,23 @@ func (s *EmployeePayrollService) processSingleEmployeePayroll(
 	employeeBenefits []models.EmployeeBenefit,
 	employeeDeductions []models.EmployeeDeduction,
 	statutoryConfigMap map[uint64]models.StatutoryDeductionConfiguration,
+	employeeReliefs []models.EmployeeRelief,
+	reliefConfigMap map[uint64]models.EmployeePayrollRelief,
 ) error {
 	return db.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Create EmployeePayslip first to get its ID
+		payslip := models.EmployeePayslip{
+			BaseModel:    models.BaseModel{CreatedBy: userID},
+			EmployeeID:   employee.ID,
+			PayrollID:    payrollID,
+			PayrollMonth: payMonth,
+			PayrollYear:  payYear,
+			Status:       "draft", // Initial status
+		}
+		if err := tx.Create(&payslip).Error; err != nil {
+			return err
+		}
+
 		var grossPay, totalBenefits, totalDeductions, totalTax, totalRelief, netPay float64
 
 		// 1. Basic Salary
@@ -230,6 +302,7 @@ func (s *EmployeePayrollService) processSingleEmployeePayroll(
 				EmployeeID: employee.ID,
 				BenefitID:  benefit.ID,
 				Amount:     benefit.Amount,
+				PayslipID:  payslip.ID, // Assign payslip ID directly
 				PayrollID:  payrollID,
 				// Month and Year can be derived from payDateRangeID if needed
 			}
@@ -270,6 +343,7 @@ func (s *EmployeePayrollService) processSingleEmployeePayroll(
 				BaseModel:   models.BaseModel{CreatedBy: userID},
 				EmployeeID:  employee.ID,
 				DeductionID: deduction.ID,
+				PayslipID:   payslip.ID, // Assign payslip ID directly
 				Amount:      deductionAmount,
 				PayrollID:   payrollID,
 				// Month and Year can be derived from payDateRangeID
@@ -280,40 +354,39 @@ func (s *EmployeePayrollService) processSingleEmployeePayroll(
 		}
 
 		// 4. Process Reliefs (if any)
-		// This would involve fetching EmployeeReliefs and applying them to reduce tax.
-		// For now, let's assume totalRelief is 0 or pre-calculated.
+		for _, er := range employeeReliefs {
+			if config, ok := reliefConfigMap[er.ReliefID]; ok {
+				reliefAmount := config.Amount
+				totalRelief += reliefAmount
+
+				epr := models.EmployeePayrollRelief{
+					BaseModel:  models.BaseModel{CreatedBy: userID},
+					EmployeeID: employee.ID,
+					ReliefID:   er.ReliefID,
+					Amount:     reliefAmount,
+					PayrollID:  payrollID,
+				}
+				if err := tx.Create(&epr).Error; err != nil {
+					return err
+				}
+			}
+		}
 
 		// 5. Calculate Net Pay
 		netPay = grossPay - totalDeductions - totalTax + totalRelief // totalTax and totalRelief would be calculated from grossPay and statutory rules
 
-		// 6. Create EmployeePayslip
-		payslip := models.EmployeePayslip{
-			BaseModel:       models.BaseModel{CreatedBy: userID},
-			EmployeeID:      employee.ID,
-			PayrollID:       payrollID,
-			PayrollMonth:    payMonth,
-			PayrollYear:     payYear,
-			BasicSalary:     basicSalary,
-			GrossPay:        grossPay,
-			TotalBenefits:   totalBenefits,
-			TotalDeductions: totalDeductions,
-			TotalTax:        totalTax,
-			TotalRelief:     totalRelief,
-			NetPay:          netPay,
-			Status:          "draft",
-		}
-		if err := tx.Create(&payslip).Error; err != nil {
+		// Update the payslip with calculated values
+		if err := tx.Model(&payslip).Updates(map[string]interface{}{
+			"basic_salary":     basicSalary,
+			"gross_pay":        grossPay,
+			"total_benefits":   totalBenefits,
+			"total_deductions": totalDeductions,
+			"total_tax":        totalTax,
+			"total_relief":     totalRelief,
+			"net_pay":          netPay,
+		}).Error; err != nil {
 			return err
 		}
-
-		// Update payslip_id for deductions and benefits
-		if err := tx.Model(&models.EmployeePayrollDeduction{}).Where("payroll_id = ? AND employee_id = ?", payrollID, employee.ID).Update("payslip_id", payslip.ID).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(&models.EmployeePayrollBenefit{}).Where("payroll_id = ? AND employee_id = ?", payrollID, employee.ID).Update("payslip_id", payslip.ID).Error; err != nil {
-			return err
-		}
-		// If reliefs are created as separate records, update their payslip_id too.
 
 		log.Printf("[EmployeePayrollService.processSingleEmployeePayroll] Successfully processed payroll for employee %d for %s %s", employee.ID, payMonth, payYear)
 		return nil
@@ -502,15 +575,13 @@ func (s *EmployeePayrollService) approvePayrollInBackground(payrollID uint64, us
 
 	// Basic validation for posting rules
 	if grossRule.ID == 0 || deductionRule.ID == 0 || benefitRule.ID == 0 || taxRule.ID == 0 || reliefRule.ID == 0 {
-		log.Printf("[EmployeePayrollService] Missing one or more posting rules for payroll %d. Aborting approval.", payrollID)
-		db.DB.Model(&payroll).Update("status", "confirmed") // Revert to confirmed
+		s.handleProcessingError(payrollID, userID, "Employee Payroll Approval Failed", "Missing one or more accounting posting rules. Please check configurations.", nil, "confirmed")
 		return
 	}
 
 	var payslips []models.EmployeePayslip
 	if err := db.DB.Where("payroll_id = ? AND status != 'approved'", payrollID).Find(&payslips).Error; err != nil {
-		log.Printf("[EmployeePayrollService] Failed to fetch payslips for payroll %d: %v", payrollID, err)
-		db.DB.Model(&payroll).Update("status", "confirmed") // Revert to confirmed
+		s.handleProcessingError(payrollID, userID, "Employee Payroll Approval Failed", "Failed to fetch payslips from database", err, "confirmed")
 		return
 	}
 
@@ -668,6 +739,32 @@ func (s *EmployeePayrollService) approvePayrollInBackground(payrollID uint64, us
 		finalStatus = "incomplete"
 	}
 
+	// Send UI notification
+	totalPayslips := len(payslips)
+	message := fmt.Sprintf("Employee payroll approval completed. Success: %d, Failed: %d out of %d payslips.", totalPayslips-int(failedCount), failedCount, totalPayslips)
+	notificationType := "SUCCESS"
+	errorLink := ""
+
+	if failedCount > 0 {
+		notificationType = "ERROR"
+		errorLink = fmt.Sprintf("/employee-payrolls/approval-errors/%d", payrollID)
+		log.Printf("[EmployeePayrollService.approvePayrollInBackground] Approval completed with %d failures for payroll %d.", failedCount, payrollID)
+	} else if totalPayslips == 0 {
+		message = "Employee payroll approval completed. No pending payslips were found."
+		notificationType = "INFO"
+	} else {
+		log.Printf("[EmployeePayrollService.approvePayrollInBackground] Approval completed successfully for payroll %d.", payrollID)
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "Employee Payroll Approval Status",
+		Message:          message,
+		NotificationType: notificationType,
+		ErrorLink:        errorLink,
+		ReferenceID:      &payrollID,
+		ReferenceType:    utils.StringPtr("EMPLOYEE_PAYROLL"),
+	})
+
 	db.DB.Model(&payroll).Updates(map[string]interface{}{
 		"status":      finalStatus,
 		"approved_at": &now,
@@ -676,6 +773,24 @@ func (s *EmployeePayrollService) approvePayrollInBackground(payrollID uint64, us
 		"posted_at":   &now,
 		"posted_by":   &userID,
 		"updated_at":  time.Now(),
+	})
+}
+
+func (s *EmployeePayrollService) handleProcessingError(payrollID uint64, userID uint64, title, message string, err error, status string) {
+	errMsg := message
+	if err != nil {
+		errMsg = fmt.Sprintf("%s: %v", message, err)
+	}
+	log.Printf("[%s] %s for payroll %d", title, errMsg, payrollID)
+	if payrollID > 0 {
+		db.DB.Model(&models.EmployeePayroll{}).Where("id = ?", payrollID).Update("status", status)
+	}
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            title,
+		Message:          errMsg,
+		NotificationType: "ERROR",
+		ReferenceID:      &payrollID,
+		ReferenceType:    utils.StringPtr("EMPLOYEE_PAYROLL"),
 	})
 }
 
@@ -728,4 +843,325 @@ func (s *EmployeePayrollService) DeleteEmployeePayroll(id string, userID uint64)
 
 		return tx.Model(&payroll).Update("updated_by", userID).Delete(&payroll).Error
 	})
+}
+
+func (s *EmployeePayrollService) GetPayslipStatement(employeeID, payrollID string) (*dtos.EmployeePayslipStatementResponse, error) {
+	var payslip models.EmployeePayslip
+	if err := db.DB.Where("employee_id = ? AND payroll_id = ? AND deleted_at IS NULL", employeeID, payrollID).First(&payslip).Error; err != nil {
+		return nil, err
+	}
+
+	var employee dtos.EmployeeResponse
+	// Aggregating employee details for the statement
+	db.DB.Model(&models.Employee{}).
+		Select("employees.*, jp.name as job_position_name").
+		Joins("left join job_positions jp on employees.job_position_id = jp.id").
+		Where("employees.id = ?", payslip.EmployeeID).
+		Scan(&employee)
+
+	// Fetch Benefits breakdown
+	var benefits []dtos.EmployeePayrollBenefitResponse
+	db.DB.Raw(`
+		SELECT epb.id, eb.benefit_id, b.name as benefit_name, epb.amount
+		FROM employee_payroll_benefits epb
+		JOIN employee_benefits eb ON epb.employee_benefit_id = eb.id
+		JOIN benefits b ON eb.benefit_id = b.id
+		WHERE epb.payslip_id = ? AND epb.deleted_at IS NULL
+	`, payslip.ID).Scan(&benefits)
+
+	// Fetch Deductions breakdown
+	var deductions []dtos.EmployeePayrollDeductionResponse
+	db.DB.Raw(`
+		SELECT epd.id, ed.deduction_type_id as deduction_id, edt.name as deduction_name, epd.amount
+		FROM employee_payroll_deductions epd
+		JOIN employee_deductions ed ON epd.employee_deduction_id = ed.id
+		JOIN employee_deduction_types edt ON ed.deduction_type_id = edt.id
+		WHERE epd.payslip_id = ? AND epd.deleted_at IS NULL
+	`, payslip.ID).Scan(&deductions)
+
+	// Fetch Reliefs breakdown
+	var reliefs []dtos.EmployeePayrollReliefResponse
+	db.DB.Raw(`
+		SELECT epr.id, epr.relief_id, pr.relief as relief_name, epr.amount
+		FROM employee_payroll_reliefs epr
+		JOIN payroll_reliefs pr ON epr.relief_id = pr.id
+		WHERE epr.employee_id = ? AND epr.payroll_id = ? AND epr.deleted_at IS NULL
+	`, payslip.EmployeeID, payslip.PayrollID).Scan(&reliefs)
+
+	return &dtos.EmployeePayslipStatementResponse{
+		Payslip: dtos.EmployeePayslipResponse{
+			ID:              payslip.ID,
+			EmployeeID:      payslip.EmployeeID,
+			PayrollMonth:    payslip.PayrollMonth,
+			PayrollYear:     payslip.PayrollYear,
+			GrossPay:        payslip.GrossPay,
+			NetPay:          payslip.NetPay,
+			TotalDeductions: payslip.TotalDeductions,
+			TotalBenefits:   payslip.TotalBenefits,
+			BasicSalary:     payslip.BasicSalary,
+			PayrollID:       payslip.PayrollID,
+			TotalTax:        payslip.TotalTax,
+			TotalRelief:     payslip.TotalRelief,
+			Status:          payslip.Status,
+			CreatedAt:       payslip.CreatedAt,
+		},
+		Employee:   employee,
+		Benefits:   benefits,
+		Deductions: deductions,
+		Reliefs:    reliefs,
+	}, nil
+}
+
+func (s *EmployeePayrollService) ExportPayslipStatement(userID uint64, employeeID, payrollID, reportType string) error {
+	go s.processPayslipStatementExportInBackground(userID, employeeID, payrollID, reportType)
+	return nil
+}
+
+func (s *EmployeePayrollService) processPayslipStatementExportInBackground(userID uint64, employeeID, payrollID, reportType string) {
+	result, err := s.GetPayslipStatement(employeeID, payrollID)
+	if err != nil {
+		log.Printf("[EmployeePayrollService.processPayslipStatementExportInBackground] Error fetching data: %v", err)
+		return
+	}
+
+	var fileData []byte
+	ext := "csv"
+	if strings.ToLower(reportType) == "pdf" {
+		ext = "pdf"
+		fileData, err = s.generateDetailedPayslipPDF(result)
+	} else {
+		fileData, err = s.generateDetailedPayslipCSV(result)
+	}
+
+	if err != nil {
+		log.Printf("[EmployeePayrollService] Generation error: %v", err)
+		return
+	}
+
+	exportDir := "./storage/exports"
+	os.MkdirAll(exportDir, 0755)
+	filename := fmt.Sprintf("employee_payslip_%s_%d.%s", employeeID, time.Now().UnixNano(), ext)
+	filePath := filepath.Join(exportDir, filename)
+
+	if err := os.WriteFile(filePath, fileData, 0644); err != nil {
+		log.Printf("[EmployeePayrollService] File write error: %v", err)
+		return
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "Employee Payslip Statement Ready",
+		Message:          fmt.Sprintf("Your detailed payslip statement for %s %s is ready for download.", result.Payslip.PayrollMonth, result.Payslip.PayrollYear),
+		NotificationType: "SUCCESS",
+		DownloadLink:     fmt.Sprintf("/api/employee-payslips/export/download/%s", filename),
+	})
+}
+
+func (s *EmployeePayrollService) generateDetailedPayslipCSV(data *dtos.EmployeePayslipStatementResponse) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	writer := csv.NewWriter(buf)
+	writer.Write([]string{"Employee No", "Name", "Period", "Category", "Description", "Amount"})
+
+	p := data.Payslip
+	e := data.Employee
+	period := fmt.Sprintf("%s %s", p.PayrollMonth, p.PayrollYear)
+	fullName := fmt.Sprintf("%s %s", e.FirstName, e.Surname)
+
+	writer.Write([]string{e.EmployeeNo, fullName, period, "EARNING", "Basic Salary", fmt.Sprintf("%.2f", p.BasicSalary)})
+	for _, b := range data.Benefits {
+		writer.Write([]string{e.EmployeeNo, fullName, period, "BENEFIT", b.BenefitName, fmt.Sprintf("%.2f", b.Amount)})
+	}
+	for _, d := range data.Deductions {
+		writer.Write([]string{e.EmployeeNo, fullName, period, "DEDUCTION", d.DeductionName, fmt.Sprintf("%.2f", d.Amount)})
+	}
+	for _, r := range data.Reliefs {
+		writer.Write([]string{e.EmployeeNo, fullName, period, "RELIEF", r.ReliefName, fmt.Sprintf("%.2f", r.Amount)})
+	}
+	writer.Write([]string{e.EmployeeNo, fullName, period, "SUMMARY", "NET PAY", fmt.Sprintf("%.2f", p.NetPay)})
+
+	writer.Flush()
+	return buf.Bytes(), writer.Error()
+}
+
+func (s *EmployeePayrollService) generateDetailedPayslipPDF(data *dtos.EmployeePayslipStatementResponse) ([]byte, error) {
+	var org struct{ RegisteredName, Address string }
+	db.DB.Table("organization_details").First(&org)
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 14)
+	pdf.CellFormat(0, 10, org.RegisteredName, "", 1, "C", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(0, 5, org.Address, "", 1, "C", false, 0, "")
+	pdf.Ln(5)
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(0, 10, "EMPLOYEE PAYSLIP STATEMENT", "B", 1, "C", false, 0, "")
+	pdf.Ln(5)
+
+	pdf.SetFont("Arial", "B", 10)
+	pdf.CellFormat(40, 7, "Employee No:", "", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(0, 7, data.Employee.EmployeeNo, "", 1, "L", false, 0, "")
+	pdf.SetFont("Arial", "B", 10)
+	pdf.CellFormat(40, 7, "Employee Name:", "", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(0, 7, fmt.Sprintf("%s %s", data.Employee.FirstName, data.Employee.Surname), "", 1, "L", false, 0, "")
+	pdf.SetFont("Arial", "B", 10)
+	pdf.CellFormat(40, 7, "Period:", "", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(0, 7, fmt.Sprintf("%s %s", data.Payslip.PayrollMonth, data.Payslip.PayrollYear), "", 1, "L", false, 0, "")
+	pdf.Ln(5)
+
+	pdf.SetFont("Arial", "B", 10)
+	pdf.CellFormat(140, 8, "Description", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(50, 8, "Amount", "1", 1, "C", false, 0, "")
+
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(140, 8, "Basic Salary", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(50, 8, fmt.Sprintf("%.2f", data.Payslip.BasicSalary), "1", 1, "R", false, 0, "")
+	for _, b := range data.Benefits {
+		pdf.CellFormat(140, 8, b.BenefitName, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(50, 8, fmt.Sprintf("%.2f", b.Amount), "1", 1, "R", false, 0, "")
+	}
+	for _, d := range data.Deductions {
+		pdf.CellFormat(140, 8, d.DeductionName, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(50, 8, fmt.Sprintf("-%.2f", d.Amount), "1", 1, "R", false, 0, "")
+	}
+	for _, r := range data.Reliefs {
+		pdf.CellFormat(140, 8, r.ReliefName, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(50, 8, fmt.Sprintf("%.2f", r.Amount), "1", 1, "R", false, 0, "")
+	}
+
+	pdf.SetFont("Arial", "B", 10)
+	pdf.CellFormat(140, 10, "NET PAYABLE", "1", 0, "R", false, 0, "")
+	pdf.CellFormat(50, 10, fmt.Sprintf("%.2f", data.Payslip.NetPay), "1", 1, "R", false, 0, "")
+
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	return buf.Bytes(), err
+}
+
+type payslipExportData struct {
+	EmployeeNo      string  `gorm:"column:employee_no"`
+	EmployeeName    string  `gorm:"column:employee_name"`
+	PayrollMonth    string  `gorm:"column:payroll_month"`
+	PayrollYear     string  `gorm:"column:payroll_year"`
+	BasicSalary     float64 `gorm:"column:basic_salary"`
+	GrossPay        float64 `gorm:"column:gross_pay"`
+	TotalBenefits   float64 `gorm:"column:total_benefits"`
+	TotalDeductions float64 `gorm:"column:total_deductions"`
+	TotalTax        float64 `gorm:"column:total_tax"`
+	TotalRelief     float64 `gorm:"column:total_relief"`
+	NetPay          float64 `gorm:"column:net_pay"`
+	Status          string  `gorm:"column:status"`
+}
+
+func (s *EmployeePayrollService) ExportPayslips(userID uint64, filters map[string]string, format string) error {
+	go s.processPayslipsExportInBackground(userID, filters, format)
+	return nil
+}
+
+func (s *EmployeePayrollService) processPayslipsExportInBackground(userID uint64, filters map[string]string, format string) {
+
+	var data []payslipExportData
+	query := db.DB.Table("employee_payslips ep").
+		Select("e.employee_no, CONCAT(e.first_name, ' ', e.surname) as employee_name, ep.payroll_month, ep.payroll_year, ep.basic_salary, ep.gross_pay, ep.total_benefits, ep.total_deductions, ep.total_tax, ep.total_relief, ep.net_pay, ep.status").
+		Joins("JOIN employees e ON ep.employee_id = e.id").
+		Where("ep.deleted_at IS NULL")
+
+	if val, ok := filters["payroll_id"]; ok {
+		query = query.Where("ep.payroll_id = ?", val)
+	}
+	if val, ok := filters["payroll_month"]; ok {
+		query = query.Where("ep.payroll_month = ?", val)
+	}
+	if val, ok := filters["payroll_year"]; ok {
+		query = query.Where("ep.payroll_year = ?", val)
+	}
+
+	if err := query.Scan(&data).Error; err != nil {
+		log.Printf("[EmployeePayrollService.processPayslipsExportInBackground] Fetch Error: %v", err)
+		return
+	}
+
+	var fileData []byte
+	var err error
+	ext := "csv"
+	if strings.ToLower(format) == "pdf" {
+		ext = "pdf"
+		fileData, err = s.generatePayslipsListPDF(data)
+	} else {
+		fileData, err = s.generatePayslipsListCSV(data)
+	}
+
+	if err != nil {
+		log.Printf("[EmployeePayrollService.processPayslipsExportInBackground] Generation error: %v", err)
+		return
+	}
+
+	exportDir := "./storage/exports"
+	os.MkdirAll(exportDir, 0755)
+	filename := fmt.Sprintf("employee_payslips_export_%d.%s", time.Now().UnixNano(), ext)
+	filePath := filepath.Join(exportDir, filename)
+
+	if err := os.WriteFile(filePath, fileData, 0644); err != nil {
+		log.Printf("[EmployeePayrollService.processPayslipsExportInBackground] File write error: %v", err)
+		return
+	}
+
+	s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+		Title:            "Employee Payslips Export Ready",
+		Message:          "The bulk export of employee payslips is ready for download.",
+		NotificationType: "SUCCESS",
+		DownloadLink:     fmt.Sprintf("/api/employee-payslips/export/download/%s", filename),
+	})
+}
+
+func (s *EmployeePayrollService) generatePayslipsListCSV(data []payslipExportData) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	writer := csv.NewWriter(buf)
+	writer.Write([]string{"Employee No", "Employee Name", "Month", "Year", "Basic Salary", "Gross Pay", "Benefits", "Deductions", "Tax", "Relief", "Net Pay", "Status"})
+
+	for _, row := range data {
+		writer.Write([]string{
+			row.EmployeeNo, row.EmployeeName, row.PayrollMonth, row.PayrollYear,
+			fmt.Sprintf("%.2f", row.BasicSalary), fmt.Sprintf("%.2f", row.GrossPay),
+			fmt.Sprintf("%.2f", row.TotalBenefits), fmt.Sprintf("%.2f", row.TotalDeductions),
+			fmt.Sprintf("%.2f", row.TotalTax), fmt.Sprintf("%.2f", row.TotalRelief),
+			fmt.Sprintf("%.2f", row.NetPay), row.Status,
+		})
+	}
+	writer.Flush()
+	return buf.Bytes(), writer.Error()
+}
+
+func (s *EmployeePayrollService) generatePayslipsListPDF(data []payslipExportData) ([]byte, error) {
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(0, 10, "EMPLOYEE PAYROLL SUMMARY", "B", 1, "C", false, 0, "")
+	pdf.Ln(5)
+	pdf.SetFont("Arial", "B", 9)
+	headers := []string{"Emp No", "Name", "Month/Year", "Basic", "Gross", "Benefits", "Deduc.", "Tax", "Relief", "Net"}
+	widths := []float64{20, 50, 25, 23, 23, 23, 23, 23, 23, 23}
+	for i, h := range headers {
+		pdf.CellFormat(widths[i], 8, h, "1", 0, "C", false, 0, "")
+	}
+	pdf.Ln(-1)
+	pdf.SetFont("Arial", "", 8)
+	for _, row := range data {
+		pdf.CellFormat(widths[0], 7, row.EmployeeNo, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[1], 7, row.EmployeeName, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(widths[2], 7, fmt.Sprintf("%s %s", row.PayrollMonth, row.PayrollYear), "1", 0, "C", false, 0, "")
+		pdf.CellFormat(widths[3], 7, fmt.Sprintf("%.2f", row.BasicSalary), "1", 0, "R", false, 0, "")
+		pdf.CellFormat(widths[4], 7, fmt.Sprintf("%.2f", row.GrossPay), "1", 0, "R", false, 0, "")
+		pdf.CellFormat(widths[5], 7, fmt.Sprintf("%.2f", row.TotalBenefits), "1", 0, "R", false, 0, "")
+		pdf.CellFormat(widths[6], 7, fmt.Sprintf("%.2f", row.TotalDeductions), "1", 0, "R", false, 0, "")
+		pdf.CellFormat(widths[7], 7, fmt.Sprintf("%.2f", row.TotalTax), "1", 0, "R", false, 0, "")
+		pdf.CellFormat(widths[8], 7, fmt.Sprintf("%.2f", row.TotalRelief), "1", 0, "R", false, 0, "")
+		pdf.CellFormat(widths[9], 7, fmt.Sprintf("%.2f", row.NetPay), "1", 0, "R", false, 0, "")
+		pdf.Ln(-1)
+	}
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	return buf.Bytes(), err
 }

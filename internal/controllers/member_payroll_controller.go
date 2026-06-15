@@ -26,10 +26,12 @@ func NewMemberPayrollController() *MemberPayrollController {
 func (c *MemberPayrollController) Create(ctx *gin.Context) {
 	var req dtos.CreateMemberPayrollRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[MemberPayrollController.Create] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[MemberPayrollController.Create] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -38,7 +40,7 @@ func (c *MemberPayrollController) Create(ctx *gin.Context) {
 	res, err := c.service.Create(req, userID)
 	if err != nil {
 		log.Printf("[MemberPayrollController.Create] Error: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create member payroll"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, res)
@@ -50,7 +52,8 @@ func (c *MemberPayrollController) List(ctx *gin.Context) {
 
 	res, total, err := c.service.List(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberPayrollController.List] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve payroll list"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": res, "total": total})
@@ -76,7 +79,8 @@ func (c *MemberPayrollController) Approve(ctx *gin.Context) {
 
 	// Bind the JSON body
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "is_approved field is required"})
+		log.Printf("[MemberPayrollController.Approve] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	log.Printf("Received payroll approve Request with status: %v", req.IsApproved)
@@ -87,7 +91,8 @@ func (c *MemberPayrollController) Approve(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member payroll not found"})
 			return
 		}
-		log.Printf("[MemberPayrollController.Approve] Error processing payroll approval/rejection %d: %v", id, err)
+		log.Printf("[MemberPayrollController.Approve] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve payroll details"})
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -101,7 +106,8 @@ func (c *MemberPayrollController) Confirm(ctx *gin.Context) {
 
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		ctx.JSON(400, gin.H{
+		log.Printf("[MemberPayrollController.Confirm] Invalid ID Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid payroll",
 		})
 		return
@@ -115,7 +121,7 @@ func (c *MemberPayrollController) Confirm(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member payroll not found"})
 			return
 		}
-		log.Printf("[MemberPayrollController.Confirm] Error confirming payroll %d: %v", id, err)
+		log.Printf("[MemberPayrollController.Confirm] Service Error: %v", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -130,7 +136,8 @@ func (c *MemberPayrollController) Get(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Payroll record not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberPayrollController.Get] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve payroll record"})
 		return
 	}
 	ctx.JSON(http.StatusOK, res)
@@ -141,7 +148,8 @@ func (c *MemberPayrollController) GetGenerationErrors(ctx *gin.Context) {
 	payrollID, err := strconv.ParseUint(payrollIDStr, 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid payroll ID",
+			"error":   "Invalid payroll ID format",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -159,7 +167,8 @@ func (c *MemberPayrollController) GetApprovalErrors(ctx *gin.Context) {
 	payrollIDStr := ctx.Param("payrollID")
 	payrollID, err := strconv.ParseUint(payrollIDStr, 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payroll ID"})
+		log.Printf("[MemberPayrollController.GetApprovalErrors] Invalid ID Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payroll ID format"})
 		return
 	}
 	errors, err := c.service.GetApprovalErrors(payrollID)

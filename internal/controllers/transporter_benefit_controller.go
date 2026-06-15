@@ -26,11 +26,13 @@ func NewTransporterBenefitController() *TransporterBenefitController {
 func (c *TransporterBenefitController) CreateBenefit(ctx *gin.Context) {
 	var req dtos.CreateTransporterBenefitRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransporterBenefitController.CreateBenefit] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[TransporterBenefitController.CreateBenefit] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -38,7 +40,6 @@ func (c *TransporterBenefitController) CreateBenefit(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	benefit, err := c.service.CreateBenefit(req, userID)
 	if err != nil {
-		log.Printf("[TransporterBenefitController.CreateBenefit] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -54,7 +55,8 @@ func (c *TransporterBenefitController) GetBenefits(ctx *gin.Context) {
 
 	results, total, err := c.service.GetBenefits(routeID, page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterBenefitController.GetBenefits] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve transporter benefits"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -68,7 +70,8 @@ func (c *TransporterBenefitController) GetBenefit(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter benefit not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterBenefitController.GetBenefit] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve transporter benefit"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -78,13 +81,14 @@ func (c *TransporterBenefitController) UpdateBenefit(ctx *gin.Context) {
 	id := ctx.Param("id")
 	var req dtos.UpdateTransporterBenefitRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransporterBenefitController.UpdateBenefit] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateBenefit(id, req, userID); err != nil {
-		log.Printf("[TransporterBenefitController.UpdateBenefit] Error: %v", err)
+		log.Printf("[TransporterBenefitController.UpdateBenefit] Service Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -94,7 +98,7 @@ func (c *TransporterBenefitController) UpdateBenefit(ctx *gin.Context) {
 func (c *TransporterBenefitController) DeleteBenefit(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if err := c.service.DeleteBenefit(id); err != nil {
-		log.Printf("[TransporterBenefitController.DeleteBenefit] Error deleting benefit %s: %v", id, err)
+		log.Printf("[TransporterBenefitController.DeleteBenefit] Service Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

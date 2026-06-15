@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,18 +25,21 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 	// dtos.CreateUserRequest is correctly defined and used here.
 	var req dtos.CreateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[UserController.CreateUser] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[UserController.CreateUser] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	user, err := c.service.CreateUser(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UserController.CreateUser] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
@@ -55,7 +59,8 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 func (c *UserController) GetUsers(ctx *gin.Context) {
 	users, total, err := c.service.GetUsers()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UserController.GetUsers] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve users"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": users, "total": total})
@@ -74,17 +79,20 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 	// dtos.UpdateUserRequest is correctly defined and used here.
 	var req dtos.UpdateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[UserController.UpdateUser] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[UserController.UpdateUser] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateUser(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UserController.UpdateUser] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "User updated successfully"})
@@ -92,7 +100,8 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 
 func (c *UserController) DeleteUser(ctx *gin.Context) {
 	if err := c.service.DeleteUser(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[UserController.DeleteUser] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "User deleted successfully"})

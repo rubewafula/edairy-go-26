@@ -25,13 +25,13 @@ func NewStoreStockTakingController() *StoreStockTakingController {
 func (c *StoreStockTakingController) CreateStockTaking(ctx *gin.Context) {
 	var req dtos.CreateStoreStockTakingRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Printf("StockTaking: Could not bind json: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StoreStockTakingController.CreateStockTaking] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		log.Printf("StockTaking: Could not validate json: %s", err.Error())
+		log.Printf("[StoreStockTakingController.CreateStockTaking] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -40,7 +40,7 @@ func (c *StoreStockTakingController) CreateStockTaking(ctx *gin.Context) {
 
 	items, err := c.service.CreateStockTaking(req, userID)
 	if err != nil {
-		log.Printf("StockTaking: Could not create stock taking: %s", err.Error())
+		log.Printf("[StoreStockTakingController.CreateStockTaking] Service Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -54,7 +54,8 @@ func (c *StoreStockTakingController) GetStockTakings(ctx *gin.Context) {
 
 	results, total, err := c.service.GetStockTakings(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreStockTakingController.GetStockTakings] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve stock takings"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -63,7 +64,8 @@ func (c *StoreStockTakingController) GetStockTakings(ctx *gin.Context) {
 func (c *StoreStockTakingController) GetStockTaking(ctx *gin.Context) {
 	result, err := c.service.GetStockTaking(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Stock taking record not found"})
+		log.Printf("[StoreStockTakingController.GetStockTaking] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Stock taking record not found"}) // Specific not found is fine
 		return
 	}
 	ctx.JSON(http.StatusOK, result)

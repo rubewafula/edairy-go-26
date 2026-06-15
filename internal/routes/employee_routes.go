@@ -28,6 +28,7 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	employeePayslipController := controllers.NewEmployeePayslipController()
 	employeeProfessionalTitleController := controllers.NewEmployeeProfessionalTitleController()
 	employeeTerminationCategoryController := controllers.NewEmployeeTerminationCategoryController()
+	employeePayrollController := controllers.NewEmployeePayrollController()
 
 	api.POST("/employees", employeeController.CreateEmployee)
 	api.GET("/employees", employeeController.GetEmployees)
@@ -163,17 +164,16 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	api.DELETE("/employee-payroll-deductions/:id", employeePayrollDeductionController.Delete)
 
 	// Employee Payroll Reliefs
-	api.POST("/employee-payroll-reliefs", employeePayrollReliefController.Create)
 	api.GET("/employee-payroll-reliefs", employeePayrollReliefController.List)
 	api.GET("/employee-payroll-reliefs/:id", employeePayrollReliefController.Get)
-	api.PUT("/employee-payroll-reliefs/:id", employeePayrollReliefController.Update)
 	api.DELETE("/employee-payroll-reliefs/:id", employeePayrollReliefController.Delete)
 
 	// Employee Payslips
-	api.POST("/employee-payslips", employeePayslipController.Create)
 	api.GET("/employee-payslips", employeePayslipController.List)
+	api.GET("/employee-payslips/export", employeePayrollController.ExportPayslips)
+	api.GET("/employee-payslips/statements/:employee_id/:payroll_id", employeePayrollController.ExportStatement)
+	api.GET("/employee-payslips/export/download/:filename", employeePayrollController.DownloadExportFile)
 	api.GET("/employee-payslips/:id", employeePayslipController.Get)
-	api.PUT("/employee-payslips/:id", employeePayslipController.Update)
 	api.DELETE("/employee-payslips/:id", employeePayslipController.Delete)
 
 	// Employee Professional Titles

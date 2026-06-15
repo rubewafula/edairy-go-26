@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -9,6 +10,8 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 )
+
+// Assuming validator and utils are imported and available for use, similar to other controllers.
 
 type EmployeeBankAccountController struct {
 	service *services.EmployeeBankAccountService
@@ -23,14 +26,16 @@ func NewEmployeeBankAccountController() *EmployeeBankAccountController {
 func (c *EmployeeBankAccountController) Create(ctx *gin.Context) {
 	var req dtos.CreateEmployeeBankAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.Create] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id") // Assuming user_id is set by auth middleware
 	res, err := c.service.CreateAccount(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.Create] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create employee bank account"})
 		return
 	}
 
@@ -44,7 +49,8 @@ func (c *EmployeeBankAccountController) List(ctx *gin.Context) {
 
 	results, total, err := c.service.GetAccounts(employeeID, page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.List] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve employee bank accounts"})
 		return
 	}
 
@@ -60,7 +66,8 @@ func (c *EmployeeBankAccountController) Get(ctx *gin.Context) {
 	id := ctx.Param("id")
 	res, err := c.service.GetAccount(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		log.Printf("[EmployeeBankAccountController.Get] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Employee bank account not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, res)
@@ -70,13 +77,15 @@ func (c *EmployeeBankAccountController) Update(ctx *gin.Context) {
 	id := ctx.Param("id")
 	var req dtos.UpdateEmployeeBankAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.Update] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateAccount(id, req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.Update] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update employee bank account"})
 		return
 	}
 
@@ -88,7 +97,8 @@ func (c *EmployeeBankAccountController) Delete(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
 	if err := c.service.DeleteAccount(id, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.Delete] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete employee bank account"})
 		return
 	}
 
@@ -99,13 +109,15 @@ func (c *EmployeeBankAccountController) Delete(ctx *gin.Context) {
 func (c *EmployeeBankAccountController) ImportAccounts(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Excel or CSV file is required"})
+		log.Printf("[EmployeeBankAccountController.ImportAccounts] File Upload Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required for import"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.ImportAccounts(file, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.ImportAccounts] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate employee bank account import"})
 		return
 	}
 
@@ -125,7 +137,8 @@ func (c *EmployeeBankAccountController) GetImportErrors(ctx *gin.Context) {
 
 	errors, err := c.service.GetImportErrors(importID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.GetImportErrors] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve import errors"})
 		return
 	}
 	ctx.JSON(http.StatusOK, errors)
@@ -137,7 +150,8 @@ func (c *EmployeeBankAccountController) ExportAccounts(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
 	if err := c.service.ExportAccounts(userID, format); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[EmployeeBankAccountController.ExportAccounts] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate employee bank account export"})
 		return
 	}
 

@@ -49,21 +49,21 @@ func (c *TransporterController) logRawRequest(ctx *gin.Context) {
 func (c *TransporterController) CreateTransporter(ctx *gin.Context) {
 	var req dtos.CreateTransporterRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		log.Println("Error binding JSON: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.CreateTransporter] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		log.Println("Error validating binding JSON: %s", err.Error())
+		log.Printf("[TransporterController.CreateTransporter] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	transporter, err := c.service.CreateTransporter(req)
 	if err != nil {
-		log.Println("Error Creating transporter: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.CreateTransporter] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transporter record"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, transporter)
@@ -75,7 +75,8 @@ func (c *TransporterController) GetTransporters(ctx *gin.Context) {
 
 	transporters, total, err := c.service.GetTransporters(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.GetTransporters] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve transporters"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": transporters, "total": total})
@@ -88,7 +89,8 @@ func (c *TransporterController) GetTransporter(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.GetTransporter] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve transporter details"})
 		return
 	}
 	ctx.JSON(http.StatusOK, transporter)
@@ -97,7 +99,8 @@ func (c *TransporterController) GetTransporter(ctx *gin.Context) {
 func (c *TransporterController) UpdateTransporter(ctx *gin.Context) {
 	var req dtos.UpdateTransporterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.UpdateTransporter] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
@@ -106,7 +109,8 @@ func (c *TransporterController) UpdateTransporter(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.UpdateTransporter] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transporter"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Transporter updated successfully"})
@@ -118,7 +122,8 @@ func (c *TransporterController) DeleteTransporter(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Transporter not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.DeleteTransporter] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete transporter"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)
@@ -134,7 +139,8 @@ func (c *TransporterController) ImportTransporters(ctx *gin.Context) {
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.ImportTransporters(file, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.ImportTransporters] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate transporter import"})
 		return
 	}
 
@@ -150,7 +156,8 @@ func (c *TransporterController) ExportTransporters(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
 	if err := c.service.ExportTransporters(userID, status, format); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.ExportTransporters] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate transporter export"})
 		return
 	}
 
@@ -179,7 +186,8 @@ func (c *TransporterController) GetImportErrors(ctx *gin.Context) {
 
 	errors, err := c.service.GetImportErrors(importID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[TransporterController.GetImportErrors] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve import errors"})
 		return
 	}
 

@@ -25,13 +25,13 @@ func NewSupplyRejectController() *SupplyRejectController {
 func (c *SupplyRejectController) CreateReject(ctx *gin.Context) {
 	var req dtos.CreateSupplyRejectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Println("Supply Rejects created, unable to parser json: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplyRejectController.CreateReject] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		log.Println("Supply Rejects created, unable to validate json: %s", err.Error())
+		log.Printf("[SupplyRejectController.CreateReject] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -39,8 +39,8 @@ func (c *SupplyRejectController) CreateReject(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	reject, err := c.service.CreateReject(req, userID)
 	if err != nil {
-		log.Println("Supply Rejects created, unable to created json: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplyRejectController.CreateReject] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create supply reject record"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, reject)
@@ -52,7 +52,8 @@ func (c *SupplyRejectController) GetRejects(ctx *gin.Context) {
 
 	results, total, err := c.service.GetRejects(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplyRejectController.GetRejects] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve supply rejects"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -61,7 +62,8 @@ func (c *SupplyRejectController) GetRejects(ctx *gin.Context) {
 func (c *SupplyRejectController) GetRejectsBySupply(ctx *gin.Context) {
 	results, err := c.service.GetRejectsBySupply(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplyRejectController.GetRejectsBySupply] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve supply rejects by supply ID"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results})
@@ -70,7 +72,8 @@ func (c *SupplyRejectController) GetRejectsBySupply(ctx *gin.Context) {
 func (c *SupplyRejectController) GetReject(ctx *gin.Context) {
 	result, err := c.service.GetReject(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Reject record not found"})
+		log.Printf("[SupplyRejectController.GetReject] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Supply reject record not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -99,7 +102,8 @@ func (c *SupplyRejectController) UpdateReject(ctx *gin.Context) {
 func (c *SupplyRejectController) DeleteReject(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.DeleteReject(ctx.Param("id"), userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplyRejectController.DeleteReject] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete supply reject record"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Reject record deleted successfully"})

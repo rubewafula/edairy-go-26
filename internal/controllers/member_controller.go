@@ -71,7 +71,8 @@ func (c *MemberController) CreateMember(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	member, err := c.service.CreateMember(ctx.Request.Context(), req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.CreateMember] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create member"})
 		return
 	}
 
@@ -100,7 +101,8 @@ func (c *MemberController) GetMembers(ctx *gin.Context) {
 		q)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.GetMembers] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve members"})
 		return
 	}
 
@@ -115,7 +117,8 @@ func (c *MemberController) GetMember(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.GetMember] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve member details"})
 		return
 	}
 
@@ -126,11 +129,13 @@ func (c *MemberController) UpdateMember(ctx *gin.Context) {
 	var req dtos.UpdateMemberRequest
 
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.UpdateMember] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[MemberController.UpdateMember] Validation Error: %v", err)
 		ctx.JSON(422, gin.H{
 			"error": utils.FormatValidationError(err),
 		})
@@ -151,7 +156,8 @@ func (c *MemberController) UpdateMember(ctx *gin.Context) {
 		passport,
 	)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.UpdateMember] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update member"})
 		return
 	}
 
@@ -160,8 +166,10 @@ func (c *MemberController) UpdateMember(ctx *gin.Context) {
 
 func (c *MemberController) DeleteMember(ctx *gin.Context) {
 	err := c.service.DeleteMember(ctx.Param("id"))
+
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.DeleteMember] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete member"})
 		return
 	}
 
@@ -175,7 +183,8 @@ func (c *MemberController) SuspendMember(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.SuspendMember] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend member"})
 		return
 	}
 
@@ -185,13 +194,15 @@ func (c *MemberController) SuspendMember(ctx *gin.Context) {
 func (c *MemberController) ImportMembers(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		log.Printf("[MemberController.ImportMembers] File Upload Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "File is required for import"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.ImportMembers(file, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.ImportMembers] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate member import"})
 		return
 	}
 	ctx.JSON(http.StatusAccepted, gin.H{"message": "Member import started in the background. Check logs for status."})
@@ -203,7 +214,8 @@ func (c *MemberController) GetMemberImportErrors(ctx *gin.Context) {
 
 	errors, err := c.service.GetImportErrors(importID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch import errors"})
+		log.Printf("[MemberController.GetMemberImportErrors] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve import errors"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": errors})
@@ -220,7 +232,8 @@ func (c *MemberController) ExportMembers(ctx *gin.Context) {
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.ExportMembers(userID, memberNo, primaryPhone, memberTypeID, routeID, gender, status, reportType); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.ExportMembers] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate member export"})
 		return
 	}
 
@@ -236,8 +249,10 @@ func (c *MemberController) ExportAGMReport(ctx *gin.Context) {
 	status := ctx.Query("status")
 
 	userID := ctx.GetUint64("user_id")
+
 	if err := c.service.ExportAGMReport(userID, memberNo, primaryPhone, memberTypeID, routeID, gender, status); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[MemberController.ExportAGMReport] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate AGM report export"})
 		return
 	}
 
@@ -249,7 +264,8 @@ func (c *MemberController) DownloadExportFile(ctx *gin.Context) {
 	filePath := filepath.Join("./storage/exports", filename)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Export file not found"})
+		log.Printf("[MemberController.DownloadExportFile] File Not Found Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Export file not found or has expired"})
 		return
 	}
 

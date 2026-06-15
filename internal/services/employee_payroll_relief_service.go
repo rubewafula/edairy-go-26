@@ -13,21 +13,6 @@ func NewEmployeePayrollReliefService() *EmployeePayrollReliefService {
 	return &EmployeePayrollReliefService{}
 }
 
-func (s *EmployeePayrollReliefService) CreatePayrollRelief(req dtos.CreateEmployeePayrollReliefRequest, userID uint64) (*models.EmployeePayrollRelief, error) {
-	relief := &models.EmployeePayrollRelief{
-		BaseModel:  models.BaseModel{CreatedBy: userID},
-		EmployeeID: req.EmployeeID,
-		ReliefID:   req.ReliefID,
-		Amount:     req.Amount,
-		PayrollID:  req.PayrollID,
-	}
-
-	if err := db.DB.Create(relief).Error; err != nil {
-		return nil, err
-	}
-	return relief, nil
-}
-
 func (s *EmployeePayrollReliefService) GetPayrollReliefs(employeeID string, payrollID string, page, limit int) ([]dtos.EmployeePayrollReliefResponse, int64, error) {
 	var results []dtos.EmployeePayrollReliefResponse
 	var total int64
@@ -84,22 +69,6 @@ func (s *EmployeePayrollReliefService) GetPayrollRelief(id string) (*dtos.Employ
 		return nil, gorm.ErrRecordNotFound
 	}
 	return &result, nil
-}
-
-func (s *EmployeePayrollReliefService) UpdatePayrollRelief(id string, req dtos.UpdateEmployeePayrollReliefRequest, userID uint64) error {
-	var relief models.EmployeePayrollRelief
-	if err := db.DB.First(&relief, id).Error; err != nil {
-		return err
-	}
-
-	updates := map[string]interface{}{
-		"relief_id":  req.ReliefID,
-		"amount":     req.Amount,
-		"payroll_id": req.PayrollID,
-		"updated_by": userID,
-	}
-
-	return db.DB.Model(&relief).Updates(updates).Error
 }
 
 func (s *EmployeePayrollReliefService) DeletePayrollRelief(id string, userID uint64) error {

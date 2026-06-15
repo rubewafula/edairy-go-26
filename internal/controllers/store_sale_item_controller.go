@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,13 @@ func NewStoreSaleItemController() *StoreSaleItemController {
 func (c *StoreSaleItemController) CreateSaleItem(ctx *gin.Context) {
 	var req dtos.CreateStoreSaleItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StoreSaleItemController.CreateSaleItem] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[StoreSaleItemController.CreateSaleItem] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -37,7 +40,8 @@ func (c *StoreSaleItemController) CreateSaleItem(ctx *gin.Context) {
 
 	item, err := c.service.CreateSaleItem(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreSaleItemController.CreateSaleItem] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create store sale item"})
 		return
 	}
 
@@ -51,7 +55,8 @@ func (c *StoreSaleItemController) GetSaleItems(ctx *gin.Context) {
 
 	results, total, err := c.service.GetSaleItems(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreSaleItemController.GetSaleItems] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve store sale items"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -60,7 +65,8 @@ func (c *StoreSaleItemController) GetSaleItems(ctx *gin.Context) {
 func (c *StoreSaleItemController) GetSaleItem(ctx *gin.Context) {
 	result, err := c.service.GetSaleItem(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Sale item not found"})
+		log.Printf("[StoreSaleItemController.GetSaleItem] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Store sale item not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -69,11 +75,13 @@ func (c *StoreSaleItemController) GetSaleItem(ctx *gin.Context) {
 func (c *StoreSaleItemController) UpdateSaleItem(ctx *gin.Context) {
 	var req dtos.UpdateStoreSaleItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StoreSaleItemController.UpdateSaleItem] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[StoreSaleItemController.UpdateSaleItem] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -81,7 +89,8 @@ func (c *StoreSaleItemController) UpdateSaleItem(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
 	if err := c.service.UpdateSaleItem(ctx.Param("id"), req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreSaleItemController.UpdateSaleItem] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update store sale item"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Sale item updated successfully"})
@@ -89,7 +98,8 @@ func (c *StoreSaleItemController) UpdateSaleItem(ctx *gin.Context) {
 
 func (c *StoreSaleItemController) DeleteSaleItem(ctx *gin.Context) {
 	if err := c.service.DeleteSaleItem(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreSaleItemController.DeleteSaleItem] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete store sale item"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Sale item deleted successfully"})

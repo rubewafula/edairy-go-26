@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,13 @@ func NewSupplierCategoryController() *SupplierCategoryController {
 func (c *SupplierCategoryController) CreateCategory(ctx *gin.Context) {
 	var req dtos.CreateSupplierCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplierCategoryController.CreateCategory] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[SupplierCategoryController.CreateCategory] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -36,7 +39,8 @@ func (c *SupplierCategoryController) CreateCategory(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	category, err := c.service.CreateCategory(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierCategoryController.CreateCategory] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create supplier category"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, category)
@@ -48,7 +52,8 @@ func (c *SupplierCategoryController) GetCategories(ctx *gin.Context) {
 
 	results, total, err := c.service.GetCategories(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierCategoryController.GetCategories] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve supplier categories"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -57,7 +62,8 @@ func (c *SupplierCategoryController) GetCategories(ctx *gin.Context) {
 func (c *SupplierCategoryController) GetCategory(ctx *gin.Context) {
 	result, err := c.service.GetCategory(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
+		log.Printf("[SupplierCategoryController.GetCategory] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Supplier category not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -66,13 +72,15 @@ func (c *SupplierCategoryController) GetCategory(ctx *gin.Context) {
 func (c *SupplierCategoryController) UpdateCategory(ctx *gin.Context) {
 	var req dtos.CreateSupplierCategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SupplierCategoryController.UpdateCategory] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	userID := ctx.GetUint64("user_id")
 	if err := c.service.UpdateCategory(ctx.Param("id"), req, userID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierCategoryController.UpdateCategory] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update supplier category"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Category updated successfully"})
@@ -80,7 +88,8 @@ func (c *SupplierCategoryController) UpdateCategory(ctx *gin.Context) {
 
 func (c *SupplierCategoryController) DeleteCategory(ctx *gin.Context) {
 	if err := c.service.DeleteCategory(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SupplierCategoryController.DeleteCategory] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete supplier category"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Category deleted successfully"})

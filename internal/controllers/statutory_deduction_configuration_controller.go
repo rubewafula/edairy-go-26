@@ -74,7 +74,8 @@ func (c *StatutoryDeductionConfigurationController) GetConfigurations(ctx *gin.C
 
 	configs, total, err := c.service.GetConfigurations(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StatutoryDeductionConfigurationController.GetConfigurations] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve statutory deduction configurations"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": configs, "total": total})
@@ -123,11 +124,13 @@ func (c *StatutoryDeductionConfigurationController) UpdateConfiguration(ctx *gin
 	id := ctx.Param("id")
 	var req dtos.UpdateStatutoryDeductionConfigurationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StatutoryDeductionConfigurationController.UpdateConfiguration] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[StatutoryDeductionConfigurationController.UpdateConfiguration] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -165,7 +168,8 @@ func (c *StatutoryDeductionConfigurationController) DeleteConfiguration(ctx *gin
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Statutory deduction configuration not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StatutoryDeductionConfigurationController.DeleteConfiguration] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete statutory deduction configuration"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Statutory deduction configuration deleted successfully"})

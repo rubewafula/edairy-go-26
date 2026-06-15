@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,13 @@ func NewSMSCampaignController() *SMSCampaignController {
 func (c *SMSCampaignController) CreateCampaign(ctx *gin.Context) {
 	var req dtos.CreateSMSCampaignRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.CreateCampaign] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[SMSCampaignController.CreateCampaign] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
@@ -36,7 +39,8 @@ func (c *SMSCampaignController) CreateCampaign(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	campaign, err := c.service.CreateCampaign(req, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.CreateCampaign] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SMS campaign"})
 		return
 	}
 	ctx.JSON(http.StatusCreated, campaign)
@@ -47,7 +51,8 @@ func (c *SMSCampaignController) GetCampaigns(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
 	results, total, err := c.service.GetCampaigns(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.GetCampaigns] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve SMS campaigns"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -60,7 +65,8 @@ func (c *SMSCampaignController) GetCampaign(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.GetCampaign] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve campaign"})
 		return
 	}
 	ctx.JSON(http.StatusOK, result)
@@ -69,7 +75,8 @@ func (c *SMSCampaignController) GetCampaign(ctx *gin.Context) {
 func (c *SMSCampaignController) UpdateCampaign(ctx *gin.Context) {
 	var req dtos.UpdateSMSCampaignRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.UpdateCampaign] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 	userID := ctx.GetUint64("user_id")
@@ -78,7 +85,8 @@ func (c *SMSCampaignController) UpdateCampaign(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.UpdateCampaign] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update campaign"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "SMS campaign updated successfully"})
@@ -90,7 +98,8 @@ func (c *SMSCampaignController) DeleteCampaign(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "SMS campaign not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[SMSCampaignController.DeleteCampaign] Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete campaign"})
 		return
 	}
 	ctx.JSON(http.StatusNoContent, nil)

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,18 +25,21 @@ func NewStoreInventoryController() *StoreInventoryController {
 func (c *StoreInventoryController) CreateInventory(ctx *gin.Context) {
 	var req dtos.CreateStoreInventoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StoreInventoryController.CreateInventory] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[StoreInventoryController.CreateInventory] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	inventory, err := c.service.CreateInventory(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreInventoryController.CreateInventory] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create store inventory"})
 		return
 	}
 
@@ -49,7 +53,8 @@ func (c *StoreInventoryController) GetInventories(ctx *gin.Context) {
 
 	results, total, err := c.service.GetInventories(page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreInventoryController.GetInventories] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve store inventories"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"data": results, "total": total})
@@ -58,7 +63,8 @@ func (c *StoreInventoryController) GetInventories(ctx *gin.Context) {
 func (c *StoreInventoryController) GetInventory(ctx *gin.Context) {
 	inventory, err := c.service.GetInventory(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+		log.Printf("[StoreInventoryController.GetInventory] Service Error: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Store inventory not found"})
 		return
 	}
 	ctx.JSON(http.StatusOK, inventory)
@@ -67,17 +73,20 @@ func (c *StoreInventoryController) GetInventory(ctx *gin.Context) {
 func (c *StoreInventoryController) UpdateInventory(ctx *gin.Context) {
 	var req dtos.UpdateStoreInventoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("[StoreInventoryController.UpdateInventory] Binding Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
+		log.Printf("[StoreInventoryController.UpdateInventory] Validation Error: %v", err)
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	if err := c.service.UpdateInventory(ctx.Param("id"), req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreInventoryController.UpdateInventory] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update store inventory"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Inventory updated successfully"})
@@ -85,7 +94,8 @@ func (c *StoreInventoryController) UpdateInventory(ctx *gin.Context) {
 
 func (c *StoreInventoryController) DeleteInventory(ctx *gin.Context) {
 	if err := c.service.DeleteInventory(ctx.Param("id")); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("[StoreInventoryController.DeleteInventory] Service Error: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete store inventory"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Inventory deleted successfully"})
