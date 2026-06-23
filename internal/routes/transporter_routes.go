@@ -6,6 +6,7 @@ import (
 )
 
 func registerTransporterRoutes(api *gin.RouterGroup) {
+	transporterDashboardController := controllers.NewTransporterDashboardController()
 	transporterController := controllers.NewTransporterController()
 	individualTransporterController := controllers.NewIndividualTransporterController()
 	companyTransporterController := controllers.NewCompanyTransporterController()
@@ -20,6 +21,8 @@ func registerTransporterRoutes(api *gin.RouterGroup) {
 	transportRateController := controllers.NewTransportRateController()
 	transporterPayDateRangeController := controllers.NewTransporterPayDateRangeController()
 	transporterPayrollController := controllers.NewTransporterPayrollController()
+
+	api.GET("/transporter-dashboard", transporterDashboardController.GetDashboard)
 
 	api.POST("/transporters", transporterController.CreateTransporter)
 	api.GET("/transporters", transporterController.GetTransporters)

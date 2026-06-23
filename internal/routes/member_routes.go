@@ -7,6 +7,7 @@ import (
 
 // registerMemberRoutes registers the API routes for member-related functionalities.
 func registerMemberRoutes(api *gin.RouterGroup) {
+	memberDashboardController := controllers.NewMemberDashboardController()
 	memberController := controllers.NewMemberController()
 	memberBankAccountController := controllers.NewMemberBankAccountController()
 	memberDependantController := controllers.NewMemberDependantController()
@@ -17,6 +18,8 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	memberPayDateRangeController := controllers.NewMemberPayDateRangeController()
 	memberPayslipController := controllers.NewMemberPayslipController()
 	memberPayrollDeductionController := controllers.NewMemberPayrollDeductionController()
+
+	api.GET("/member-dashboard", memberDashboardController.GetDashboard)
 
 	// Member Registration Routes
 	api.POST("/members", memberController.CreateMember)

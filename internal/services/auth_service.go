@@ -36,7 +36,6 @@ func (s *AuthService) generateToken(
 	userID uint64,
 	email string,
 	roles []string,
-	permissions []string,
 ) (string, error) {
 
 	expiryHours, _ := strconv.Atoi(os.Getenv("JWT_EXPIRY_HOURS"))
@@ -45,11 +44,10 @@ func (s *AuthService) generateToken(
 	}
 
 	claims := jwt.MapClaims{
-		"user_id":     userID,
-		"email":       email,
-		"roles":       roles,
-		"permissions": permissions,
-		"exp":         utils.Now().Add(time.Duration(expiryHours) * time.Hour).Unix(),
+		"user_id": userID,
+		"email":   email,
+		"roles":   roles,
+		"exp":     utils.Now().Add(time.Duration(expiryHours) * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -126,7 +124,7 @@ func (s *AuthService) Login(req dtos.LoginRequest) (*dtos.LoginResponse, error) 
 		permissions = append(permissions, p)
 	}
 
-	token, err := s.generateToken(user.ID, user.Email, roles, permissions)
+	token, err := s.generateToken(user.ID, user.Email, roles)
 
 	if err != nil {
 		return nil, err

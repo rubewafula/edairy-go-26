@@ -51,12 +51,18 @@ func ConnectToDatabase() {
 		cfg.DBName,
 	)
 
+	logLevel := logger.Silent
+	env := getEnv("APP_ENV", "production")
+	if env != "production" {
+		logLevel = logger.Info
+	}
+
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
 				SlowThreshold:             time.Second,
-				LogLevel:                  logger.Info, // prints SQL
+				LogLevel:                  logLevel,
 				IgnoreRecordNotFoundError: true,
 				Colorful:                  true,
 			},

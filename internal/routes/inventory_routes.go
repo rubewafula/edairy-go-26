@@ -6,6 +6,7 @@ import (
 )
 
 func registerInventoryRoutes(api *gin.RouterGroup) {
+	storeDashboardController := controllers.NewStoreDashboardController()
 	productGradeController := controllers.NewProductGradeController()
 	itemCategoryController := controllers.NewItemCategoryController()
 	storeController := controllers.NewStoreController()
@@ -20,6 +21,8 @@ func registerInventoryRoutes(api *gin.RouterGroup) {
 	storeStockMovementController := controllers.NewStoreStockMovementController()
 	storeStockMovementTypeController := controllers.NewStoreStockMovementTypeController()
 	storeItemUnitController := controllers.NewStoreItemUnitController()
+
+	api.GET("/store-dashboard", storeDashboardController.GetDashboard)
 
 	// Product Grade Routes
 	api.POST("/product-grades", productGradeController.CreateGrade)

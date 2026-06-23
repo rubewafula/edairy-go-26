@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rubewafula/edairy-go-26/internal/db"
 )
 
 type contextKey string
@@ -22,6 +23,11 @@ type AuthUser struct {
 
 func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
 
 		tokenStr := c.GetHeader("Authorization")
 		if tokenStr == "" {
@@ -50,30 +56,38 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 		}
 		c.Set("user_id", uint64(userID))
 
-		// permissions
-		permissions := []string{}
-		if p, ok := claims["permissions"]; ok {
-			if arr, ok := p.([]interface{}); ok {
-				for _, v := range arr {
-					if s, ok := v.(string); ok {
-						permissions = append(permissions, s)
-					}
-				}
-			}
+		// Fetch roles for the user using raw SQL
+		var roles []string
+		roleQuery := `
+			SELECT r.name 
+			FROM roles r 
+			INNER JOIN user_roles ur ON ur.role_id = r.id 
+			WHERE ur.user_id = ? AND r.deleted_at IS NULL`
+		if err := db.DB.Raw(roleQuery, uint64(userID)).Scan(&roles).Error; err != nil {
+			c.AbortWithStatusJSON(500, gin.H{"Error": "internal server error: session data fetch failed"})
+			return
 		}
-		c.Set("permissions", permissions)
 
-		// roles (optional)
-		roles := []string{}
-		if r, ok := claims["roles"]; ok {
-			if arr, ok := r.([]interface{}); ok {
-				for _, v := range arr {
-					if s, ok := v.(string); ok {
-						roles = append(roles, s)
-					}
-				}
-			}
+		// Fetch unique permissions (combined from roles and direct assignments) using raw SQL
+		var permissions []string
+		permQuery := `
+			SELECT DISTINCT p.name
+			FROM permissions p
+
+			LEFT JOIN role_permissions rp ON rp.permission_id = p.id
+			LEFT JOIN user_roles ur ON ur.role_id = rp.role_id AND ur.user_id = ?
+
+			LEFT JOIN user_permissions up ON up.permission_id = p.id AND up.user_id = ?
+
+			WHERE p.deleted_at IS NULL
+			AND (ur.user_id IS NOT NULL OR up.user_id IS NOT NULL)
+			`
+		if err := db.DB.Raw(permQuery, uint64(userID), uint64(userID)).Scan(&permissions).Error; err != nil {
+			c.AbortWithStatusJSON(500, gin.H{"Error": "internal server error: session data fetch failed"})
+			return
 		}
+
+		c.Set("permissions", permissions)
 		c.Set("roles", roles)
 
 		authUser := AuthUser{

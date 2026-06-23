@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"log"
 	"mime/multipart"
@@ -518,19 +519,37 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 						}
 
 						// Lookups for Route, Bank, and Member Type
+						// Route
 						routeVal := strings.TrimSpace(row[9])
 						var route models.Route
-						tx.Where("route_code = ? OR name = ?", routeVal, routeVal).First(&route)
+						if err := tx.Where("route_code = ? OR route_name = ?", routeVal, routeVal).First(&route).Error; err != nil {
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								route = models.Route{Name: routeVal, Description: routeVal}
+								if err := tx.Create(&route).Error; err != nil {
+									return fmt.Errorf("failed to create route '%s': %w", routeVal, err)
+								}
+							} else {
+								return fmt.Errorf("failed to query route '%s': %w", routeVal, err)
+							}
+						}
 
+						// Bank (no creation requested, so keep existing logic)
 						bankName := strings.TrimSpace(row[13])
 						var bank models.Bank
 						tx.Where("bank_name LIKE ?", "%"+bankName+"%").First(&bank)
 
+						// Member Type
 						memberTypeName := strings.TrimSpace(row[8])
 						var memberType models.MemberType
 						if err := tx.Where("name = ?", memberTypeName).First(&memberType).Error; err != nil {
-							// Fallback to first member type if none matches by name
-							tx.First(&memberType)
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								memberType = models.MemberType{Name: memberTypeName}
+								if err := tx.Create(&memberType).Error; err != nil {
+									return fmt.Errorf("failed to create member type '%s': %w", memberTypeName, err)
+								}
+							} else {
+								return fmt.Errorf("failed to query member type '%s': %w", memberTypeName, err)
+							}
 						}
 
 						dob := utils.ParseFlexibleDate(row[6])

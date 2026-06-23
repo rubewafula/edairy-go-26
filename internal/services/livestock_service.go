@@ -90,8 +90,9 @@ func (s *LivestockService) GetLivestock(id string) (*dtos.LivestockResponse, err
 func (s *LivestockService) UpdateLivestock(id string, req dtos.UpdateLivestockRequest, userID uint64) error {
 	return db.DB.Model(&models.Livestock{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"tag_no": req.TagNo, "breed_id": req.BreedID, "gender": req.Gender,
-		"date_of_birth": utils.ParseDate(req.DateOfBirth), "status": req.Status,
-		"description": req.Description, "updated_by": userID,
+		"date_of_birth": utils.ParseDate(req.DateOfBirth),
+		"status":        req.Status,
+		"description":   req.Description, "updated_by": userID,
 	}).Error
 }
 

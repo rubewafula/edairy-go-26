@@ -2,7 +2,9 @@ package routes
 
 import (
 	"os"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/controllers"
 	"github.com/rubewafula/edairy-go-26/internal/middleware"
@@ -23,28 +25,27 @@ func SetupRouter() *gin.Engine {
 
 	r := gin.Default()
 
+	r.Use(cors.New(cors.Config{
+		// DO NOT use "*" with AllowCredentials: true.
+		// This function dynamically mirrors the incoming origin safely.
+		AllowOriginFunc: func(origin string) bool {
+			allowed := map[string]bool{
+				"https://arithi.edairy.africa":     true,
+				"https://api.arithi.edairy.africa": true,
+				"https://edairy.africa":            true,
+				"http://localhost:5173":            true,
+			}
+			return allowed[origin] // In production, check against an allowed list
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Disposition"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	// WebSocket Route moved above global middleware to prevent CORS interference during handshake
 	r.GET("/ws", ws.ServeWS(hub))
-
-	// CORS Middleware to allow cross-origin requests
-	r.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		if origin != "" {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-		} else {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	authMiddleware := middleware.AuthMiddleware([]byte(jwtSecret))
