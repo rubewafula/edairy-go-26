@@ -6,6 +6,7 @@ import (
 )
 
 func registerFinanceRoutes(api *gin.RouterGroup) {
+	financeDashboardController := controllers.NewFinanceDashboardController()
 	cashTransactionController := controllers.NewCashTransactionController()
 
 	accountController := controllers.NewAccountController()
@@ -13,6 +14,8 @@ func registerFinanceRoutes(api *gin.RouterGroup) {
 	transactionPostingRuleController := controllers.NewTransactionPostingRuleController()
 	accountTypeController := controllers.NewAccountTypeController()
 	accountCategoryController := controllers.NewAccountCategoryController()
+
+	api.GET("/finance-dashboard", financeDashboardController.GetDashboard)
 
 	api.POST("/cash-transactions", cashTransactionController.Create)
 	api.GET("/cash-transactions", cashTransactionController.List)

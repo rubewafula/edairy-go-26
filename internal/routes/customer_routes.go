@@ -6,6 +6,7 @@ import (
 )
 
 func registerCustomerRoutes(api *gin.RouterGroup) {
+	customerDashboardController := controllers.NewCustomerDashboardController()
 	customerController := controllers.NewCustomerController()
 	customerTypeController := controllers.NewCustomerTypeController()
 	customerBillingController := controllers.NewCustomerBillingController()
@@ -13,6 +14,8 @@ func registerCustomerRoutes(api *gin.RouterGroup) {
 	customerPaymentController := controllers.NewCustomerPaymentController()
 	customerMilkRateController := controllers.NewCustomerMilkRateController()
 	customerPayDateRangeController := controllers.NewCustomerPayDateRangeController()
+
+	api.GET("/customer-dashboard", customerDashboardController.GetDashboard)
 
 	// Customer Routes
 	api.POST("/customers", customerController.CreateCustomer)

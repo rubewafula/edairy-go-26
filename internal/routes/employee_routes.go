@@ -6,6 +6,7 @@ import (
 )
 
 func registerEmployeeRoutes(api *gin.RouterGroup) {
+	hrDashboardController := controllers.NewHRDashboardController()
 	employeeController := controllers.NewEmployeeController()
 	employeeBenefitController := controllers.NewEmployeeBenefitController()
 	employeeDocumentController := controllers.NewEmployeeDocumentController()
@@ -29,6 +30,8 @@ func registerEmployeeRoutes(api *gin.RouterGroup) {
 	employeeProfessionalTitleController := controllers.NewEmployeeProfessionalTitleController()
 	employeeTerminationCategoryController := controllers.NewEmployeeTerminationCategoryController()
 	employeePayrollController := controllers.NewEmployeePayrollController()
+
+	api.GET("/hr-dashboard", hrDashboardController.GetDashboard)
 
 	api.POST("/employees", employeeController.CreateEmployee)
 	api.GET("/employees", employeeController.GetEmployees)

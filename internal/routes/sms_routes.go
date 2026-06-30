@@ -6,8 +6,11 @@ import (
 )
 
 func registerSMSRoutes(api *gin.RouterGroup) {
+	smsDashboardController := controllers.NewSMSDashboardController()
 	smsController := controllers.NewSMSController()
 	smsCampaignController := controllers.NewSMSCampaignController()
+
+	api.GET("/sms-dashboard", smsDashboardController.GetDashboard)
 
 	// SMS Routes
 	api.POST("/sms-groups", smsController.CreateGroup)

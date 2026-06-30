@@ -20,12 +20,12 @@ type CreateMemberRequest struct {
 	PrimaryPhone   string `json:"primary_phone" form:"primary_phone" validate:"required,max=15"`
 	SecondaryPhone string `json:"secondary_phone" form:"secondary_phone"`
 	Email          string `json:"email" form:"email" validate:"omitempty,email"`
-	NumberOfCows   int    `json:"number_of_cows" form:"number_of_cows" validate:"required,min=0"`
+	NumberOfCows   int    `json:"number_of_cows" form:"number_of_cows"`
 
-	IDFrontPhoto  *multipart.FileHeader `form:"id_front_photo" validate:"required"`
-	IDBackPhoto   *multipart.FileHeader `form:"id_back_photo" validate:"required"`
-	PassportPhoto *multipart.FileHeader `form:"passport_photo" validate:"required"`
-	IDDateOfIssue string                `json:"id_date_of_issue" form:"id_date_of_issue" validate:"required"`
+	IDFrontPhoto  *multipart.FileHeader `form:"id_front_photo"`
+	IDBackPhoto   *multipart.FileHeader `form:"id_back_photo"`
+	PassportPhoto *multipart.FileHeader `form:"passport_photo"`
+	IDDateOfIssue string                `json:"id_date_of_issue" form:"id_date_of_issue"`
 
 	TaxNumber     string                         `json:"tax_number" form:"tax_number"`
 	MaritalStatus string                         `json:"marital_status" form:"marital_status"` //

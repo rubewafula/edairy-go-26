@@ -6,6 +6,7 @@ import (
 )
 
 func registerSupplierRoutes(api *gin.RouterGroup) {
+	supplierDashboardController := controllers.NewSupplierDashboardController()
 	supplierCategoryController := controllers.NewSupplierCategoryController()
 	supplierController := controllers.NewSupplierController()
 	supplierContactController := controllers.NewSupplierContactController()
@@ -16,6 +17,8 @@ func registerSupplierRoutes(api *gin.RouterGroup) {
 	suppliedItemController := controllers.NewSuppliedItemController()
 	supplyRejectController := controllers.NewSupplyRejectController()
 	purchaseOrderController := controllers.NewPurchaseOrderController()
+
+	api.GET("/supplier-dashboard", supplierDashboardController.GetDashboard)
 
 	// Supplier Category Routes
 	api.POST("/supplier-categories", supplierCategoryController.CreateCategory)

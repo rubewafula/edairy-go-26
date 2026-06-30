@@ -63,7 +63,7 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 			FROM roles r 
 			INNER JOIN user_roles ur ON ur.role_id = r.id 
 			WHERE ur.user_id = ? AND r.deleted_at IS NULL`
-		if err := db.DB.Raw(roleQuery, uint64(userID)).Scan(&roles).Error; err != nil {
+		if err := db.WithContext(c.Request.Context()).Raw(roleQuery, uint64(userID)).Scan(&roles).Error; err != nil {
 			c.AbortWithStatusJSON(500, gin.H{"Error": "internal server error: session data fetch failed"})
 			return
 		}
@@ -82,7 +82,7 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 			WHERE p.deleted_at IS NULL
 			AND (ur.user_id IS NOT NULL OR up.user_id IS NOT NULL)
 			`
-		if err := db.DB.Raw(permQuery, uint64(userID), uint64(userID)).Scan(&permissions).Error; err != nil {
+		if err := db.WithContext(c.Request.Context()).Raw(permQuery, uint64(userID), uint64(userID)).Scan(&permissions).Error; err != nil {
 			c.AbortWithStatusJSON(500, gin.H{"Error": "internal server error: session data fetch failed"})
 			return
 		}

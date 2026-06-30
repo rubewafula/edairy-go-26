@@ -30,10 +30,12 @@ func SetupRouter() *gin.Engine {
 		// This function dynamically mirrors the incoming origin safely.
 		AllowOriginFunc: func(origin string) bool {
 			allowed := map[string]bool{
-				"https://arithi.edairy.africa":     true,
-				"https://api.arithi.edairy.africa": true,
-				"https://edairy.africa":            true,
-				"http://localhost:5173":            true,
+				"https://arithi.edairy.africa":           true,
+				"https://api.arithi.edairy.africa":       true,
+				"https://tigania-west.edairy.africa":     true,
+				"https://api.tigania-west.edairy.africa": true,
+				"https://edairy.africa":                  true,
+				"http://localhost:5173":                  true,
 			}
 			return allowed[origin] // In production, check against an allowed list
 		},

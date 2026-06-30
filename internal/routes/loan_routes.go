@@ -6,9 +6,12 @@ import (
 )
 
 func registerLoanRoutes(api *gin.RouterGroup) {
+	loanDashboardController := controllers.NewLoanDashboardController()
 	loanController := controllers.NewLoanController()
 	loanManagementController := controllers.NewLoanManagementController()
 	loanOrganizationProfileController := controllers.NewLoanOrganizationProfileController()
+
+	api.GET("/loan-dashboard", loanDashboardController.GetDashboard)
 
 	// Loan Routes (General Loan)
 	api.POST("/loans", loanController.CreateLoan)
