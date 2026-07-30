@@ -45,13 +45,22 @@ func ParseDate(dateStr string) time.Time {
 // ParseFlexibleDate attempts to parse a date string using various common formats.
 func ParseFlexibleDate(dateStr string) time.Time {
 	dateStr = strings.TrimSpace(dateStr)
+	if dateStr == "" {
+		return time.Time{}
+	}
 	formats := []string{
 		"02 Jan 2006", // 01 Jan 2024
 		"2006-01-02",  // ISO
 		"02/01/2006",  // DD/MM/YYYY
+		"2/1/2006",    // D/M/YYYY (e.g. 1/1/1990)
 		"01/02/2006",  // MM/DD/YYYY
+		"1/2/2006",    // M/D/YYYY
 		"02-01-2006",  // DD-MM-YYYY
+		"2-1-2006",    // D-M-YYYY
+		"2006-1-1",    // YYYY-M-D
+		"1/1/2006",    // M/D/YYYY
 		"2006/01/02",
+		"2006/1/1",    // YYYY/M/D
 	}
 	for _, f := range formats {
 		if t, err := time.Parse(f, dateStr); err == nil {
@@ -59,6 +68,15 @@ func ParseFlexibleDate(dateStr string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// ParseFlexibleDatePtr returns nil when the input is empty or unparseable.
+func ParseFlexibleDatePtr(dateStr string) *time.Time {
+	t := ParseFlexibleDate(dateStr)
+	if t.IsZero() {
+		return nil
+	}
+	return &t
 }
 
 // FormatDate formats a time.Time object into a "YYYY-MM-DD" string.

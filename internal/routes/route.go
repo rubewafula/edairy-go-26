@@ -46,10 +46,8 @@ func SetupRouter() *gin.Engine {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// WebSocket Route moved above global middleware to prevent CORS interference during handshake
-	r.GET("/ws", ws.ServeWS(hub))
-
 	jwtSecret := os.Getenv("JWT_SECRET")
+	r.GET("/ws", ws.ServeWS(hub, []byte(jwtSecret)))
 	authMiddleware := middleware.AuthMiddleware([]byte(jwtSecret))
 
 	registerPublicRoutes(r)

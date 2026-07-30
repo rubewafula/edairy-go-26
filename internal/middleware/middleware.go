@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -38,6 +39,9 @@ func AuthMiddleware(jwtSecret []byte) gin.HandlerFunc {
 		tokenStr = strings.Replace(tokenStr, "Bearer ", "", 1)
 
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+			if token.Method != jwt.SigningMethodHS256 {
+				return nil, fmt.Errorf("unexpected signing method")
+			}
 			return jwtSecret, nil
 		})
 

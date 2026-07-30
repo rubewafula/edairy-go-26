@@ -10,9 +10,9 @@ type CreateMemberRequest struct {
 	LastName     string `json:"last_name" form:"last_name" validate:"required,max=128"`
 	OtherNames   string `json:"other_names" form:"other_names" validate:"max=128"`
 	RouteID      uint64 `json:"route_id" form:"route_id"`
-	DOB          string `json:"date_of_birth" form:"date_of_birth" validate:"required"`
+	DOB          string `json:"date_of_birth" form:"date_of_birth"`
 
-	IDNo      string `json:"id_no" form:"id_no" validate:"required,max=25"`
+	IDNo      string `json:"id_no" form:"id_no" validate:"max=25"`
 	MemberNo  string `json:"member_no" form:"member_no"`
 	BirthCity string `json:"birth_city" form:"birth_city"`
 	Gender    string `json:"gender" form:"gender" validate:"required,oneof=MALE FEMALE"`

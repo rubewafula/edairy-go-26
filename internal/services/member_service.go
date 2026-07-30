@@ -501,7 +501,7 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 					}()
 
 					err := db.DB.Transaction(func(tx *gorm.DB) error {
-						// Expected columns based on: Member No, First Name, Last Name, Other Names, ID No, Gender, Date of Birth, Date Registered, Member Type, Route, Primary Phone, Secondary Phone, Email, Bank, Bank Branch, Account No, Account Name, Number of Cows
+						// Expected columns: Member No, First Name, Last Name, Other Names, ID No, Gender, Date of Birth (optional), Date Registered, Member Type, Route, Primary Phone, Secondary Phone, Email, Bank, Bank Branch, Account No, Account Name, Number of Cows
 						if len(row) < 18 {
 							return fmt.Errorf("row has insufficient columns (%d < 18)", len(row))
 						}
@@ -552,8 +552,8 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 							}
 						}
 
-						dob := utils.ParseFlexibleDate(row[6])
-						joiningDate := utils.ParseFlexibleDate(row[7])
+						dobPtr := utils.ParseFlexibleDatePtr(row[6])
+						joiningDatePtr := utils.ParseFlexibleDatePtr(row[7])
 						numberOfCows, _ := strconv.Atoi(strings.TrimSpace(row[17]))
 
 						member := models.Member{
@@ -563,19 +563,31 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 							LastName:       strings.TrimSpace(row[2]),
 							OtherNames:     strings.TrimSpace(row[3]),
 							IDNo:           idNo,
-							DateOfBirth:    dob,
 							PrimaryPhone:   utils.NormalizePhone(row[10]),
 							SecondaryPhone: utils.NormalizePhone(row[11]),
 							Email:          strings.TrimSpace(row[12]),
 							Gender:         strings.ToUpper(strings.TrimSpace(row[5])),
 							RouteID:        route.ID,
 							MemberTypeID:   memberType.ID,
-							DateRegistered: joiningDate,
 							NumberOfCows:   numberOfCows,
 							Status:         "PENDING",
 						}
+						if dobPtr != nil {
+							member.DateOfBirth = *dobPtr
+						}
+						if joiningDatePtr != nil {
+							member.DateRegistered = *joiningDatePtr
+						}
 
-						if err := tx.Create(&member).Error; err != nil {
+						createMember := tx
+						if dobPtr == nil {
+							createMember = createMember.Omit("DateOfBirth")
+						}
+						if joiningDatePtr == nil {
+							createMember = createMember.Omit("DateRegistered")
+						}
+
+						if err := createMember.Create(&member).Error; err != nil {
 							return err
 						}
 

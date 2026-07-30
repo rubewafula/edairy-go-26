@@ -2,19 +2,36 @@ package sockets
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 )
+
+var allowedOrigins = map[string]bool{
+	"https://arithi.edairy.africa":           true,
+	"https://api.arithi.edairy.africa":       true,
+	"https://tigania-west.edairy.africa":     true,
+	"https://api.tigania-west.edairy.africa": true,
+	"https://edairy.africa":                  true,
+	"http://localhost:5173":                  true,
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for the websocket handshake
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		return allowedOrigins[origin]
 	},
 }
 
@@ -50,6 +67,43 @@ func InitHub(hub *Hub) {
 	})
 }
 
+func validateTokenAndGetUserID(tokenStr string, jwtSecret []byte) (string, error) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("invalid claims")
+	}
+
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return "", fmt.Errorf("invalid user id")
+	}
+
+	return strconv.FormatUint(uint64(userID), 10), nil
+}
+
+func extractToken(c *gin.Context) string {
+	if token := c.Query("token"); token != "" {
+		return token
+	}
+
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+
+	return ""
+}
+
 func (h *Hub) Run() {
 	for {
 		select {
@@ -74,7 +128,6 @@ func (h *Hub) Run() {
 				select {
 				case client.Send <- message:
 				default:
-					// If the buffer is full, the unregister process will handle cleanup
 					log.Printf("Buffer full for user %s, skipping broadcast", client.ID)
 				}
 			}
@@ -83,7 +136,6 @@ func (h *Hub) Run() {
 	}
 }
 
-// Join associates a client with a specific user ID and registers them with the hub
 func (h *Hub) Join(userID string, client *Client) {
 	client.ID = userID
 	h.Register <- client
@@ -101,7 +153,6 @@ func readPump(hub *Hub, c *Client) {
 			break
 		}
 
-		// handle incoming messages
 		hub.Broadcast <- message
 	}
 }
@@ -115,18 +166,19 @@ func writePump(c *Client) {
 	}
 }
 
-// ServeWS upgrades the HTTP connection to a WebSocket and registers the client
-func ServeWS(hub *Hub) gin.HandlerFunc {
+func ServeWS(hub *Hub, jwtSecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		// 👉 THIS is your gin context
-		userID := c.GetString("user_id") // from auth middleware
-		if userID == "" {
-			userID = c.Query("user_id") // fallback (not secure)
+		tokenStr := extractToken(c)
+		if tokenStr == "" {
+			log.Println("WebSocket upgrade failed: token missing")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token is required"})
+			return
 		}
-		if userID == "" {
-			log.Println("WebSocket upgrade failed: userID query parameter missing")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "userID is required"})
+
+		userID, err := validateTokenAndGetUserID(tokenStr, jwtSecret)
+		if err != nil {
+			log.Printf("WebSocket upgrade failed: %v", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 
@@ -148,10 +200,7 @@ func ServeWS(hub *Hub) gin.HandlerFunc {
 	}
 }
 
-// EmitNotification sends a real-time notification to a specific user's room
-// EmitNotification sends a real-time notification to a specific user
 func EmitNotification(userID string, notification interface{}) {
-
 	if Manager == nil {
 		return
 	}
