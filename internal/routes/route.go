@@ -40,8 +40,10 @@ func SetupRouter() *gin.Engine {
 				"https://api.mwimbi.edairy.africa":       true,
 				"https://mutuati.edairy.africa":          true,
 				"https://api.mutuati.edairy.africa":      true,
-				"https://nguene.edairy.africa":           true,
-				"https://api.nguene.edairy.africa":       true,
+				"https://nkuene.edairy.africa":           true,
+				"https://api.nkuene.edairy.africa":       true,
+				"https://dev.edairy.africa":              true,
+				"https://api.dev.edairy.africa":          true,
 				"https://edairy.africa":                  true,
 				"http://localhost:5173":                  true,
 			}

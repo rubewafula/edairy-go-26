@@ -8,7 +8,7 @@ EDAIRY_VERSION="${EDAIRY_VERSION:-1.0.0}"
 export EDAIRY_VERSION
 
 declare -a DAIRIES=(
-  "nguene 8510 8511"
+  "nkuene 8510 8511"
   "mutuati 8508 8509"
   "mwimbi 8506 8507"
   "mukululu 8504 8505"
@@ -17,7 +17,7 @@ declare -a DAIRIES=(
 )
 
 echo "Migrating ${#DAIRIES[@]} dairies to Docker (EDAIRY_VERSION=${EDAIRY_VERSION})"
-echo "Order: nguene first (rehearsal), then remaining five."
+echo "Order: nkuene first (rehearsal), then remaining five."
 
 for entry in "${DAIRIES[@]}"; do
   read -r slug api_port ui_port <<< "$entry"

@@ -44,7 +44,8 @@ Build and publish via GitHub Actions on tag push (`v1.0.0`) or manual workflow d
 | mukululu | 8504 | 8505 | mukululu_dairy_erp |
 | mwimbi | 8506 | 8507 | mwimbi_dairy_erp |
 | mutuati | 8508 | 8509 | mutuati_dairy_erp |
-| nguene | 8510 | 8511 | nguene_dairy_erp |
+| nkuene | 8510 | 8511 | nkuene_dairy_erp |
+| dev | 8512 | 8513 | dev_dairy_erp |
 
 ## Provision a new dairy
 
@@ -77,7 +78,24 @@ The `--migrate` flag:
 - Stops and disables the legacy systemd unit
 - Removes the host nginx site config (backed up with timestamp)
 
-## Migrate all six dairies
+## Rename a dairy
+
+```bash
+sudo MYSQL_ROOT='...' ./deploy/rename-dairy.sh nguene nkuene 8510 8511
+```
+
+## Development dairy
+
+The `dev` stack (API 8512, UI 8513) is for integration testing and local frontend dev:
+
+```bash
+# Local frontend dev server targets dev dairy API
+npm run dev   # uses env/.env.dev -> api.dev.edairy.africa
+
+# Per-dairy build config (optional)
+npm run build --dev-dairy
+```
+
 
 ```bash
 sudo EDAIRY_VERSION=1.0.0 ./deploy/migrate-all-to-docker.sh
