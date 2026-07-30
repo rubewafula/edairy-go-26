@@ -34,10 +34,18 @@ func SetupRouter() *gin.Engine {
 				"https://api.arithi.edairy.africa":       true,
 				"https://tigania-west.edairy.africa":     true,
 				"https://api.tigania-west.edairy.africa": true,
+				"https://mukululu.edairy.africa":         true,
+				"https://api.mukululu.edairy.africa":     true,
+				"https://mwimbi.edairy.africa":           true,
+				"https://api.mwimbi.edairy.africa":       true,
+				"https://mutuati.edairy.africa":          true,
+				"https://api.mutuati.edairy.africa":      true,
+				"https://nguene.edairy.africa":           true,
+				"https://api.nguene.edairy.africa":       true,
 				"https://edairy.africa":                  true,
 				"http://localhost:5173":                  true,
 			}
-			return allowed[origin] // In production, check against an allowed list
+			return allowed[origin]
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token", "X-Requested-With"},
