@@ -5,12 +5,15 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
+	"gorm.io/gorm"
 )
 
-type LoanManagementService struct{}
+type LoanManagementService struct {
+	posting *FinancialPostingService
+}
 
 func NewLoanManagementService() *LoanManagementService {
-	return &LoanManagementService{}
+	return &LoanManagementService{posting: NewFinancialPostingService()}
 }
 
 // --- LoanAccount CRUD ---
@@ -253,7 +256,32 @@ func (s *LoanManagementService) CreateLoanTransaction(req dtos.CreateLoanTransac
 		Description: req.Description,
 		Date:        utils.ParseDate(req.Date),
 	}
-	if err := db.DB.Create(transaction).Error; err != nil {
+
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(transaction).Error; err != nil {
+			return err
+		}
+		if !req.PostToGL {
+			return nil
+		}
+		idempotencyKey := req.IdempotencyKey
+		if idempotencyKey == "" {
+			idempotencyKey = req.Reference
+		}
+		var glResult *PostFromRuleResult
+		var err error
+		if req.Type == "DEBIT" {
+			glResult, err = s.posting.PostLoanDisbursement(userID, req.LoanID, req.Amount, transaction.Date, req.Description, idempotencyKey)
+		} else {
+			glResult, err = s.posting.PostLoanRepayment(userID, req.LoanID, req.Amount, transaction.Date, req.Description, idempotencyKey)
+		}
+		if err != nil {
+			return err
+		}
+		_ = glResult
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	return transaction, nil

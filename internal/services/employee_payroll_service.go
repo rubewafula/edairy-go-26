@@ -795,25 +795,7 @@ func (s *EmployeePayrollService) handleProcessingError(payrollID uint64, userID 
 }
 
 func (s *EmployeePayrollService) createGLEntries(tx *gorm.DB, transactionID, userID uint64, transactionDate time.Time, debitAccountID, creditAccountID uint64, amount float64, description string) error {
-	glEntries := []models.GeneralLedgerEntry{
-		{
-			BaseModel:       models.BaseModel{CreatedBy: userID},
-			TransactionID:   transactionID,
-			AccountID:       debitAccountID,
-			Debit:           amount,
-			TransactionDate: transactionDate,
-			Description:     description,
-		},
-		{
-			BaseModel:       models.BaseModel{CreatedBy: userID},
-			TransactionID:   transactionID,
-			AccountID:       creditAccountID,
-			Credit:          amount,
-			TransactionDate: transactionDate,
-			Description:     description,
-		},
-	}
-	return tx.Create(&glEntries).Error
+	return Ledger().AppendManualPair(tx, userID, transactionID, debitAccountID, creditAccountID, nil, nil, amount, transactionDate, description)
 }
 
 func (s *EmployeePayrollService) DeleteEmployeePayroll(id string, userID uint64) error {

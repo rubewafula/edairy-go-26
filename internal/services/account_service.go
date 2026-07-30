@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
@@ -103,10 +104,12 @@ func (s *AccountService) DeleteAccount(id string, userID uint64) error {
 	return db.DB.Model(&models.Account{}).Where("id = ?", id).Update("updated_by", userID).Delete(&models.Account{}).Error
 }
 
-func (s *AccountService) GetTrialBalance() (*dtos.TrialBalanceResponse, error) {
+func (s *AccountService) GetTrialBalance(from, to string) (*dtos.TrialBalanceResponse, error) {
 	var items []dtos.TrialBalanceItem
 
-	query := `
+	dateFilter, dateArgs := reportDateFilter("gle.transaction_date", from, to)
+
+	query := fmt.Sprintf(`
 		SELECT 
 			a.id as account_id, 
 			a.account_code, 
@@ -116,12 +119,12 @@ func (s *AccountService) GetTrialBalance() (*dtos.TrialBalanceResponse, error) {
 			(SUM(COALESCE(gle.debit, 0)) - SUM(COALESCE(gle.credit, 0))) as balance
 		FROM accounts a
 		INNER JOIN general_ledger_entries gle ON a.id = gle.account_id
-		WHERE a.deleted_at IS NULL AND gle.deleted_at IS NULL
+		WHERE a.deleted_at IS NULL AND gle.deleted_at IS NULL %s
 		GROUP BY a.id, a.account_code, a.name
 		ORDER BY a.account_code ASC
-	`
+	`, dateFilter)
 
-	if err := db.DB.Raw(query).Scan(&items).Error; err != nil {
+	if err := db.DB.Raw(query, dateArgs...).Scan(&items).Error; err != nil {
 		return nil, err
 	}
 
@@ -138,7 +141,21 @@ func (s *AccountService) GetTrialBalance() (*dtos.TrialBalanceResponse, error) {
 	}, nil
 }
 
-func (s *AccountService) GetProfitLoss() (*dtos.ProfitLossResponse, error) {
+func reportDateFilter(column, from, to string) (string, []interface{}) {
+	clauses := ""
+	args := []interface{}{}
+	if from != "" {
+		clauses += fmt.Sprintf(" AND %s >= ?", column)
+		args = append(args, from)
+	}
+	if to != "" {
+		clauses += fmt.Sprintf(" AND %s <= ?", column)
+		args = append(args, to+" 23:59:59")
+	}
+	return clauses, args
+}
+
+func (s *AccountService) GetProfitLoss(from, to string) (*dtos.ProfitLossResponse, error) {
 	var rawItems []struct {
 		AccountID       uint64
 		AccountCode     string
@@ -149,7 +166,9 @@ func (s *AccountService) GetProfitLoss() (*dtos.ProfitLossResponse, error) {
 		TotalCredit     float64
 	}
 
-	query := `
+	dateFilter, dateArgs := reportDateFilter("gle.transaction_date", from, to)
+
+	query := fmt.Sprintf(`
 		SELECT 
 			a.id as account_id, 
 			a.account_code, 
@@ -162,13 +181,13 @@ func (s *AccountService) GetProfitLoss() (*dtos.ProfitLossResponse, error) {
 		INNER JOIN account_categories ac ON a.account_category_id = ac.id
 		INNER JOIN account_types at ON ac.account_type_id = at.id
 		INNER JOIN general_ledger_entries gle ON a.id = gle.account_id
-		WHERE a.deleted_at IS NULL AND gle.deleted_at IS NULL
-		  AND (at.name LIKE '%Revenue%' OR at.name LIKE '%Income%' OR at.name LIKE '%Expense%')
+		WHERE a.deleted_at IS NULL AND gle.deleted_at IS NULL %s
+		  AND (at.name LIKE '%%Revenue%%' OR at.name LIKE '%%Income%%' OR at.name LIKE '%%Expense%%')
 		GROUP BY a.id, a.account_code, a.name, ac.name, at.name
 		ORDER BY at.name, a.account_code ASC
-	`
+	`, dateFilter)
 
-	if err := db.DB.Raw(query).Scan(&rawItems).Error; err != nil {
+	if err := db.DB.Raw(query, dateArgs...).Scan(&rawItems).Error; err != nil {
 		return nil, err
 	}
 
@@ -207,9 +226,8 @@ func (s *AccountService) GetProfitLoss() (*dtos.ProfitLossResponse, error) {
 	return resp, nil
 }
 
-func (s *AccountService) GetBalanceSheet() (*dtos.BalanceSheetResponse, error) {
-	// 1. Get Net Profit from P&L to account for current period earnings in Equity
-	pl, err := s.GetProfitLoss()
+func (s *AccountService) GetBalanceSheet(from, to string) (*dtos.BalanceSheetResponse, error) {
+	pl, err := s.GetProfitLoss(from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +242,9 @@ func (s *AccountService) GetBalanceSheet() (*dtos.BalanceSheetResponse, error) {
 		TotalCredit     float64
 	}
 
-	query := `
+	dateFilter, dateArgs := reportDateFilter("gle.transaction_date", from, to)
+
+	query := fmt.Sprintf(`
 		SELECT 
 			a.id as account_id, 
 			a.account_code, 
@@ -237,13 +257,13 @@ func (s *AccountService) GetBalanceSheet() (*dtos.BalanceSheetResponse, error) {
 		INNER JOIN account_categories ac ON a.account_category_id = ac.id
 		INNER JOIN account_types at ON ac.account_type_id = at.id
 		INNER JOIN general_ledger_entries gle ON a.id = gle.account_id
-		WHERE a.deleted_at IS NULL AND gle.deleted_at IS NULL
-		  AND (at.name LIKE '%Asset%' OR at.name LIKE '%Liability%' OR at.name LIKE '%Equity%' OR at.name LIKE '%Capital%')
+		WHERE a.deleted_at IS NULL AND gle.deleted_at IS NULL %s
+		  AND (at.name LIKE '%%Asset%%' OR at.name LIKE '%%Liability%%' OR at.name LIKE '%%Equity%%' OR at.name LIKE '%%Capital%%')
 		GROUP BY a.id, a.account_code, a.name, ac.name, at.name
 		ORDER BY at.name, a.account_code ASC
-	`
+	`, dateFilter)
 
-	if err := db.DB.Raw(query).Scan(&rawItems).Error; err != nil {
+	if err := db.DB.Raw(query, dateArgs...).Scan(&rawItems).Error; err != nil {
 		return nil, err
 	}
 
@@ -251,6 +271,8 @@ func (s *AccountService) GetBalanceSheet() (*dtos.BalanceSheetResponse, error) {
 		AssetItems:     []dtos.BalanceSheetItem{},
 		LiabilityItems: []dtos.BalanceSheetItem{},
 		EquityItems:    []dtos.BalanceSheetItem{},
+		FromDate:       from,
+		ToDate:         to,
 	}
 
 	for _, item := range rawItems {

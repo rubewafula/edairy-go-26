@@ -183,7 +183,7 @@ func (h *AccountController) DeleteAccount(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /accounting/trial-balance [get]
 func (h *AccountController) GetTrialBalance(c *gin.Context) {
-	result, err := h.service.GetTrialBalance()
+	result, err := h.service.GetTrialBalance(c.Query("from"), c.Query("to"))
 	if err != nil {
 		// Log exact error but return user-friendly message
 		log.Println("AccountController.GetTrialBalance Error:", err)
@@ -202,7 +202,7 @@ func (h *AccountController) GetTrialBalance(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /accounting/profit-loss [get]
 func (h *AccountController) GetProfitLoss(c *gin.Context) {
-	result, err := h.service.GetProfitLoss()
+	result, err := h.service.GetProfitLoss(c.Query("from"), c.Query("to"))
 	if err != nil {
 		// Log exact error but return user-friendly message
 		log.Println("AccountController.GetProfitLoss Error:", err)
@@ -221,7 +221,7 @@ func (h *AccountController) GetProfitLoss(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /accounting/balance-sheet [get]
 func (h *AccountController) GetBalanceSheet(c *gin.Context) {
-	result, err := h.service.GetBalanceSheet()
+	result, err := h.service.GetBalanceSheet(c.Query("from"), c.Query("to"))
 	if err != nil {
 		// Log exact error but return user-friendly message
 		log.Println("AccountController.GetBalanceSheet Error:", err)

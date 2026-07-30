@@ -32,7 +32,12 @@ func (c *SharePaymentController) CreateSharePayment(ctx *gin.Context) {
 		return
 	}
 
-	payment, err := c.service.CreateSharePayment(req)
+	userID := ctx.MustGet("user_id").(uint64)
+	if req.IdempotencyKey == "" {
+		req.IdempotencyKey = ctx.GetHeader("Idempotency-Key")
+	}
+
+	payment, err := c.service.CreateSharePayment(req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

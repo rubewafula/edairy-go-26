@@ -1,0 +1,185 @@
+# Standard dairy Chart of Accounts — deploy template (P1)
+# Used by: go run ./cmd/seed-finance/main.go
+
+account_types:
+  - name: ASSET
+  - name: LIABILITY
+  - name: EQUITY
+  - name: REVENUE
+  - name: EXPENSE
+
+categories:
+  - name: Cash & Bank
+    type: ASSET
+  - name: Accounts Receivable
+    type: ASSET
+  - name: Loans Receivable
+    type: ASSET
+  - name: Inventory
+    type: ASSET
+  - name: Member Savings
+    type: LIABILITY
+  - name: Accounts Payable
+    type: LIABILITY
+  - name: Employee Liabilities
+    type: LIABILITY
+  - name: Member Shares
+    type: EQUITY
+  - name: Retained Earnings
+    type: EQUITY
+  - name: Sales
+    type: REVENUE
+  - name: Milk Purchase
+    type: EXPENSE
+  - name: Staff Costs
+    type: EXPENSE
+  - name: Cost of Goods Sold
+    type: EXPENSE
+  - name: Operating Expenses
+    type: EXPENSE
+
+accounts:
+  - code: "1000"
+    name: Cash at Bank
+    category: Cash & Bank
+  - code: "1050"
+    name: Petty Cash
+    category: Cash & Bank
+  - code: "1100"
+    name: Farmer Receivables
+    category: Accounts Receivable
+  - code: "1200"
+    name: Member Loans
+    category: Loans Receivable
+  - code: "1500"
+    name: Inventory
+    category: Inventory
+  - code: "1600"
+    name: Accumulated Depreciation
+    category: Inventory
+  - code: "2000"
+    name: Member Savings Contribution
+    category: Member Savings
+  - code: "2100"
+    name: Accounts Payable
+    category: Accounts Payable
+  - code: "2215"
+    name: Salary Payable
+    category: Employee Liabilities
+  - code: "3000"
+    name: Member Shares Contribution
+    category: Member Shares
+  - code: "3100"
+    name: Retained Earnings
+    category: Retained Earnings
+  - code: "4002"
+    name: Milk Sales
+    category: Sales
+  - code: "4005"
+    name: Inventory Sales
+    category: Sales
+  - code: "5000"
+    name: Farmer Milk Payments
+    category: Milk Purchase
+  - code: "5100"
+    name: Salaries & Wages
+    category: Staff Costs
+
+posting_rules:
+  - type: MILK_PAYMENT
+    debit: "5000"
+    credit: "1000"
+    description: Member milk payment
+  - type: SHARES_CONTRIBUTION
+    debit: "1000"
+    credit: "3000"
+    description: Share contribution
+  - type: LOAN_DISBURSEMENT
+    debit: "1200"
+    credit: "1000"
+    description: Loan disbursement
+  - type: LOAN_REPAYMENT
+    debit: "1000"
+    credit: "1200"
+    description: Loan repayment
+  - type: CASH_IN_PAYMENT
+    debit: "1000"
+    credit: "1100"
+    description: Cash receipt
+  - type: CASH_OUT_PAYMENT
+    debit: "2100"
+    credit: "1000"
+    description: Cash payment
+  - type: MEMBER_SAVINGS_CONTRIBUTION
+    debit: "1000"
+    credit: "2000"
+    description: Savings deposit
+  - type: MEMBER_SAVINGS_WITHDRAWAL
+    debit: "2000"
+    credit: "1000"
+    description: Savings withdrawal
+  - type: LOCAL_MILK_SALES
+    debit: "1000"
+    credit: "4002"
+    description: Local milk sale
+  - type: VENDOR_PAYMENTS
+    debit: "2100"
+    credit: "1000"
+    description: Supplier payment
+  - type: GOOD_RECEIVED_ON_CREDIT
+    debit: "1500"
+    credit: "2100"
+    description: Goods received on credit
+  - type: EMPLOYEE_SALARY_GROSS
+    debit: "5100"
+    credit: "2215"
+    description: Salary accrual
+  - type: TRANSPORTER_PAYMENT_GROSS
+    debit: "5000"
+    credit: "2215"
+    description: Transporter payment gross
+  - type: TRANSPORTER_REPAYMENT_DEDUCTION
+    debit: "2215"
+    credit: "1000"
+    description: Transporter loan recovery
+  - type: SHARES_IMPORT
+    debit: "1000"
+    credit: "3000"
+    description: Share opening import
+  - type: STOCK_IMPORT
+    debit: "1500"
+    credit: "1000"
+    description: Inventory opening import
+  - type: DIVIDEND_DECLARATION
+    debit: "3100"
+    credit: "2100"
+    description: Dividend declaration
+  - type: DIVIDEND_PAYMENT
+    debit: "2100"
+    credit: "1000"
+    description: Dividend payment
+  - type: BAD_DEBT_PROVISION
+    debit: "5100"
+    credit: "1200"
+    description: Bad debt provision
+  - type: BAD_DEBT_WRITE_OFF
+    debit: "1200"
+    credit: "1000"
+    description: Bad debt write-off (configure allowance account in production)
+
+default_settings:
+  currency: KES
+  fiscal_year_start_month: 1
+  default_bank_account_code: "1000"
+  default_share_account_code: "3000"
+  default_loan_account_code: "1200"
+  milk_payment_expense_code: "5000"
+
+opening_checklist:
+  - Run finance seed (account types through posting rules)
+  - Run cleanup-coa.sql on migrated databases
+  - Verify trial balance debits equal credits after test posting
+  - Configure statutory deduction rates
+  - Assign finance RBAC permissions to admin user
+  - Post opening balances if migrating from legacy system
+  - Close test period after validation

@@ -13,6 +13,7 @@ type CreateSharePaymentRequest struct {
 	TransactionDate string  `json:"transaction_date" validate:"required"`
 	ApprovedBy      uint64  `json:"approved_by"`
 	DateApproved    string  `json:"date_approved"`
+	IdempotencyKey  string  `json:"idempotency_key"`
 }
 
 type UpdateSharePaymentRequest struct {

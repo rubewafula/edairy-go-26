@@ -130,12 +130,14 @@ type LoanOriginationCallbackLogResponse struct {
 
 // LoanTransaction DTOs
 type CreateLoanTransactionRequest struct {
-	LoanID      uint64  `json:"loan_id" validate:"required"`
-	Amount      float64 `json:"amount" validate:"required,min=0"`
-	Type        string  `json:"type" validate:"required,oneof=DEBIT CREDIT"`
-	Reference   string  `json:"reference" validate:"required"`
-	Description string  `json:"description"`
-	Date        string  `json:"date" validate:"required,datetime"`
+	LoanID         uint64  `json:"loan_id" validate:"required"`
+	Amount         float64 `json:"amount" validate:"required,min=0"`
+	Type           string  `json:"type" validate:"required,oneof=DEBIT CREDIT"`
+	Reference      string  `json:"reference" validate:"required"`
+	Description    string  `json:"description"`
+	Date           string  `json:"date" validate:"required,datetime"`
+	PostToGL       bool    `json:"post_to_gl"`
+	IdempotencyKey string  `json:"idempotency_key"`
 }
 
 type UpdateLoanTransactionRequest struct {

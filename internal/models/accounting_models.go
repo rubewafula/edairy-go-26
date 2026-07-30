@@ -37,7 +37,9 @@ type AccountSubAccount struct {
 
 type Transaction struct {
 	BaseModel
-	Reference       string    `gorm:"index;column:reference"`
+	Reference       string    `gorm:"uniqueIndex;column:reference"`
+	IdempotencyKey  string    `gorm:"uniqueIndex;column:idempotency_key"`
+	ReversalOfID    *uint64   `gorm:"column:reversal_of_id;index"`
 	TransactionName string    `gorm:"column:transaction_name"`
 	TransactionType string    `gorm:"column:transaction_type"`
 	TransactionDate time.Time `gorm:"index;column:transaction_date"`
@@ -110,8 +112,11 @@ type GeneralLedgerEntry struct {
 	SubAccountID    *uint64   `gorm:"column:sub_account_id;index"`
 	Debit           float64   `gorm:"column:debit;type:decimal(10,2);not null;default:0.00"`
 	Credit          float64   `gorm:"column:credit;type:decimal(10,2);not null;default:0.00"`
-	TransactionDate time.Time `gorm:"column:transaction_date;not null"`
+	TransactionDate time.Time `gorm:"column:transaction_date;not null;index"`
 	Description     string    `gorm:"column:description"`
+	PostedAt        time.Time `gorm:"column:posted_at"`
+	IsReversal      bool      `gorm:"column:is_reversal;default:0"`
+	ReversesEntryID *uint64   `gorm:"column:reverses_entry_id;index"`
 }
 
 func (GeneralLedgerEntry) TableName() string {
@@ -134,4 +139,34 @@ type StatutoryDeductionConfiguration struct {
 
 func (StatutoryDeductionConfiguration) TableName() string {
 	return "statutory_deductions_configurations"
+}
+
+// FinancialPeriod tracks closed accounting periods.
+type FinancialPeriod struct {
+	BaseModel
+	Name      string    `gorm:"column:name"`
+	StartDate time.Time `gorm:"column:start_date;index"`
+	EndDate   time.Time `gorm:"column:end_date;index"`
+	Status    string    `gorm:"column:status;index"` // OPEN, CLOSED
+	ClosedAt  *time.Time `gorm:"column:closed_at"`
+	ClosedBy  *uint64    `gorm:"column:closed_by"`
+}
+
+func (FinancialPeriod) TableName() string {
+	return "financial_periods"
+}
+
+// BankAccount links operational bank accounts to ledger accounts (multi-bank).
+type BankAccount struct {
+	BaseModel
+	Name        string `gorm:"column:name"`
+	AccountNo   string `gorm:"column:account_no"`
+	BankName    string `gorm:"column:bank_name"`
+	LedgerAccountID uint64 `gorm:"column:ledger_account_id;index"`
+	IsDefault   bool   `gorm:"column:is_default"`
+	IsActive    bool   `gorm:"column:is_active;default:1"`
+}
+
+func (BankAccount) TableName() string {
+	return "bank_accounts"
 }

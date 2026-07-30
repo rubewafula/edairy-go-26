@@ -16,20 +16,12 @@ func NewSharePaymentService() *SharePaymentService {
 	return &SharePaymentService{}
 }
 
-func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequest) (*models.SharePayment, error) {
-	// Get posting rules for shares contribution
-	var rule models.TransactionPostingRule
-	if err := db.DB.Where("transaction_type = ?", "SHARES_CONTRIBUTION").First(&rule).Error; err != nil {
-		return nil, fmt.Errorf("posting rule for SHARES_CONTRIBUTION not found: %w", err)
-	}
-
-	// Get share account to determine share type and unit price
+func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequest, userID uint64) (*models.SharePayment, error) {
 	var shareAccount models.ShareAccount
 	if err := db.DB.First(&shareAccount, req.ShareAccountID).Error; err != nil {
 		return nil, fmt.Errorf("share account not found: %w", err)
 	}
 
-	// Get share type to determine unit price
 	var shareType models.ShareType
 	if err := db.DB.First(&shareType, shareAccount.ShareTypeID).Error; err != nil {
 		return nil, fmt.Errorf("share type not found for share account: %w", err)
@@ -39,6 +31,12 @@ func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequ
 	status := req.Status
 	if status == "" {
 		status = "POSTED"
+	}
+
+	reference := fmt.Sprintf("SHR-%s-%04d-%d", transactionDate.Format("200601"), req.MemberID, utils.Now().UnixNano())
+	idempotencyKey := req.IdempotencyKey
+	if idempotencyKey == "" {
+		idempotencyKey = reference
 	}
 
 	payment := &models.SharePayment{
@@ -59,34 +57,35 @@ func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequ
 	}
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
-		// 1. Create Main Transaction Record
-		transaction := &models.Transaction{
-			Reference:       fmt.Sprintf("SHR-%s-%04d", transactionDate.Format("200601"), req.MemberID),
+		glResult, err := Ledger().PostFromRule(PostFromRuleRequest{
+			Tx:              tx,
+			UserID:          userID,
+			Reference:       reference,
+			IdempotencyKey:  idempotencyKey,
 			TransactionName: "Share Contribution",
-			TransactionType: "SHARE",
+			HeaderType:      "SHARE",
+			RuleType:        "SHARES_CONTRIBUTION",
+			Amount:          req.AmountPaid,
 			TransactionDate: transactionDate,
 			Description:     req.Description,
 			Status:          status,
-		}
-
-		if err := tx.Create(transaction).Error; err != nil {
+		})
+		if err != nil {
 			return err
 		}
 
-		// 2. Link Transaction ID to Share Payment and Save
-		payment.TransactionID = transaction.ID
+		payment.TransactionID = glResult.Transaction.ID
 		if err := tx.Create(payment).Error; err != nil {
 			return err
 		}
 
-		// 3. Record Member Share Movement (PURCHASE)
 		var prevBalance float64
 		tx.Model(&models.ShareTransaction{}).
 			Where("share_account_id = ?", payment.ShareAccountID).
 			Select("COALESCE(SUM(debit - credit), 0)").Scan(&prevBalance)
 
 		shareMovement := &models.ShareTransaction{
-			TransactionID:   transaction.ID,
+			TransactionID:   glResult.Transaction.ID,
 			ShareAccountID:  payment.ShareAccountID,
 			MemberID:        payment.MemberID,
 			TransactionType: "PURCHASE",
@@ -101,49 +100,15 @@ func (s *SharePaymentService) CreateSharePayment(req dtos.CreateSharePaymentRequ
 			return err
 		}
 
-		// 4. Create General Ledger Debit Entry (typically Bank or Cash)
-		debitGL := &models.GeneralLedgerEntry{
-			TransactionID:   transaction.ID,
-			AccountID:       rule.DebitAccountID,
-			SubAccountID:    rule.DebitSubAccountID,
-			Debit:           req.AmountPaid,
-			Credit:          0.00,
-			TransactionDate: transactionDate,
-			Description:     fmt.Sprintf("Share contribution - %s", req.Description),
-		}
-		if err := tx.Create(debitGL).Error; err != nil {
-			return err
-		}
-
-		// 5. Create General Ledger Credit Entry (typically Share Capital)
-		creditGL := &models.GeneralLedgerEntry{
-			TransactionID:   transaction.ID,
-			AccountID:       rule.CreditAccountID,
-			SubAccountID:    rule.CreditSubAccountID,
-			Debit:           0.00,
-			Credit:          req.AmountPaid,
-			TransactionDate: transactionDate,
-			Description:     fmt.Sprintf("Share contribution by member %d - %s", req.MemberID, req.Description),
-		}
-		if err := tx.Create(creditGL).Error; err != nil {
-			return err
-		}
-
-		// 6. Update Share Account Balance
-		if err := tx.Model(&models.ShareAccount{}).Where("id = ?", payment.ShareAccountID).Updates(map[string]interface{}{
+		return tx.Model(&models.ShareAccount{}).Where("id = ?", payment.ShareAccountID).Updates(map[string]interface{}{
 			"share_units":  gorm.Expr("share_units + ?", payment.ShareUnits),
 			"share_amount": gorm.Expr("share_amount + ?", payment.AmountPaid),
-		}).Error; err != nil {
-			return err
-		}
-
-		return nil
+		}).Error
 	})
 
 	if err != nil {
 		return nil, err
 	}
-
 	return payment, nil
 }
 

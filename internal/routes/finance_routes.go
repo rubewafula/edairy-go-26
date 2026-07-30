@@ -8,6 +8,7 @@ import (
 func registerFinanceRoutes(api *gin.RouterGroup) {
 	financeDashboardController := controllers.NewFinanceDashboardController()
 	cashTransactionController := controllers.NewCashTransactionController()
+	financialController := controllers.NewFinancialController()
 
 	accountController := controllers.NewAccountController()
 	accountSubAccountController := controllers.NewAccountSubAccountController()
@@ -23,10 +24,25 @@ func registerFinanceRoutes(api *gin.RouterGroup) {
 	api.PUT("/cash-transactions/:id", cashTransactionController.Update)
 	api.DELETE("/cash-transactions/:id", cashTransactionController.Delete)
 
-	// Account routes
+	// Ledger posting & reversals
+	api.POST("/financial-transactions", financialController.PostTransaction)
+	api.POST("/financial-transactions/:id/reverse", financialController.ReverseTransaction)
+
+	// Financial reports
 	api.GET("/trial-balance", accountController.GetTrialBalance)
 	api.GET("/profit-loss", accountController.GetProfitLoss)
 	api.GET("/balance-sheet", accountController.GetBalanceSheet)
+	api.GET("/general-ledger", financialController.GetGeneralLedger)
+	api.GET("/cash-flow-statement", financialController.GetCashFlow)
+	api.GET("/member-statements/:member_id", financialController.GetMemberStatement)
+	api.GET("/loan-statements/:loan_id", financialController.GetLoanStatement)
+	api.GET("/budget-vs-actual", financialController.GetBudgetVsActual)
+	api.GET("/bank-reconciliation", financialController.GetBankReconciliation)
+
+	// Period-end
+	api.GET("/financial-periods", financialController.ListPeriods)
+	api.POST("/financial-periods", financialController.CreatePeriod)
+	api.POST("/financial-periods/:id/close", financialController.ClosePeriod)
 	api.POST("/accounts", accountController.CreateAccount)
 	api.GET("/accounts", accountController.GetAccounts)
 	api.GET("/accounts/:id", accountController.GetAccount)

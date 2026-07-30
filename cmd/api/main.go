@@ -13,12 +13,16 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	initializers "github.com/rubewafula/edairy-go-26/internal/initializers"
 	"github.com/rubewafula/edairy-go-26/internal/routes"
+	"github.com/rubewafula/edairy-go-26/internal/services"
 )
 
 func init() {
 	initializers.LoadEnvVariables()
 	initializers.InitTimezone()
 	db.ConnectToDatabase()
+	if err := services.EnsureLedgerSchema(); err != nil {
+		log.Printf("ledger schema migration warning: %v", err)
+	}
 }
 
 func main() {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/jung-kurt/gofpdf"
 	"github.com/rubewafula/edairy-go-26/internal/db"
+	"github.com/rubewafula/edairy-go-26/internal/debuglog"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	models "github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
@@ -420,6 +421,96 @@ func (s *MemberService) SuspendMember(id string) error {
 	return db.DB.Model(&member).Update("status", "SUSPENDED").Error
 }
 
+type routeImportCache struct {
+	mu    sync.Mutex
+	byKey map[string]uint64
+}
+
+func normalizeRouteKey(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
+
+func findOrCreateRouteForImport(routeVal string, cache *routeImportCache, userID uint64, importID uint64) (uint64, error) {
+	key := normalizeRouteKey(routeVal)
+	if key == "" {
+		return 0, fmt.Errorf("route is empty")
+	}
+
+	cache.mu.Lock()
+	if id, ok := cache.byKey[key]; ok {
+		cache.mu.Unlock()
+		// #region agent log
+		debuglog.Log("member_service.go:routeCacheHit", "route resolved from import cache", "H1", "post-fix", map[string]any{
+			"importID": importID, "routeVal": routeVal, "routeID": id,
+		})
+		// #endregion
+		return id, nil
+	}
+	cache.mu.Unlock()
+
+	var routeID uint64
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		cache.mu.Lock()
+		defer cache.mu.Unlock()
+
+		if id, ok := cache.byKey[key]; ok {
+			routeID = id
+			return nil
+		}
+
+		lookup := func() (models.Route, error) {
+			var route models.Route
+			err := tx.Where(
+				"LOWER(TRIM(route_name)) = ? OR LOWER(TRIM(route_code)) = ?",
+				key, key,
+			).First(&route).Error
+			return route, err
+		}
+
+		if route, err := lookup(); err == nil {
+			routeID = route.ID
+			cache.byKey[key] = routeID
+			// #region agent log
+			debuglog.Log("member_service.go:routeFound", "route found existing", "H2", "post-fix", map[string]any{
+				"importID": importID, "routeVal": routeVal, "routeID": route.ID, "routeName": route.Name, "routeCode": route.Code,
+			})
+			// #endregion
+			return nil
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("failed to query route '%s': %w", routeVal, err)
+		}
+
+		// #region agent log
+		debuglog.Log("member_service.go:routeCreate", "route not found, creating", "H1", "post-fix", map[string]any{
+			"importID": importID, "routeVal": routeVal,
+		})
+		// #endregion
+
+		displayVal := strings.TrimSpace(routeVal)
+		route := models.Route{
+			BaseModel:   models.BaseModel{CreatedBy: userID},
+			Name:        displayVal,
+			Description: displayVal,
+			Code:        displayVal,
+		}
+		if err := tx.Create(&route).Error; err != nil {
+			return fmt.Errorf("failed to create route '%s': %w", routeVal, err)
+		}
+		routeID = route.ID
+		cache.byKey[key] = routeID
+		// #region agent log
+		debuglog.Log("member_service.go:routeCreated", "route created", "H1", "post-fix", map[string]any{
+			"importID": importID, "routeVal": routeVal, "routeID": route.ID,
+		})
+		// #endregion
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return routeID, nil
+}
+
 // ImportMembers bulk imports members from CSV, XLS, or XLSX files.
 func (s *MemberService) ImportMembers(file *multipart.FileHeader, userID uint64) error {
 	src, err := file.Open()
@@ -471,6 +562,14 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 
 	importID := uint64(utils.Now().UnixNano())
 
+	// #region agent log
+	debuglog.Log("member_service.go:processMemberRowsInBackground", "member import started", "H1", "post-fix", map[string]any{
+		"importID": importID, "totalRows": totalRows, "numWorkers": runtime.NumCPU() * 2,
+	})
+	// #endregion
+
+	routeCache := &routeImportCache{byKey: make(map[string]uint64)}
+
 	var wg sync.WaitGroup
 	jobs := make(chan []string, totalRows)
 	errorChan := make(chan error, totalRows)
@@ -519,18 +618,10 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 						}
 
 						// Lookups for Route, Bank, and Member Type
-						// Route
 						routeVal := strings.TrimSpace(row[9])
-						var route models.Route
-						if err := tx.Where("route_code = ? OR route_name = ?", routeVal, routeVal).First(&route).Error; err != nil {
-							if errors.Is(err, gorm.ErrRecordNotFound) {
-								route = models.Route{Name: routeVal, Description: routeVal}
-								if err := tx.Create(&route).Error; err != nil {
-									return fmt.Errorf("failed to create route '%s': %w", routeVal, err)
-								}
-							} else {
-								return fmt.Errorf("failed to query route '%s': %w", routeVal, err)
-							}
+						routeID, err := findOrCreateRouteForImport(routeVal, routeCache, userID, importID)
+						if err != nil {
+							return err
 						}
 
 						// Bank (no creation requested, so keep existing logic)
@@ -567,7 +658,7 @@ func (s *MemberService) processMemberRowsInBackground(data [][]string, userID ui
 							SecondaryPhone: utils.NormalizePhone(row[11]),
 							Email:          strings.TrimSpace(row[12]),
 							Gender:         strings.ToUpper(strings.TrimSpace(row[5])),
-							RouteID:        route.ID,
+							RouteID:        routeID,
 							MemberTypeID:   memberType.ID,
 							NumberOfCows:   numberOfCows,
 							Status:         "PENDING",

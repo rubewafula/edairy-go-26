@@ -12,6 +12,8 @@ type CreateCashTransactionRequest struct {
 	PaymentModeID          uint64 `json:"payment_mode_id"`
 	PaymentType            string `json:"payment_type"`
 	TransactionID          int64  `json:"transaction_id"`
+	PostToGL               bool   `json:"post_to_gl"`
+	IdempotencyKey         string `json:"idempotency_key"`
 }
 
 type CashTransactionResponse struct {
