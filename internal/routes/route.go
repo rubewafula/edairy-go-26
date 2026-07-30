@@ -51,6 +51,9 @@ func SetupRouter() *gin.Engine {
 	authMiddleware := middleware.AuthMiddleware([]byte(jwtSecret))
 
 	registerPublicRoutes(r)
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	api := r.Group("/api")

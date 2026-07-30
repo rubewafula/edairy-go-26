@@ -1,0 +1,6 @@
+window.__EDAIRY_CONFIG__ = {
+    VITE_EDAIRY_API_URL: "https://api.{{SLUG}}.edairy.africa/api",
+    VITE_WEBSOCKET_URL: "wss://api.{{SLUG}}.edairy.africa/ws",
+    VITE_APP_NAME: "{{APP_NAME}}",
+    VITE_API_BASE_URL: "https://api.{{SLUG}}.edairy.africa",
+};
