@@ -127,6 +127,7 @@ type MilkSale struct {
 type DailyMilkVariance struct {
 	ID               uint64    `gorm:"column:id"`
 	Transporter      string    `gorm:"column:transporter"`
+	TransporterID    *uint64   `gorm:"column:transporter_id"`
 	Day              time.Time `gorm:"column:day"`
 	Month            string    `gorm:"column:month"`
 	FieldCollections float64   `gorm:"column:field_collections"`
