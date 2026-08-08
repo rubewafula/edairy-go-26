@@ -236,9 +236,15 @@ func (s *MilkJournalService) UpdateMilkJournal(id string, req dtos.UpdateMilkJou
 	journal.TransporterID = req.TransporterID
 	journal.Confirmed = req.Confirmed
 
+	replaceBatches := len(req.Batches) > 0
+
 	return db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&journal).Error; err != nil {
 			return err
+		}
+
+		if !replaceBatches {
+			return nil
 		}
 
 		// Delete old entries and batches to replace with updated payload
