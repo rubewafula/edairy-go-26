@@ -519,6 +519,18 @@ type OrganizationWallet struct {
 	WalletName   string `gorm:"column:wallet_name"`
 }
 
+type MemberWallet struct {
+	BaseModel
+	MemberID      uint64 `gorm:"index;column:member_id"`
+	WalletID      string `gorm:"column:wallet_id"`
+	WalletName    string `gorm:"column:wallet_name"`
+	WalletTypeID  string `gorm:"column:walletTypeId"`
+	UUID          string `gorm:"column:uuid"`
+	AccountNumber string `gorm:"column:account_number"`
+}
+
+func (MemberWallet) TableName() string { return "member_wallets" }
+
 type OrganizationKybComment struct {
 	BaseModel
 	Issue     string `gorm:"type:text;column:issue"`

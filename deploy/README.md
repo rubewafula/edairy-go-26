@@ -46,6 +46,7 @@ Build and publish via GitHub Actions on tag push (`v1.0.0`) or manual workflow d
 | mutuati | 8508 | 8509 | mutuati_dairy_erp |
 | nkuene | 8510 | 8511 | nkuene_dairy_erp |
 | dev | 8512 | 8513 | dev_dairy_erp |
+| s-butsotso | 8514 | 8515 | s_butsotso_dairy_erp |
 
 ## Provision a new dairy
 

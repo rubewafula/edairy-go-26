@@ -25,10 +25,15 @@ func SetupRouter() *gin.Engine {
 
 	r := gin.Default()
 
+	corsAllowAll := os.Getenv("CORS_ALLOW_ALL") == "true"
+
 	r.Use(cors.New(cors.Config{
 		// DO NOT use "*" with AllowCredentials: true.
 		// This function dynamically mirrors the incoming origin safely.
 		AllowOriginFunc: func(origin string) bool {
+			if corsAllowAll {
+				return true
+			}
 			allowed := map[string]bool{
 				"https://arithi.edairy.africa":           true,
 				"https://api.arithi.edairy.africa":       true,
@@ -44,6 +49,8 @@ func SetupRouter() *gin.Engine {
 				"https://api.nkuene.edairy.africa":       true,
 				"https://dev.edairy.africa":              true,
 				"https://api.dev.edairy.africa":          true,
+				"https://s-butsotso.edairy.africa":       true,
+				"https://api.s-butsotso.edairy.africa":   true,
 				"https://edairy.africa":                  true,
 				"http://localhost:5173":                  true,
 			}
@@ -77,11 +84,17 @@ func SetupRouter() *gin.Engine {
 
 func registerPublicRoutes(r *gin.Engine) {
 	authController := controllers.NewAuthController()
+	loanModuleController := controllers.NewLoanModuleController()
 	r.POST("/api/signup", authController.Signup)
 	r.GET("/api/verify", authController.Verify)
 	r.POST("/api/login", authController.Login)
 	r.POST("/api/forgot-password", authController.ForgotPassword)
 	r.POST("/api/reset-password", authController.ResetPassword)
+	r.POST("/api/withdrawal-callback", loanModuleController.WithdrawalCallback)
+	r.POST("/api/mpesa-b2c-result", loanModuleController.MpesaB2CResultCallback)
+	r.POST("/api/mpesa-b2c-timeout", loanModuleController.MpesaB2CTimeoutCallback)
+	r.POST("/api/airtel-disbursement-callback", loanModuleController.AirtelDisbursementCallback)
+	r.POST("/api/jenga-mobile-callback", loanModuleController.JengaMobileCallback)
 }
 
 func registerAuthenticatedRoutes(api *gin.RouterGroup) {
@@ -97,6 +110,7 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	registerSupplierRoutes(api)
 	registerTransporterRoutes(api)
 	registerLoanRoutes(api)
+	registerLoanModuleRoutes(api)
 	registerShareRoutes(api)
 	registerOrgRoutes(api)
 	registerAssetRoutes(api)

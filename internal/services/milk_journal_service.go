@@ -91,10 +91,23 @@ func (s *MilkJournalService) CreateMilkJournal(req dtos.CreateMilkJournalRequest
 	return journal, nil
 }
 
-func (s *MilkJournalService) GetMilkJournals(page, limit int) ([]dtos.MilkJournalResponse, int64, error) {
+func (s *MilkJournalService) GetMilkJournals(page, limit int, filters dtos.MilkJournalListFilters) ([]dtos.MilkJournalResponse, int64, error) {
 	var journals []dtos.MilkJournalResponse
 	var total int64
-	db.DB.Model(&models.MilkJournal{}).Count(&total)
+
+	whereClauses := []string{"mj.deleted_at IS NULL"}
+	var args []interface{}
+	whereClauses, args = appendMilkJournalHeaderFilters(whereClauses, args, filters)
+	whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	countQuery := `
+		SELECT COUNT(DISTINCT mj.id)
+		FROM milk_journals mj
+	` + whereSQL
+	if err := db.DB.Raw(countQuery, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	offset := (page - 1) * limit
 
 	query := `	
@@ -111,15 +124,15 @@ func (s *MilkJournalService) GetMilkJournals(page, limit int) ([]dtos.MilkJourna
 					mj.confirmed,
 					mj.created_at,
 					mj.updated_at,
-					mjb.batch_no,
-
+					(
+						SELECT MAX(mjb.batch_no)
+						FROM milk_journal_batches mjb
+						WHERE mjb.milk_journal_id = mj.id
+					) AS batch_no,
 					COALESCE(e.entries_count, 0) AS entries_count,
 					COALESCE(e.total_litres, 0) AS collections
 
 				FROM milk_journals mj
-
-				LEFT JOIN milk_journal_batches mjb 
-					ON mj.id = mjb.milk_journal_id
 
 				LEFT JOIN milk_delivery_shifts mds 
 					ON mj.milk_delivery_shift_id = mds.id
@@ -137,10 +150,11 @@ func (s *MilkJournalService) GetMilkJournals(page, limit int) ([]dtos.MilkJourna
 					GROUP BY milk_journal_id
 				) e ON e.milk_journal_id = mj.id
 
-				WHERE mj.deleted_at IS NULL
+				` + whereSQL + `
+				ORDER BY mj.journal_date DESC, mj.id DESC
 				LIMIT ? OFFSET ?
 	`
-	err := db.DB.Raw(query, limit, offset).Scan(&journals).Error
+	err := db.DB.Raw(query, append(args, limit, offset)...).Scan(&journals).Error
 	return journals, total, err
 }
 

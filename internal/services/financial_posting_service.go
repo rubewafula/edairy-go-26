@@ -66,6 +66,87 @@ func (s *FinancialPostingService) PostLoanDisbursement(userID, loanID uint64, am
 	})
 }
 
+// LoanNetDisbursementAmounts books gross principal to member loans while paying net cash and recognizing fees.
+type LoanNetDisbursementAmounts struct {
+	GrossPrincipal float64
+	NetCash        float64
+	ProcessingFee  float64
+	InsuranceFee   float64
+}
+
+// PostLoanNetDisbursement posts DR Member Loans (gross) / CR Cash (net) / CR Fee Income (fees).
+func (s *FinancialPostingService) PostLoanNetDisbursement(userID uint64, reference, idempotencyKey, contractNo string, amounts LoanNetDisbursementAmounts, date time.Time) (*PostFromRuleResult, error) {
+	var result *PostFromRuleResult
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if reference == "" {
+			return fmt.Errorf("reference is required")
+		}
+		if existing, err := s.ledger.FindExistingByReference(tx, reference); err == nil {
+			var entries []models.GeneralLedgerEntry
+			tx.Where("transaction_id = ? AND deleted_at IS NULL", existing.ID).Find(&entries)
+			result = &PostFromRuleResult{Transaction: existing, Entries: entries}
+			return nil
+		}
+		if idempotencyKey != "" {
+			if existing, err := s.ledger.FindExistingByIdempotencyKey(tx, idempotencyKey); err == nil {
+				var entries []models.GeneralLedgerEntry
+				tx.Where("transaction_id = ? AND deleted_at IS NULL", existing.ID).Find(&entries)
+				result = &PostFromRuleResult{Transaction: existing, Entries: entries}
+				return nil
+			}
+		}
+
+		disburseRule, err := s.ledger.loadRule(tx, "LOAN_DISBURSEMENT")
+		if err != nil {
+			return err
+		}
+		feeRule, err := s.ledger.loadRule(tx, "LOAN_PROCESSING_FEE_CAPITALIZED")
+		if err != nil {
+			return err
+		}
+		loanAccountID := disburseRule.DebitAccountID
+		cashAccountID := disburseRule.CreditAccountID
+		feeIncomeAccountID := feeRule.CreditAccountID
+
+		desc := fmt.Sprintf("Loan net disbursement %s", contractNo)
+		header, err := s.ledger.createHeader(tx, userID, reference, idempotencyKey,
+			"LOAN_NET_DISBURSEMENT", "LOAN", date, desc, "POSTED", nil)
+		if err != nil {
+			return err
+		}
+
+		if amounts.NetCash > 0 {
+			if _, err := s.ledger.insertBalancedPair(tx, userID, header.ID,
+				loanAccountID, cashAccountID, disburseRule.DebitSubAccountID, disburseRule.CreditSubAccountID,
+				amounts.NetCash, date, desc+" (cash)", false); err != nil {
+				return err
+			}
+		}
+		if amounts.ProcessingFee > 0 {
+			if _, err := s.ledger.insertBalancedPair(tx, userID, header.ID,
+				loanAccountID, feeIncomeAccountID, disburseRule.DebitSubAccountID, feeRule.CreditSubAccountID,
+				amounts.ProcessingFee, date, desc+" (processing fee)", false); err != nil {
+				return err
+			}
+		}
+		if amounts.InsuranceFee > 0 {
+			if _, err := s.ledger.insertBalancedPair(tx, userID, header.ID,
+				loanAccountID, feeIncomeAccountID, disburseRule.DebitSubAccountID, feeRule.CreditSubAccountID,
+				amounts.InsuranceFee, date, desc+" (insurance fee)", false); err != nil {
+				return err
+			}
+		}
+		if err := s.ledger.ValidateTransactionBalance(tx, header.ID); err != nil {
+			return err
+		}
+		var entries []models.GeneralLedgerEntry
+		tx.Where("transaction_id = ? AND deleted_at IS NULL", header.ID).Find(&entries)
+		result = &PostFromRuleResult{Transaction: header, Entries: entries}
+		return nil
+	})
+	return result, err
+}
+
 func (s *FinancialPostingService) PostLoanRepayment(userID, loanID uint64, amount float64, date time.Time, desc string, idempotencyKey string) (*PostFromRuleResult, error) {
 	return s.postRule(DomainPostRequest{
 		UserID: userID, Reference: fmt.Sprintf("LOAN-REP-%d-%d", loanID, date.Unix()),

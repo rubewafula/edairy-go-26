@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -30,10 +32,25 @@ func (s *MilkJournalEntryService) CreateEntry(req dtos.CreateMilkJournalEntryReq
 	return entry, nil
 }
 
-func (s *MilkJournalEntryService) GetEntries(page, limit int) ([]dtos.MilkJournalEntryResponse, int64, error) {
+func (s *MilkJournalEntryService) GetEntries(page, limit int, filters dtos.MilkJournalListFilters) ([]dtos.MilkJournalEntryResponse, int64, error) {
 	var entries []dtos.MilkJournalEntryResponse
 	var total int64
-	db.DB.Model(&models.MilkJournalEntry{}).Count(&total)
+
+	whereClauses := []string{"mje.deleted_at IS NULL"}
+	var args []interface{}
+	whereClauses, args = appendMilkJournalEntryFilters(whereClauses, args, filters)
+	whereSQL := " WHERE " + strings.Join(whereClauses, " AND ")
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM milk_journal_entries mje
+		LEFT JOIN milk_journals mj ON mj.id = mje.milk_journal_id
+		LEFT JOIN member_registrations m ON mje.member_id = m.id
+	` + whereSQL
+	if err := db.DB.Raw(countQuery, args...).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	offset := (page - 1) * limit
 
 	query := `
@@ -48,14 +65,15 @@ func (s *MilkJournalEntryService) GetEntries(page, limit int) ([]dtos.MilkJourna
 			mds.name AS milk_delivery_shift
 		FROM milk_journal_entries mje
 		LEFT JOIN milk_journals mj on mj.id = mje.milk_journal_id
-		LEFT JOIN milk_journal_batches mjb on mj.id = mjb.milk_journal_id
+		LEFT JOIN milk_journal_batches mjb on mjb.id = mje.milk_journal_batch_id
 		LEFT JOIN member_registrations m ON mje.member_id = m.id
 		LEFT JOIN routes r ON mj.route_id = r.id
 		LEFT JOIN milk_delivery_shifts mds ON mj.milk_delivery_shift_id = mds.id
-		WHERE mje.deleted_at IS NULL
+		` + whereSQL + `
+		ORDER BY mj.journal_date DESC, mje.id DESC
 		LIMIT ? OFFSET ?
 	`
-	err := db.DB.Raw(query, limit, offset).Scan(&entries).Error
+	err := db.DB.Raw(query, append(args, limit, offset)...).Scan(&entries).Error
 	return entries, total, err
 }
 

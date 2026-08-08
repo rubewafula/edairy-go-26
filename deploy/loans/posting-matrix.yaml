@@ -1,0 +1,68 @@
+# Loan module GL posting rules — add to chart-of-accounts.yaml or run seed
+
+accounts:
+  - code: "4010"
+    name: Loan Interest Income
+    category: Sales
+  - code: "4020"
+    name: Loan Penalty Income
+    category: Sales
+  - code: "4100"
+    name: Loan Processing Fee Income
+    category: Sales
+  - code: "5105"
+    name: Bad Debt Expense
+    category: Operating Expenses
+  - code: "2210"
+    name: Member Payables
+    category: Employee Liabilities
+
+posting_rules:
+  - type: LOAN_DISBURSEMENT
+    debit: "1200"
+    credit: "1000"
+    description: Loan principal disbursement
+  - type: LOAN_REPAYMENT
+    debit: "1000"
+    credit: "1200"
+    description: Loan repayment (cash/bank)
+  - type: MEMBER_REPAYMENT_DEDUCTION
+    debit: "2210"
+    credit: "1200"
+    description: Loan recovery from member milk payment
+  - type: LOAN_PROCESSING_FEE
+    debit: "1000"
+    credit: "4100"
+    description: Loan processing fee (cash)
+  - type: LOAN_PROCESSING_FEE_CAPITALIZED
+    debit: "1200"
+    credit: "4100"
+    description: Processing fee deducted from loan proceeds (net disbursement)
+  - type: LOAN_INSURANCE_FEE
+    debit: "1000"
+    credit: "4100"
+    description: Loan insurance fee
+  - type: LOAN_INTEREST_ACCRUAL
+    debit: "1200"
+    credit: "4010"
+    description: Interest accrual on outstanding loans
+  - type: LOAN_PENALTY
+    debit: "1200"
+    credit: "4020"
+    description: Late payment penalty
+  - type: LOAN_PENALTY_WAIVER
+    debit: "4020"
+    credit: "1200"
+    description: Penalty waiver
+  - type: LOAN_WRITE_OFF
+    debit: "5105"
+    credit: "1200"
+    description: Loan principal write-off
+  - type: LOAN_RECOVERY_AFTER_WRITE_OFF
+    debit: "1000"
+    credit: "5105"
+    description: Recovery of previously written-off loan
+  - type: BAD_DEBT_PROVISION
+    debit: "5105"
+    credit: "1200"
+    description: Provision for doubtful loans

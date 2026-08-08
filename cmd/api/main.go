@@ -23,6 +23,9 @@ func init() {
 	if err := services.EnsureLedgerSchema(); err != nil {
 		log.Printf("ledger schema migration warning: %v", err)
 	}
+	if err := services.EnsureLoanSchema(); err != nil {
+		log.Printf("loan schema migration warning: %v", err)
+	}
 }
 
 func main() {

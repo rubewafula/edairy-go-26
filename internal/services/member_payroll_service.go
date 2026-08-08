@@ -1214,6 +1214,8 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 	close(jobs)
 	wg.Wait()
 
+	s.syncLoanRepaymentsFromPayroll(payrollID, userID)
+
 	// 5. Finalize Payroll Header
 	finalStatus := "approved"
 	if failedCount > 0 {
@@ -1317,6 +1319,40 @@ func (s *MemberPayrollService) handleProcessingError(payrollID uint64, userID ui
 		ReferenceID:      &payrollID,
 		ReferenceType:    utils.StringPtr("MEMBER_PAYROLL"),
 	})
+}
+
+// syncLoanRepaymentsFromPayroll updates loan contract schedules after milk payroll deductions are posted.
+func (s *MemberPayrollService) syncLoanRepaymentsFromPayroll(payrollID, userID uint64) {
+	loanSvc := NewLoanModuleService()
+	var deductions []models.MemberPayrollDeduction
+	if err := db.DB.Table("member_payroll_deductions mpd").
+		Joins("JOIN deduction_types dt ON dt.id = mpd.deduction_type_id").
+		Where("mpd.payroll_id = ? AND dt.code = ?", payrollID, "LOAN").
+		Select("mpd.*").Find(&deductions).Error; err != nil {
+		return
+	}
+	for _, d := range deductions {
+		if !strings.HasPrefix(d.Reference, "LOAN-") {
+			continue
+		}
+		contract, err := loanSvc.FindContractByDeductionReference(d.Reference)
+		if err != nil {
+			continue
+		}
+		amt, err := strconv.ParseFloat(d.Amount, 64)
+		if err != nil || amt <= 0 {
+			continue
+		}
+		var payslip models.MemberPayslip
+		payslipID := uint64(0)
+		if err := db.DB.Where("payroll_id = ? AND member_id = ?", payrollID, d.MemberID).First(&payslip).Error; err == nil {
+			payslipID = payslip.ID
+		}
+		ref := fmt.Sprintf("PAYROLL-%d-%s", payrollID, d.Reference)
+		if err := loanSvc.RecordRepaymentFromPayroll(contract.ID, amt, payslipID, payrollID, userID, ref); err != nil {
+			log.Printf("[MemberPayrollService] loan sync failed payroll=%d ref=%s: %v", payrollID, d.Reference, err)
+		}
+	}
 }
 
 // GetApprovalErrors retrieves the list of errors encountered during a specific payroll approval.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +30,8 @@ var allowedOrigins = map[string]bool{
 	"https://api.nkuene.edairy.africa":       true,
 	"https://dev.edairy.africa":              true,
 	"https://api.dev.edairy.africa":          true,
+	"https://s-butsotso.edairy.africa":       true,
+	"https://api.s-butsotso.edairy.africa":   true,
 	"https://edairy.africa":                  true,
 	"http://localhost:5173":                  true,
 }
@@ -39,6 +42,9 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
 		if origin == "" {
+			return true
+		}
+		if os.Getenv("CORS_ALLOW_ALL") == "true" {
 			return true
 		}
 		return allowedOrigins[origin]

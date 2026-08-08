@@ -85,6 +85,22 @@ accounts:
     name: Salaries & Wages
     category: Staff Costs
 
+  - code: "2210"
+    name: Member Payables
+    category: Employee Liabilities
+  - code: "4010"
+    name: Loan Interest Income
+    category: Sales
+  - code: "4020"
+    name: Loan Penalty Income
+    category: Sales
+  - code: "4100"
+    name: Loan Processing Fee Income
+    category: Sales
+  - code: "5105"
+    name: Bad Debt Expense
+    category: Operating Expenses
+
 posting_rules:
   - type: MILK_PAYMENT
     debit: "5000"
@@ -102,6 +118,26 @@ posting_rules:
     debit: "1000"
     credit: "1200"
     description: Loan repayment
+  - type: MEMBER_REPAYMENT_DEDUCTION
+    debit: "2210"
+    credit: "1200"
+    description: Loan recovery from member milk payment
+  - type: LOAN_INTEREST_ACCRUAL
+    debit: "1200"
+    credit: "4010"
+    description: Loan interest accrual
+  - type: LOAN_PENALTY
+    debit: "1200"
+    credit: "4020"
+    description: Late payment penalty
+  - type: LOAN_PROCESSING_FEE
+    debit: "1000"
+    credit: "4100"
+    description: Loan processing fee
+  - type: LOAN_WRITE_OFF
+    debit: "5105"
+    credit: "1200"
+    description: Loan write-off
   - type: CASH_IN_PAYMENT
     debit: "1000"
     credit: "1100"

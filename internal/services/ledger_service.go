@@ -120,13 +120,15 @@ func (s *LedgerService) createHeader(tx *gorm.DB, userID uint64, reference, idem
 	header := &models.Transaction{
 		BaseModel:       models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		Reference:       reference,
-		IdempotencyKey:  idempotencyKey,
 		TransactionName: name,
 		TransactionType: headerType,
 		TransactionDate: date,
 		Description:     description,
 		Status:          status,
 		ReversalOfID:    reversalOf,
+	}
+	if idempotencyKey != "" {
+		header.IdempotencyKey = idempotencyKey
 	}
 	if err := tx.Create(header).Error; err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {

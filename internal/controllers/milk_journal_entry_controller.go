@@ -45,7 +45,7 @@ func (c *MilkJournalEntryController) GetEntries(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 
-	entries, total, err := c.service.GetEntries(page, limit)
+	entries, total, err := c.service.GetEntries(page, limit, dtos.ParseMilkJournalListFilters(ctx))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
