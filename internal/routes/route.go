@@ -96,6 +96,8 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.GET("/api/verify", authController.Verify)
 	r.POST("/api/login", authController.Login)
 	r.POST("/api/member-login", authController.MemberLogin)
+	r.POST("/api/member-pin/otp", authController.MemberPinOTP)
+	r.POST("/api/member-pin/reset", authController.MemberPinReset)
 	r.POST("/api/forgot-password", authController.ForgotPassword)
 	r.POST("/api/reset-password", authController.ResetPassword)
 	r.POST("/api/withdrawal-callback", loanModuleController.WithdrawalCallback)
@@ -137,6 +139,9 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	adminDashboardController := controllers.NewAdminDashboardController()
 	api.POST("/change-password", authController.ChangePassword)
 	api.GET("/member-me", authController.MemberMe)
+	api.POST("/member-pin/change", authController.MemberPinChange)
+	api.POST("/members/:id/reset-pin", authController.ResetMemberPin)
+	api.GET("/members/:id/pin-status", authController.MemberPinStatus)
 	api.GET("/admin-dashboard", adminDashboardController.GetDashboard)
 
 }

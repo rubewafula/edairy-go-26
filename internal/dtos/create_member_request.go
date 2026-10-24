@@ -5,6 +5,10 @@ import (
 )
 
 type CreateMemberRequest struct {
+	// Pin is the farmer's 4-digit login PIN (mandatory on create; stored hashed in member_login_pins,
+	// never on the member record).
+	Pin string `json:"pin" form:"pin"`
+
 	MemberTypeID uint64 `json:"member_type_id" form:"member_type_id" validate:"required"`
 	FirstName    string `json:"first_name" form:"first_name" validate:"required,max=128"`
 	LastName     string `json:"last_name" form:"last_name" validate:"required,max=128"`

@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
@@ -68,11 +70,30 @@ func (c *MemberController) CreateMember(ctx *gin.Context) {
 		})
 		return
 	}
+	// The farmer's 4-digit login PIN is mandatory when a member is created.
+	if strings.TrimSpace(req.Pin) == "" {
+		ctx.JSON(422, gin.H{"error": "A 4-digit PIN is required. Ask the member to choose a PIN for the eDairy app."})
+		return
+	}
+	if err := services.ValidateNewMemberPin(req.Pin, req.PrimaryPhone, req.IDNo); err != nil {
+		var se *services.ServiceError
+		if errors.As(err, &se) {
+			ctx.JSON(422, gin.H{"error": se.Message})
+			return
+		}
+		ctx.JSON(422, gin.H{"error": err.Error()})
+		return
+	}
 	userID := ctx.GetUint64("user_id")
 	member, err := c.service.CreateMember(ctx.Request.Context(), req, userID)
 	if err != nil {
 		log.Printf("[MemberController.CreateMember] Service Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create member"})
+		return
+	}
+	if err := services.SetMemberPin(member.ID, req.Pin); err != nil {
+		log.Printf("[MemberController.CreateMember] member %d created but PIN not saved: %v", member.ID, err)
+		ctx.JSON(http.StatusCreated, gin.H{"data": member, "warning": "Member created, but the PIN could not be saved. The member can set it in the app with an SMS code."})
 		return
 	}
 

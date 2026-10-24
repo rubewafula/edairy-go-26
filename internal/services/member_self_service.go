@@ -26,10 +26,10 @@ import (
 
 const MemberRoleName = "Member"
 
-// MemberLoginRequest is POST /api/member-login.
+// MemberLoginRequest is POST /api/member-login: phone number + 4-digit PIN.
 type MemberLoginRequest struct {
-	Phone    string `json:"phone"`
-	IDNumber string `json:"id_number"`
+	Phone string `json:"phone"`
+	Pin   string `json:"pin"`
 }
 
 type MemberLoginProfile struct {
@@ -65,6 +65,9 @@ func EnsureMemberSelfServiceSchema() error {
 				return
 			}
 			log.Printf("[MemberLogin] added users.member_id")
+		}
+		if err = ensureMemberPinTable(); err != nil {
+			return
 		}
 		err = db.DB.Exec(`INSERT INTO roles (name, guard_name, created_at, updated_at)
 			SELECT ?, 'web', NOW(), NOW() FROM DUAL
@@ -128,15 +131,16 @@ func memberLoginSucceeded(keys ...string) {
 	}
 }
 
-// MemberLogin checks phone (2547…, 07…, 7…, +254…) + ID number against member_registrations.
+// MemberLogin checks phone (2547…, 07…, 7…, +254…) + PIN. Members without a PIN (or locked after
+// 5 wrong PINs) are told to set one with an SMS code (POST /api/member-pin/otp + /reset).
 func MemberLogin(req MemberLoginRequest, clientIP string) (*MemberLoginResponse, error) {
 	phone := utils.NormalizePhone(req.Phone)
-	idNo := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(req.IDNumber), " ", ""))
+	pin := strings.TrimSpace(req.Pin)
 	if phone == "" {
 		return nil, serviceErr(http.StatusBadRequest, "Enter a valid phone number, e.g. 0712345678, 712345678 or 254712345678.")
 	}
-	if idNo == "" {
-		return nil, serviceErr(http.StatusBadRequest, "Enter your ID number.")
+	if len(pin) != 4 {
+		return nil, serviceErr(http.StatusBadRequest, "Enter your 4-digit PIN.")
 	}
 	keys := []string{"phone:" + phone, "ip:" + clientIP}
 	if memberLoginBlocked(keys...) {
@@ -145,44 +149,56 @@ func MemberLogin(req MemberLoginRequest, clientIP string) (*MemberLoginResponse,
 	if err := EnsureMemberSelfServiceSchema(); err != nil {
 		return nil, fmt.Errorf("member login setup: %w", err)
 	}
-
-	var candidates []struct {
-		ID           uint64
-		MemberNo     string
-		FirstName    string
-		LastName     string
-		PrimaryPhone string
-		IDNo         string `gorm:"column:id_no"`
-		Email        string
-		Status       string
+	if err := ensureMemberPinTable(); err != nil {
+		return nil, fmt.Errorf("member login setup: %w", err)
 	}
-	db.DB.Raw(`SELECT id, member_no, first_name, last_name, primary_phone, id_no, email, status
-		FROM member_registrations
-		WHERE deleted_at IS NULL AND UPPER(REPLACE(TRIM(id_no), ' ', '')) = ?`, idNo).Scan(&candidates)
 
-	var match *MemberLoginProfile
-	var memberEmail string
-	for _, m := range candidates {
-		if utils.NormalizePhone(m.PrimaryPhone) == phone {
-			match = &MemberLoginProfile{
-				ID: m.ID, MemberNo: m.MemberNo, Phone: phone, IDNumber: m.IDNo, Status: m.Status,
-				Name: strings.TrimSpace(m.FirstName + " " + m.LastName),
+	candidates := membersByPhone(phone)
+	if len(candidates) == 0 {
+		memberLoginFailed(keys...)
+		return nil, serviceErr(http.StatusUnauthorized, "Phone number or PIN is incorrect. Use the phone number registered with the dairy.")
+	}
+	anyPin, anyLocked := false, false
+	for i := range candidates {
+		m := &candidates[i]
+		r := loadMemberPin(m.ID)
+		if r.PinHash == nil {
+			continue
+		}
+		anyPin = true
+		if r.Locked {
+			anyLocked = true
+			continue
+		}
+		if bcrypt.CompareHashAndPassword([]byte(*r.PinHash), []byte(pin)) == nil {
+			if blockedMemberStatus(m.Status) {
+				return nil, serviceErr(http.StatusForbidden, "This member account is %s. Please contact the dairy office.", strings.ToLower(m.Status))
 			}
-			memberEmail = strings.TrimSpace(m.Email)
-			break
+			db.DB.Exec(`UPDATE member_login_pins SET failed_attempts = 0, updated_at = NOW() WHERE member_id = ?`, m.ID)
+			memberLoginSucceeded(keys...)
+			return issueMemberLogin(m, phone)
+		}
+		db.DB.Exec(`UPDATE member_login_pins SET failed_attempts = failed_attempts + 1,
+			locked = IF(failed_attempts + 1 >= ?, 1, locked), updated_at = NOW() WHERE member_id = ?`, memberPinMaxFailures, m.ID)
+		if r.FailedAttempts+1 >= memberPinMaxFailures {
+			anyLocked = true
 		}
 	}
-	if match == nil {
-		memberLoginFailed(keys...)
-		return nil, serviceErr(http.StatusUnauthorized, "Phone number or ID number is incorrect. Use the phone number registered with the dairy.")
+	memberLoginFailed(keys...)
+	switch {
+	case !anyPin:
+		return nil, serviceErr(http.StatusConflict, "You have not set a PIN yet. Tap \"Set or forgot PIN\" to get an SMS code and set your PIN.")
+	case anyLocked:
+		return nil, serviceErr(http.StatusLocked, "Your PIN is locked after too many wrong tries. Tap \"Set or forgot PIN\" to set a new PIN with an SMS code.")
 	}
-	switch strings.ToUpper(strings.TrimSpace(match.Status)) {
-	case "EXITED", "DECEASED", "DELETED", "CLOSED", "REJECTED":
-		return nil, serviceErr(http.StatusForbidden, "This member account is %s. Please contact the dairy office.", strings.ToLower(match.Status))
-	}
-	memberLoginSucceeded(keys...)
+	return nil, serviceErr(http.StatusUnauthorized, "Phone number or PIN is incorrect.")
+}
 
-	userID, email, err := ensureMemberUser(match.ID, match.Name, memberEmail)
+// issueMemberLogin creates/links the member's login user and returns a session token.
+func issueMemberLogin(m *memberLoginCandidate, phone string) (*MemberLoginResponse, error) {
+	profile := MemberLoginProfile{ID: m.ID, MemberNo: m.MemberNo, Phone: phone, IDNumber: m.IDNo, Status: m.Status,
+		Name: strings.TrimSpace(m.FirstName + " " + m.LastName)}
+	userID, email, err := ensureMemberUser(m.ID, profile.Name, strings.TrimSpace(m.Email))
 	if err != nil {
 		return nil, fmt.Errorf("member login: %w", err)
 	}
@@ -191,11 +207,11 @@ func MemberLogin(req MemberLoginRequest, clientIP string) (*MemberLoginResponse,
 		return nil, err
 	}
 	forgetMemberUserCache(userID)
-	log.Printf("[MemberLogin] member %d (%s) signed in as user %d", match.ID, match.MemberNo, userID)
+	log.Printf("[MemberLogin] member %d (%s) signed in as user %d", m.ID, m.MemberNo, userID)
 	return &MemberLoginResponse{
 		Token: token, UserID: userID, Email: email,
 		Roles: []string{MemberRoleName}, Permissions: []string{},
-		AccountType: "member", Member: *match,
+		AccountType: "member", Member: profile,
 	}, nil
 }
 

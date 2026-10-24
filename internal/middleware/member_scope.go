@@ -15,6 +15,7 @@ import (
 // Key: METHOD + " " + gin FullPath.
 var memberSelfServiceRoutes = map[string]bool{
 	"GET /api/member-me":                         true,
+	"POST /api/member-pin/change":                true,
 	"GET /api/member-credit-limit":               true,
 	"GET /api/milk-collection-overview":          true,
 	"GET /api/loan-module/applications":          true,

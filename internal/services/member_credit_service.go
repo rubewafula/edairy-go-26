@@ -122,6 +122,8 @@ var memberCreditPermissions = []string{
 	"loan-module.mobile.quote.view",
 	"loan-module.cashout-settings.view",
 	"loan-module.cashout-settings.update",
+	"members.reset-pin.create",
+	"members.pin-status.view",
 }
 
 func ensureMemberCreditPermissions() error {
