@@ -42,6 +42,7 @@ func main() {
 	go services.FixLoanRecurrentAmounts()
 	services.StartDisbursementWorker()
 	go services.EnsureMilkOverviewPermission()
+	go services.EnsureDefaultMemberTypes()
 	go services.SeedDevCustomers()
 	go services.SeedDevMpesaTestMembers()
 	go services.EnsureBankBranchViewPermission()

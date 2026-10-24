@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -90,4 +91,38 @@ func (s *MemberTypeService) DeleteMemberType(id string) error {
 		return err
 	}
 	return db.DB.Delete(&memberType).Error
+}
+
+// defaultMemberTypes are created at API start when missing (matched by name, case-insensitive), so
+// registration offers more than "Ordinary". Existing types are never changed or removed.
+var defaultMemberTypes = []struct{ Name, Description string }{
+	{"Individual", "A single farmer registering in their own name"},
+	{"Ordinary", "Ordinary member"},
+	{"School", "A school supplying milk"},
+	{"Company", "A registered company"},
+	{"Organization", "An organization or NGO"},
+	{"Group", "A farmers' self-help or women/youth group"},
+	{"Cooperative", "A cooperative society or SACCO"},
+	{"Church", "A church or religious institution"},
+	{"Institution", "A public or private institution (hospital, prison, college, …)"},
+	{"Partnership", "A business partnership"},
+}
+
+// EnsureDefaultMemberTypes adds any missing default member types.
+func EnsureDefaultMemberTypes() {
+	added := 0
+	for _, t := range defaultMemberTypes {
+		res := db.DB.Exec(`INSERT INTO member_types (name, description, created_by, updated_by, created_at, updated_at)
+			SELECT ?, ?, 0, 0, NOW(), NOW() FROM DUAL
+			WHERE NOT EXISTS (SELECT 1 FROM member_types WHERE LOWER(TRIM(name)) = LOWER(?) AND deleted_at IS NULL)`,
+			t.Name, t.Description, t.Name)
+		if res.Error != nil {
+			log.Printf("[MemberTypes] could not add %q: %v", t.Name, res.Error)
+			continue
+		}
+		added += int(res.RowsAffected)
+	}
+	if added > 0 {
+		log.Printf("[MemberTypes] added %d default member types", added)
+	}
 }
