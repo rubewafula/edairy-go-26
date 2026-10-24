@@ -7,6 +7,8 @@ type UpdateMemberRequest struct {
 	OtherNames   string `json:"other_names" validate:"max=128"`
 	RouteID      uint64 `json:"route_id"`
 	DOB          string `json:"dob"`
+	// Status (PENDING, ACTIVE, INACTIVE, SUSPENDED, CLOSED); empty = unchanged.
+	Status string `json:"status" form:"status"`
 
 	IDNo      string `json:"id_no" validate:"max=25"`
 	MemberNo  string `json:"member_no"`

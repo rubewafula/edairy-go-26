@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -80,6 +81,11 @@ func (c *MilkJournalController) UpdateMilkJournal(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateMilkJournal(ctx.Param("id"), req); err != nil {
+		var rateErr *services.ErrMilkRateMissing
+		if errors.As(err, &rateErr) {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": rateErr.Message, "message": rateErr.Message})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

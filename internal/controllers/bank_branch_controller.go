@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"strconv"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,8 @@ func (c *BankBranchController) CreateBankBranch(ctx *gin.Context) {
 }
 
 func (c *BankBranchController) GetBankBranches(ctx *gin.Context) {
-	branches, total, err := c.service.GetBankBranches()
+	bankID, _ := strconv.ParseUint(ctx.Query("bank_id"), 10, 64)
+	branches, total, err := c.service.GetBankBranches(bankID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

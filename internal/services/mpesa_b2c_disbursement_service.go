@@ -3,6 +3,8 @@ package services
 import (
 	"fmt"
 	"math"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
@@ -31,6 +33,9 @@ func (s *MpesaB2cDisbursementService) InitiateB2C(channelID, memberID uint64, am
 	if err != nil {
 		return nil, err
 	}
+	if productionPayoutBlocked(daraja.Env()) {
+		return nil, fmt.Errorf("M-Pesa production payouts are disabled when ENV=development; set MPESA_ALLOW_PRODUCTION_IN_DEV=true to send real money")
+	}
 	if !daraja.Configured() {
 		return nil, fmt.Errorf("M-Pesa Daraja is not configured (set MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_B2C_SHORTCODE, MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_CERT_PATH)")
 	}
@@ -44,6 +49,9 @@ func (s *MpesaB2cDisbursementService) InitiateB2C(channelID, memberID uint64, am
 	}
 	phone, err := utils.NormalizeKenyaPhone(phoneNumber, member.PrimaryPhone)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkDevPayoutPhone(phone); err != nil {
 		return nil, err
 	}
 
@@ -65,6 +73,13 @@ func (s *MpesaB2cDisbursementService) InitiateB2C(channelID, memberID uint64, am
 		OriginatorConversationID: resp.OriginatorConversationID,
 		ProviderReference:        resp.ConversationID,
 	}, nil
+}
+
+// productionPayoutBlocked stops a development API from sending real money through a production Daraja channel.
+func productionPayoutBlocked(darajaEnv string) bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("ENV")), "development") &&
+		strings.EqualFold(strings.TrimSpace(darajaEnv), "production") &&
+		strings.TrimSpace(os.Getenv("MPESA_ALLOW_PRODUCTION_IN_DEV")) != "true"
 }
 
 func mpesaB2CPayloadPatch(result *MpesaB2CInitiateResult) map[string]interface{} {

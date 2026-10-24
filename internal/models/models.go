@@ -199,14 +199,27 @@ type Location struct {
 	LocationName string `gorm:"column:location_name" json:"location_name"`
 }
 
+// CreditLimitChangeLog does not embed BaseModel because the legacy table stores updated_at as varchar.
 type CreditLimitChangeLog struct {
-	BaseModel
-	CustomerID   uint64  `gorm:"index;column:customer_id"`
-	CustomerType string  `gorm:"column:customer_type"`
-	OldLimit     float64 `gorm:"column:old_limit"`
-	CreditLimit  float64 `gorm:"column:credit_limit"`
-	Action       string  `gorm:"column:action"`
+	ID           uint64         `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	CustomerID   uint64         `gorm:"index;column:customer_id" json:"customer_id"`
+	CustomerType string         `gorm:"column:customer_type" json:"customer_type"`
+	OldLimit     float64        `gorm:"column:old_limit;type:decimal(15,2);default:0" json:"old_limit"`
+	CreditLimit  float64        `gorm:"column:credit_limit;type:decimal(15,2);default:0" json:"credit_limit"`
+	Amount       float64        `gorm:"column:amount;type:decimal(15,2);default:0" json:"amount"`
+	Action       string         `gorm:"column:action;size:45" json:"action"`
+	Reference    string         `gorm:"column:reference;size:128;index" json:"reference"`
+	SourceType   string         `gorm:"column:source_type;size:64" json:"source_type"`
+	SourceID     uint64         `gorm:"column:source_id" json:"source_id"`
+	Narration    string         `gorm:"column:narration;size:500" json:"narration"`
+	CreatedBy    uint64         `gorm:"column:created_by" json:"created_by"`
+	UpdatedBy    uint64         `gorm:"column:updated_by" json:"updated_by"`
+	CreatedAt    *time.Time     `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	UpdatedAt    string         `gorm:"column:updated_at" json:"-"`
+	DeletedAt    gorm.DeletedAt `gorm:"index;column:deleted_at" json:"-"`
 }
+
+func (CreditLimitChangeLog) TableName() string { return "credit_limit_change_log" }
 
 type SalesSummary struct {
 	BaseModel
@@ -460,9 +473,9 @@ type Bank struct {
 
 type BankBranch struct {
 	BaseModel
-	Name     string `gorm:"column:branch_name"`
-	BankID   uint64 `gorm:"column:bank_id"`
-	Location string `gorm:"column:location"`
+	Name     string `gorm:"column:branch_name" json:"name"`
+	BankID   uint64 `gorm:"column:bank_id" json:"bank_id"`
+	Location string `gorm:"column:location" json:"location"`
 }
 
 type OrganizationBank struct {

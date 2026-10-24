@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ var allowedOrigins = map[string]bool{
 	"https://api.s-butsotso.edairy.africa":   true,
 	"https://edairy.africa":                  true,
 	"http://localhost:5173":                  true,
+	"http://127.0.0.1:5173":                  true,
 }
 
 var upgrader = websocket.Upgrader{
@@ -47,8 +49,21 @@ var upgrader = websocket.Upgrader{
 		if os.Getenv("CORS_ALLOW_ALL") == "true" {
 			return true
 		}
+		if os.Getenv("ENV") == "development" && IsLocalOrigin(origin) {
+			return true
+		}
 		return allowedOrigins[origin]
 	},
+}
+
+// IsLocalOrigin reports whether origin is an http(s) localhost or 127.0.0.1 origin on any port.
+func IsLocalOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	host := u.Hostname()
+	return host == "localhost" || host == "127.0.0.1"
 }
 
 type Client struct {

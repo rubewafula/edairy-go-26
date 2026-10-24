@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -41,7 +42,8 @@ func (c *RouteCenterController) CreateCenter(ctx *gin.Context) {
 }
 
 func (c *RouteCenterController) GetCenters(ctx *gin.Context) {
-	centers, total, err := c.service.GetCenters()
+	routeID := strings.TrimSpace(firstNonEmptyQuery(ctx, "route_id", "routeId", "route"))
+	centers, total, err := c.service.GetCenters(routeID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -83,4 +85,14 @@ func (c *RouteCenterController) DeleteCenter(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Route center deleted successfully"})
+}
+
+// firstNonEmptyQuery returns the first non-empty query value among keys.
+func firstNonEmptyQuery(ctx *gin.Context, keys ...string) string {
+	for _, key := range keys {
+		if v := ctx.Query(key); v != "" {
+			return v
+		}
+	}
+	return ""
 }

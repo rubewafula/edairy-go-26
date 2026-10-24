@@ -17,7 +17,7 @@ type CustomerResponse struct {
 	PostalCode       string    `json:"postal_code"`
 	PostalTown       string    `json:"postal_town"`
 	SiteID           uint64    `json:"site_id"`
-	Terms            string    `json:"terms"`
+	Terms            uint64    `json:"terms"`
 	Rate             float64   `json:"rate"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`

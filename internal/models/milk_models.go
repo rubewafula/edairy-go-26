@@ -34,6 +34,8 @@ type DefaultMilkRate struct {
 	RouteID  *uint64 `gorm:"column:route_id"`
 	MemberID *uint64 `gorm:"column:member_id"`
 	Rate     float64 `gorm:"column:rate"`
+	// AdvanceRate (KES/kg) values confirmed milk for advances (credit limit); Rate stays the payout rate.
+	AdvanceRate *float64 `gorm:"column:advance_rate;type:decimal(10,2)"`
 }
 
 func (DefaultMilkRate) TableName() string {

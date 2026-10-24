@@ -119,13 +119,14 @@ func (s *AdminDashboardService) getMembers() dtos.AdminDashboardMemberStat {
 
 func (s *AdminDashboardService) getLoanStats() dtos.AdminDashboardLoanStat {
 	var result dtos.AdminDashboardLoanStat
+	// This month's loans: legacy loans plus loan-module applications (incl. mobile cashouts).
 	db.DB.Raw(`
-		SELECT  
-			count(*) as total_loans,
-			count(if(status = 'pending', id, null)) as pending,
-			COALESCE(SUM(ifnull(amount, 0)), 0) as total_amount,
-			COALESCE(SUM(if(status = 'pending', ifnull(amount, 0), 0)), 0)as total_amount_pending
-		FROM loans
+		SELECT
+			COUNT(*) AS total,
+			COALESCE(SUM(IF(status = 'PENDING', 1, 0)), 0) AS pending,
+			COALESCE(SUM(IFNULL(amount, 0)), 0) AS total_amount,
+			COALESCE(SUM(IF(status = 'PENDING', IFNULL(amount, 0), 0)), 0) AS total_amount_pending
+		FROM ` + allLoansSQL + `
 		WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
 	`).Scan(&result)
 

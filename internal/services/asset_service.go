@@ -58,8 +58,7 @@ func (s *AssetService) CreateAsset(req dtos.CreateAssetRequest) (*models.Asset, 
 	}
 
 	if err := db.DB.Create(asset).Error; err != nil {
-		log.Println("Found error trying to created asset: %s", err.Error())
-		log.Printf("Found error trying to created asset: %s", err.Error()) // Use Printf
+		log.Printf("Found error trying to created asset: %s", err.Error())
 		return nil, err
 	}
 	return asset, nil

@@ -88,6 +88,22 @@ func (s *MilkJournalService) CreateMilkJournal(req dtos.CreateMilkJournalRequest
 		return nil, err
 	}
 
+	// Recorded milk raises each member's credit limit (and may flip can_borrow).
+	var memberIDs []uint64
+	for _, b := range req.Batches {
+		for _, e := range b.Entries {
+			memberIDs = append(memberIDs, e.MemberID)
+		}
+	}
+	NewMemberCreditService().RecalculateAsync(memberIDs, CreditChange{
+		Action:     models.CreditActionMilkEntryChanged,
+		SourceType: "milk_journal",
+		SourceID:   journal.ID,
+		Reference:  fmt.Sprintf("MILK-JOURNAL-%d", journal.ID),
+		Narration:  fmt.Sprintf("Milk journal %s recorded", journal.Journal),
+		UserID:     journal.UserID,
+	})
+
 	return journal, nil
 }
 
@@ -228,6 +244,17 @@ func (s *MilkJournalService) UpdateMilkJournal(id string, req dtos.UpdateMilkJou
 	} else {
 		journalDate = nil
 	}
+	wasConfirmed := journal.Confirmed
+	affectedMembers := journalMemberIDs(journal.ID)
+
+	// Confirming credits each member's milk at the milk rate, so a journal cannot be confirmed
+	// while any of its members has no rate (default / route / member / special).
+	if !wasConfirmed && req.Confirmed {
+		if err := ensureMilkRatesForJournal(&journal, req, affectedMembers); err != nil {
+			return err
+		}
+	}
+
 	journal.Journal = req.Journal
 	journal.JournalDate = journalDate
 	journal.MilkDeliveryShiftID = req.MilkDeliveryShiftID
@@ -238,7 +265,7 @@ func (s *MilkJournalService) UpdateMilkJournal(id string, req dtos.UpdateMilkJou
 
 	replaceBatches := len(req.Batches) > 0
 
-	return db.DB.Transaction(func(tx *gorm.DB) error {
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&journal).Error; err != nil {
 			return err
 		}
@@ -282,10 +309,57 @@ func (s *MilkJournalService) UpdateMilkJournal(id string, req dtos.UpdateMilkJou
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	{
+		action := models.CreditActionMilkEntryChanged
+		switch {
+		case !wasConfirmed && journal.Confirmed:
+			action = models.CreditActionMilkConfirmed
+		case wasConfirmed && !journal.Confirmed:
+			action = models.CreditActionMilkUnconfirmed
+		}
+		appendAppLog("credit-changes.log", fmt.Sprintf("milk journal %d (%s) saved: confirmed %v -> %v, %d member(s) to recalculate",
+			journal.ID, journal.Journal, wasConfirmed, journal.Confirmed, len(uniqueMemberIDs(append(affectedMembers, journalMemberIDs(journal.ID)...)))))
+		NewMemberCreditService().RecalculateAsync(append(affectedMembers, journalMemberIDs(journal.ID)...), CreditChange{
+			Action:     action,
+			SourceType: "milk_journal",
+			SourceID:   journal.ID,
+			Reference:  fmt.Sprintf("MILK-JOURNAL-%d", journal.ID),
+			Narration:  fmt.Sprintf("Milk journal %s", journal.Journal),
+			UserID:     journal.UserID,
+		})
+	}
+	return nil
 }
 
 func (s *MilkJournalService) DeleteMilkJournal(id string) error {
-	return db.DB.Delete(&models.MilkJournal{}, id).Error
+	var journal models.MilkJournal
+	if err := db.DB.First(&journal, id).Error; err != nil {
+		return err
+	}
+	members := journalMemberIDs(journal.ID)
+	if err := db.DB.Delete(&models.MilkJournal{}, journal.ID).Error; err != nil {
+		return err
+	}
+	{
+		NewMemberCreditService().RecalculateAsync(members, CreditChange{
+			Action:     models.CreditActionMilkUnconfirmed,
+			SourceType: "milk_journal",
+			SourceID:   journal.ID,
+			Reference:  fmt.Sprintf("MILK-JOURNAL-%d", journal.ID),
+			Narration:  fmt.Sprintf("Milk journal %s deleted", journal.Journal),
+		})
+	}
+	return nil
+}
+
+func journalMemberIDs(journalID uint64) []uint64 {
+	var ids []uint64
+	db.DB.Model(&models.MilkJournalEntry{}).Where("milk_journal_id = ?", journalID).Distinct().Pluck("member_id", &ids)
+	return ids
 }
 
 func (s *MilkJournalService) GetDailyJournals() ([]dtos.DailyJournalSummaryResponse, error) {
@@ -380,6 +454,8 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 	importID := uint64(utils.Now().UnixNano())
 
 	var wg sync.WaitGroup
+	var importedMu sync.Mutex
+	var importedMembers []uint64
 	jobs := make(chan []string, totalRows)
 	errorChan := make(chan error, totalRows)
 
@@ -407,7 +483,7 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 					}()
 
 					err := db.DB.Transaction(func(tx *gorm.DB) error {
-						// Expected format: Member No(0), Batch No(1), Route(2), Can ID(3), Quantity(4), Journal(5), Journal Date(6), Shift(7)
+						// Expected format: Member No(0), Batch No(1), Route(2), Can ID(3), Quantity(4), Journal(5), Journal Date(6), Shift(7), Center(8, optional)
 						if len(row) < 8 {
 							return fmt.Errorf("insufficient columns (found %d, need at least 8)", len(row))
 						}
@@ -422,6 +498,22 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 						var route models.Route
 						if err := tx.Where("route_name = ? OR route_code = ?", routeVal, routeVal).First(&route).Error; err != nil {
 							return fmt.Errorf("route '%s' not found", routeVal)
+						}
+
+						// Resolve Center: milk is always recorded against a route center.
+						// Optional column Center(8) matches by name within the route; otherwise
+						// fall back to the route's first center.
+						var center models.RouteCenter
+						centerVal := ""
+						if len(row) > 8 {
+							centerVal = strings.TrimSpace(row[8])
+						}
+						if centerVal != "" {
+							if err := tx.Where("route_id = ? AND center = ?", route.ID, centerVal).First(&center).Error; err != nil {
+								return fmt.Errorf("center '%s' not found on route '%s'", centerVal, routeVal)
+							}
+						} else if err := tx.Where("route_id = ?", route.ID).Order("id ASC").First(&center).Error; err != nil {
+							return fmt.Errorf("route '%s' has no centers; add at least one center to the route", routeVal)
 						}
 
 						canVal := strings.TrimSpace(row[3])
@@ -493,8 +585,15 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 							Status:             "PENDING",
 							Quantity:           qty,
 							CanID:              canID,
+							RouteCenterID:      center.ID,
 						}
-						return tx.Create(&entry).Error
+						if err := tx.Create(&entry).Error; err != nil {
+							return err
+						}
+						importedMu.Lock()
+						importedMembers = append(importedMembers, member.ID)
+						importedMu.Unlock()
+						return nil
 					})
 
 					if err != nil {
@@ -523,6 +622,15 @@ func (s *MilkJournalService) processJournalRowsInBackground(data [][]string, use
 		failCount++
 	}
 
+	NewMemberCreditService().RecalculateAsync(importedMembers, CreditChange{
+		Action:     models.CreditActionMilkEntryChanged,
+		SourceType: "milk_journal_import",
+		SourceID:   importID,
+		Reference:  fmt.Sprintf("MILK-IMPORT-%d", importID),
+		Narration:  "Milk journals imported",
+		UserID:     userID,
+	})
+
 	message := fmt.Sprintf("Milk journal import completed. Success: %d, Failed: %d out of %d records.", totalRows-failCount, failCount, totalRows)
 	notificationType := "SUCCESS"
 	errorLink := ""
@@ -546,4 +654,75 @@ func (s *MilkJournalService) GetImportErrors(importID uint64) ([]models.ImportEr
 	var importErrors []models.ImportError
 	err := db.DB.Where("import_id = ?", importID).Order("id DESC").Find(&importErrors).Error
 	return importErrors, err
+}
+
+// ErrMilkRateMissing is returned when a journal is confirmed but a member on it has no milk rate.
+type ErrMilkRateMissing struct{ Message string }
+
+func (e *ErrMilkRateMissing) Error() string { return e.Message }
+
+func ensureMilkRatesForJournal(journal *models.MilkJournal, req dtos.UpdateMilkJournalRequest, memberIDs []uint64) error {
+	// Members on the journal after this save (new batches replace the old ones).
+	if len(req.Batches) > 0 {
+		memberIDs = nil
+		for _, b := range req.Batches {
+			for _, e := range b.Entries {
+				memberIDs = append(memberIDs, e.MemberID)
+			}
+		}
+	}
+	memberIDs = uniqueMemberIDs(memberIDs)
+	if len(memberIDs) == 0 {
+		return nil
+	}
+	date := time.Now()
+	if journal.JournalDate != nil {
+		date = *journal.JournalDate
+	}
+	if req.JournalDate != "" {
+		date = utils.ParseFlexibleDate(req.JournalDate)
+	}
+	var pdrID uint64
+	db.DB.Raw(`SELECT id FROM member_pay_date_ranges WHERE ? BETWEEN start_date AND end_date AND deleted_at IS NULL
+		ORDER BY id DESC LIMIT 1`, date.Format("2006-01-02")).Scan(&pdrID)
+	var pdrIDs []uint64
+	if pdrID > 0 {
+		pdrIDs = []uint64{pdrID}
+	}
+	rates, err := loadMilkRateResolver(db.DB, pdrIDs)
+	if err != nil {
+		return err
+	}
+	journalRoute := journal.RouteID
+	if req.RouteID != 0 {
+		journalRoute = req.RouteID
+	}
+	var members []struct {
+		ID       uint64
+		MemberNo string
+		RouteID  uint64
+	}
+	db.DB.Raw(`SELECT id, member_no, COALESCE(route_id, 0) AS route_id FROM member_registrations WHERE id IN ?`, memberIDs).Scan(&members)
+	var missing []string
+	var detail []string
+	for _, m := range members {
+		if rates.RateForJournal(pdrID, m.ID, m.RouteID, journalRoute) <= 0 {
+			name := firstNonEmptyString(m.MemberNo, fmt.Sprintf("#%d", m.ID))
+			missing = append(missing, name)
+			detail = append(detail, fmt.Sprintf("%s (member route %d)", name, m.RouteID))
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	shown := missing
+	if len(shown) > 5 {
+		shown = append(shown[:5:5], fmt.Sprintf("and %d more", len(missing)-5))
+	}
+	found := rates.Describe()
+	appendAppLog("credit-changes.log", fmt.Sprintf("milk journal %d (%s) NOT confirmed: no milk rate for %d member(s): %s | journal route %d, pay period %d, date %s | rates found: %s",
+		journal.ID, journal.Journal, len(missing), strings.Join(detail, ", "), journalRoute, pdrID, date.Format("2006-01-02"), found))
+	return &ErrMilkRateMissing{Message: fmt.Sprintf(
+		"Cannot confirm this journal: no milk rate applies to %d member(s) (%s). Rates found: %s. Set a Default Milk Rate with route and member left empty (all members), or one for this journal's route, then confirm again.",
+		len(missing), strings.Join(shown, ", "), found)}
 }

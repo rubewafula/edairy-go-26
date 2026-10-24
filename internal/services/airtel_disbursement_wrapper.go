@@ -46,6 +46,9 @@ func (s *AirtelDisbursementService) InitiateDisbursement(channelID, memberID uin
 	if err != nil {
 		return nil, err
 	}
+	if err := checkDevPayoutPhone(phone); err != nil {
+		return nil, err
+	}
 
 	amountInt := int(math.Round(amount))
 	if amountInt < 10 {

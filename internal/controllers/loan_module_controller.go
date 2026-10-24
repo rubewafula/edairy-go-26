@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/rubewafula/edairy-go-26/internal/config"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
@@ -107,10 +108,34 @@ func (h *LoanModuleController) CreateApplication(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": app})
 }
 
+func parseLoanDateRange(c *gin.Context) (string, string) {
+	from := c.Query("date[from]")
+	to := c.Query("date[to]")
+	if from == "" || to == "" {
+		m := c.QueryMap("date")
+		if from == "" {
+			from = m["from"]
+		}
+		if to == "" {
+			to = m["to"]
+		}
+	}
+	if from == "" {
+		from = c.Query("date_from")
+	}
+	if to == "" {
+		to = c.Query("date_to")
+	}
+	return from, to
+}
+
 func (h *LoanModuleController) ListApplications(c *gin.Context) {
 	page, limit := h.parsePage(c)
 	memberID, _ := strconv.ParseUint(c.Query("member_id"), 10, 64)
-	items, total, err := h.svc.ListApplications(page, limit, c.Query("status"), memberID)
+	dateFrom, dateTo := parseLoanDateRange(c)
+	items, total, err := h.svc.ListApplications(
+		page, limit, c.Query("status"), memberID, dateFrom, dateTo, c.Query("q"),
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -145,12 +170,102 @@ func (h *LoanModuleController) ApproveApplication(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// The member must confirm: the code sent to their phone has to be entered here.
+	if err := h.svc.VerifyApprovalOTP(id, req.OTP, h.userID(c)); err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
 	app, err := h.svc.ApproveApplication(id, req, h.userID(c))
 	if err != nil {
+		h.svc.ReopenApprovalOTP(id)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": app})
+}
+
+// RetryDisbursement serves POST /api/loan-module/disbursements/:id/retry: re-queues an MPESA_FAILED payout.
+func (h *LoanModuleController) RetryDisbursement(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	n, err := h.svc.RetryMpesaFailed(id, h.userID(c))
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"requeued": n}})
+}
+
+// RetryAllMpesaFailed serves POST /api/loan-module/disbursements/retry-mpesa-failed.
+func (h *LoanModuleController) RetryAllMpesaFailed(c *gin.Context) {
+	n, err := h.svc.RetryMpesaFailed(0, h.userID(c))
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"requeued": n}})
+}
+
+// SettleApplications serves POST /api/loan-module/applications/settle {application_ids}: queues the
+// selected DISBURSED loans; each is settled separately and the officer is notified per loan.
+func (h *LoanModuleController) SettleApplications(c *gin.Context) {
+	var req dtos.SettleApplicationsRequest
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.ApplicationIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "application_ids is required"})
+		return
+	}
+	res, err := h.svc.QueueSettlements(req.ApplicationIDs, h.userID(c))
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"data": res})
+}
+
+// SettlementSummary serves GET /api/loan-module/applications/settlement-summary?month=YYYY-MM.
+func (h *LoanModuleController) SettlementSummary(c *gin.Context) {
+	productID, _ := strconv.ParseUint(c.Query("product_id"), 10, 64)
+	res, err := h.svc.SettlementSummary(c.Query("month"), productID)
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": res})
+}
+
+// SettleMonth serves POST /api/loan-module/applications/settle-month {"month":"YYYY-MM"}: queues every
+// unsettled disbursed loan of the month; each is settled separately with a notification per loan.
+func (h *LoanModuleController) SettleMonth(c *gin.Context) {
+	var req struct {
+		Month  string `json:"month"`
+		DryRun bool   `json:"dry_run"` // only check that the caller may clear dairy loans
+	}
+	_ = c.ShouldBindJSON(&req)
+	if !services.CanClearDairyLoans(c.GetStringSlice("permissions")) {
+		c.JSON(http.StatusForbidden, gin.H{"error": services.ClearDairyLoansDeniedMessage})
+		return
+	}
+	if req.DryRun {
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{"allowed": true}})
+		return
+	}
+	res, err := h.svc.QueueMonthSettlement(req.Month, h.userID(c))
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"data": res})
+}
+
+// SendApprovalOTP serves POST /api/loan-module/applications/:id/approval-otp: texts the approval code
+// to the member's registered phone.
+func (h *LoanModuleController) SendApprovalOTP(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	res, err := h.svc.SendApprovalOTP(id, h.userID(c))
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": res})
 }
 
 func (h *LoanModuleController) RejectApplication(c *gin.Context) {
@@ -173,7 +288,10 @@ func (h *LoanModuleController) RejectApplication(c *gin.Context) {
 func (h *LoanModuleController) ListContracts(c *gin.Context) {
 	page, limit := h.parsePage(c)
 	memberID, _ := strconv.ParseUint(c.Query("member_id"), 10, 64)
-	items, total, err := h.svc.ListContracts(page, limit, c.Query("status"), memberID)
+	dateFrom, dateTo := parseLoanDateRange(c)
+	items, total, err := h.svc.ListContracts(
+		page, limit, c.Query("status"), memberID, dateFrom, dateTo, c.Query("q"),
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -311,6 +429,10 @@ func (h *LoanModuleController) WithdrawalCallback(c *gin.Context) {
 }
 
 func (h *LoanModuleController) MpesaB2CResultCallback(c *gin.Context) {
+	if !config.MpesaCallbackTokenValid(c.Query("token")) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid callback token"})
+		return
+	}
 	var data map[string]interface{}
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -324,6 +446,10 @@ func (h *LoanModuleController) MpesaB2CResultCallback(c *gin.Context) {
 }
 
 func (h *LoanModuleController) MpesaB2CTimeoutCallback(c *gin.Context) {
+	if !config.MpesaCallbackTokenValid(c.Query("token")) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid callback token"})
+		return
+	}
 	var data map[string]interface{}
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -564,4 +690,24 @@ func (h *LoanModuleController) DisbursementsReport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": r})
+}
+
+// GetCashoutSettings GET /api/loan-module/cashout-settings
+func (h *LoanModuleController) GetCashoutSettings(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"data": services.GetCashoutSettings()})
+}
+
+// UpdateCashoutSettings PUT /api/loan-module/cashout-settings {"support_phone": "07..."}
+func (h *LoanModuleController) UpdateCashoutSettings(c *gin.Context) {
+	var in services.CashoutSettings
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	out, err := services.UpdateCashoutSettings(in, h.userID(c))
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": out, "message": "Cashout settings saved"})
 }

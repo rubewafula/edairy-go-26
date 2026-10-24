@@ -33,6 +33,20 @@ type Member struct {
 	IdDateOfIssue     *time.Time `gorm:"column:id_date_of_issue"`
 	Title             string     `gorm:"column:title"`
 	CashoutEnrolled   bool       `gorm:"column:cashout_enrolled"`
+	CreditLimit          float64    `gorm:"column:credit_limit;type:decimal(15,2);default:0"`
+	CreditLimitUpdatedAt *time.Time `gorm:"column:credit_limit_updated_at"`
+	// CanBorrow is recomputed on every credit recalculation and loan status change.
+	// When false, CannotBorrowCode/CannotBorrowReason say why; both are NULL when true.
+	// CreditLimitComputed is the formula value (unpaid milk − rejects − loans − deductions) at the last
+	// recalculation. Each recalculation adds (new formula value − this) to CreditLimit, so the stored
+	// limit moves with milk and loans but is never reset to the formula value.
+	CreditLimitComputed *float64 `gorm:"column:credit_limit_computed;type:decimal(15,2)" json:"-"`
+	// MemberBalance is the same balance as CreditLimit valued at the DEFAULT (payout) milk rate:
+	// credit_limit x default / credit. Updated with every credit recalculation.
+	MemberBalance float64 `gorm:"column:member_balance;type:decimal(15,2);not null;default:0" json:"member_balance"`
+	CanBorrow          bool    `gorm:"column:can_borrow;not null;default:false" json:"can_borrow"`
+	CannotBorrowCode   *string `gorm:"column:cannot_borrow_code;size:40" json:"cannot_borrow_code"`
+	CannotBorrowReason *string `gorm:"column:cannot_borrow_reason;size:255" json:"cannot_borrow_reason"`
 }
 
 func (Member) TableName() string {

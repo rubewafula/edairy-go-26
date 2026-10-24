@@ -8,3 +8,9 @@ run:
 
 test:
 	go test ./...
+
+seed-route-centers:
+	go run ./cmd/seed-route-centers
+
+seed-credit-limits:
+	go run ./cmd/seed-credit-limits

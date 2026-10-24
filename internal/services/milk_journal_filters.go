@@ -67,6 +67,19 @@ func appendMilkJournalEntryFilters(
 		whereClauses = append(whereClauses, "m.member_no LIKE ?")
 		args = append(args, "%"+strings.TrimSpace(filters.MemberNo)+"%")
 	}
+	if memberID := strings.TrimSpace(filters.MemberID); memberID != "" {
+		whereClauses = append(whereClauses, "mje.member_id = ?")
+		args = append(args, memberID)
+	}
+	if status := strings.ToLower(strings.TrimSpace(filters.Status)); status != "" {
+		if status == "pending" {
+			// Entries are pending until payroll marks them otherwise; legacy rows have NULL status.
+			whereClauses = append(whereClauses, "(mje.status IS NULL OR mje.status = '' OR LOWER(mje.status) = 'pending')")
+		} else {
+			whereClauses = append(whereClauses, "LOWER(mje.status) = ?")
+			args = append(args, status)
+		}
+	}
 
 	return whereClauses, args
 }

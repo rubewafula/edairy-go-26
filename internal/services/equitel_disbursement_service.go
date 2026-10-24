@@ -51,6 +51,9 @@ func (s *EquitelDisbursementService) InitiatePayout(channelID, memberID uint64, 
 	if err != nil {
 		return nil, err
 	}
+	if err := checkDevPayoutPhone(phone); err != nil {
+		return nil, err
+	}
 
 	name := strings.TrimSpace(strings.TrimSpace(member.FirstName) + " " + strings.TrimSpace(member.LastName))
 	if name == "" {

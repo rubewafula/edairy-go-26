@@ -21,7 +21,17 @@ func (s *RouteService) CreateRoute(req dtos.CreateRouteRequest) (*models.Route, 
 		LocationID:  req.LocationID,
 	}
 
-	if err := db.DB.Create(route).Error; err != nil {
+	// A route must always have at least one center; create a default one with it.
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(route).Error; err != nil {
+			return err
+		}
+		return tx.Create(&models.RouteCenter{
+			RouteID: route.ID,
+			Center:  defaultCenterName(route.ID, route.Name, route.Code),
+		}).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 	return route, nil

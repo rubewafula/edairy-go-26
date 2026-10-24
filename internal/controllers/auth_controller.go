@@ -104,3 +104,33 @@ func (a *AuthController) ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "updated"})
 }
+
+// MemberLogin POST /api/member-login {"phone": "07…|7…|254…", "id_number": "…"} — farmer sign-in.
+func (a *AuthController) MemberLogin(c *gin.Context) {
+	var req services.MemberLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Enter your phone number and ID number."})
+		return
+	}
+	resp, err := services.MemberLogin(req, c.ClientIP())
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// MemberMe GET /api/member-me — the signed-in member's profile (member logins only).
+func (a *AuthController) MemberMe(c *gin.Context) {
+	memberID := c.GetUint64("member_id")
+	if memberID == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not a member account"})
+		return
+	}
+	profile, err := services.MemberSelfProfile(memberID)
+	if err != nil {
+		respondServiceError(c, err, nil)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": profile})
+}

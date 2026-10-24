@@ -5,12 +5,14 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"math"
 	"mime/multipart"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jung-kurt/gofpdf"
 	"github.com/rubewafula/edairy-go-26/internal/db"
@@ -87,18 +89,59 @@ func (s *CustomerService) UpdateCustomer(id string, req dtos.UpdateCustomerReque
 		return err
 	}
 
-	return db.DB.Model(&customer).Updates(map[string]interface{}{
+	updates := map[string]interface{}{
 		"customer_type_id": req.CustomerTypeID,
 		"full_names":       req.FullNames,
 		"phone":            utils.NormalizePhone(req.Phone),
+		"email_address":    req.EmailAddress,
 		"kra_pin":          req.KraPin,
 		"postal_address":   req.PostalAddress,
 		"postal_code":      req.PostalCode,
 		"postal_town":      req.PostalTown,
 		"rate":             req.Rate,
-		"status":           req.Status,
-		"updated_by":       userID,
-	}).Error
+		// The edit form sends the credit limit; it was previously dropped here, so edits never saved.
+		"credit_limit": req.CreditLimit,
+		"updated_by":   userID,
+	}
+	if req.Terms > 0 {
+		updates["payment_terms_days"] = req.Terms
+	}
+	// The form does not send status: keep the stored one instead of blanking it.
+	if strings.TrimSpace(req.Status) != "" {
+		updates["status"] = req.Status
+	}
+	oldLimit := customer.CreditLimit
+	if err := db.DB.Model(&customer).Updates(updates).Error; err != nil {
+		return err
+	}
+	// Best-effort audit line; the change log's customer_type enum may not allow "customer".
+	if math.Abs(req.CreditLimit-oldLimit) >= 0.005 {
+		now := time.Now()
+		if err := db.DB.Create(&models.CreditLimitChangeLog{
+			CustomerID: customer.ID, CustomerType: "customer", OldLimit: oldLimit, CreditLimit: req.CreditLimit,
+			Amount: req.CreditLimit - oldLimit, Action: "MANUAL_SET", Reference: customer.CustomerNo,
+			SourceType: "customer_edit", SourceID: customer.ID, Narration: "Credit limit set on the customer form",
+			CreatedBy: userID, UpdatedBy: userID, CreatedAt: &now, UpdatedAt: now.Format("2006-01-02 15:04:05"),
+		}).Error; err != nil {
+			log.Printf("[Customer] credit limit log for customer %d skipped: %v", customer.ID, err)
+		}
+	}
+	return nil
+}
+
+// GetCustomerResponse returns one customer with the same snake_case fields as the list.
+func (s *CustomerService) GetCustomerResponse(id string) (*dtos.CustomerResponse, error) {
+	var out dtos.CustomerResponse
+	err := db.DB.Raw(`SELECT c.*, ct.name AS customer_type_name, COALESCE(c.payment_terms_days, 0) AS terms
+		FROM customers c LEFT JOIN customer_types ct ON c.customer_type_id = ct.id
+		WHERE c.id = ? AND c.deleted_at IS NULL`, id).Scan(&out).Error
+	if err != nil {
+		return nil, err
+	}
+	if out.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &out, nil
 }
 
 func (s *CustomerService) DeleteCustomer(id string) error {

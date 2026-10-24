@@ -131,8 +131,21 @@ func extractResource(path string) string {
 	return strings.Join(resources, ".")
 }
 
+// selfScopedPaths need only a logged-in user: the handler limits the data to the caller
+// (a member sees their own milk, a transporter theirs, staff everything).
+var selfScopedPaths = map[string]bool{
+	"/api/milk-collection-overview": true,
+	// Everyone sees "Settle all"; the handler allows only holders of loan-module.dairy-loans.clear
+	// (the DBU Edairy Accountant role) and tells everyone else so.
+	"/api/loan-module/applications/settle-month": true,
+}
+
 func RequireAutoPermission() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if selfScopedPaths[c.FullPath()] || c.GetBool("member_self_service") {
+			c.Next()
+			return
+		}
 
 		method := c.Request.Method
 		path := c.FullPath()

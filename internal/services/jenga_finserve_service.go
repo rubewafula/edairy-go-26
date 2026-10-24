@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -248,7 +249,7 @@ func (s *JengaFinserveService) SendMobileEquitel(recipientName, phone254, amount
 		if msg == "" {
 			msg = "jenga sendmobile rejected"
 		}
-		return nil, fmt.Errorf(msg)
+		return nil, errors.New(msg)
 	}
 	return &out, nil
 }

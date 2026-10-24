@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
@@ -236,6 +237,17 @@ func (s *StoreSaleService) CreateSale(req dtos.CreateStoreSaleRequest, userID ui
 
 	if err != nil {
 		return nil, err
+	}
+
+	if req.AmountDue > 0 && strings.EqualFold(req.CustomerType, creditCustomerTypeMember) {
+		NewMemberCreditService().RecalculateAsync([]uint64{req.CustomerID}, CreditChange{
+			Action:     models.CreditActionDeductionChanged,
+			SourceType: "store_sale",
+			SourceID:   sale.ID,
+			Reference:  req.Reference,
+			Narration:  fmt.Sprintf("Store credit sale KES %.2f", req.AmountDue),
+			UserID:     userID,
+		})
 	}
 
 	return &sale, nil
