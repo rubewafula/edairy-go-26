@@ -3,6 +3,9 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"math"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/rubewafula/edairy-go-26/internal/models"
 	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type LoanModuleService struct {
@@ -83,11 +87,66 @@ func (s *LoanModuleService) CreateProduct(req dtos.CreateLoanProductRequest, use
 		AllocationPriority:    allocJSON,
 		RecoveryPriority:      recoveryPriority,
 		IsActive:              active,
+		IsDefaultMemberLoan:   req.IsDefaultMemberLoan != nil && *req.IsDefaultMemberLoan,
 	}
-	if err := db.DB.Create(product).Error; err != nil {
+	if req.ChargePerLitre != nil {
+		if *req.ChargePerLitre < 0 {
+			return nil, serviceErr(http.StatusBadRequest, "charge per litre cannot be negative")
+		}
+		product.ChargePerLitre = roundMoney(*req.ChargePerLitre)
+	}
+	if req.ProcessingFeeAmount != nil {
+		if *req.ProcessingFeeAmount < 0 {
+			return nil, serviceErr(http.StatusBadRequest, "processing fee cannot be negative")
+		}
+		product.ProcessingFeeAmount = roundMoney(*req.ProcessingFeeAmount)
+		product.ProcessingFeeRate = 0
+	}
+	product.DBUMinAmount, product.DBUMaxAmount = 0, DefaultDBUMaxAmount
+	if req.DBUMinAmount != nil {
+		product.DBUMinAmount = roundMoney(*req.DBUMinAmount)
+	}
+	if req.DBUMaxAmount != nil {
+		product.DBUMaxAmount = roundMoney(*req.DBUMaxAmount)
+	}
+	if err := validateDBUQuota(product.DBUMinAmount, product.DBUMaxAmount); err != nil {
 		return nil, err
 	}
+	if req.ProcessingFeeTiers != nil {
+		tiers, err := validateFeeTiers(*req.ProcessingFeeTiers)
+		if err != nil {
+			return nil, serviceErr(http.StatusBadRequest, "%s", err.Error())
+		}
+		product.ProcessingFeeTiers = encodeFeeTiers(tiers)
+		product.FeeTiers = tiers
+	}
+	if product.IsDefaultMemberLoan && !product.IsActive {
+		return nil, serviceErr(http.StatusBadRequest, "an inactive product cannot be the default member loan")
+	}
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if product.IsDefaultMemberLoan {
+			if err := clearDefaultMemberLoan(tx, 0); err != nil {
+				return err
+			}
+		}
+		return tx.Create(product).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	if product.IsDefaultMemberLoan {
+		go RefreshAllBorrowStatus(fmt.Sprintf("new default member loan product %d", product.ID))
+	}
 	return product, nil
+}
+
+// clearDefaultMemberLoan unsets the default member loan flag on every product except exceptID.
+func clearDefaultMemberLoan(tx *gorm.DB, exceptID uint64) error {
+	q := tx.Model(&models.LoanProduct{}).Where("is_default_member_loan = ?", true)
+	if exceptID > 0 {
+		q = q.Where("id <> ?", exceptID)
+	}
+	return q.Update("is_default_member_loan", false).Error
 }
 
 func (s *LoanModuleService) ListProducts(page, limit int, activeOnly bool) ([]models.LoanProduct, int64, error) {
@@ -169,8 +228,74 @@ func (s *LoanModuleService) UpdateProduct(id uint64, req dtos.UpdateLoanProductR
 	if req.RecoveryPriority != nil {
 		updates["recovery_priority"] = *req.RecoveryPriority
 	}
-	if err := db.DB.Model(&p).Updates(updates).Error; err != nil {
+	if req.ChargePerLitre != nil {
+		if *req.ChargePerLitre < 0 {
+			return nil, serviceErr(http.StatusBadRequest, "charge per litre cannot be negative")
+		}
+		updates["charge_per_litre"] = roundMoney(*req.ChargePerLitre)
+	}
+	if req.ProcessingFeeAmount != nil {
+		if *req.ProcessingFeeAmount < 0 {
+			return nil, serviceErr(http.StatusBadRequest, "processing fee cannot be negative")
+		}
+		updates["processing_fee_amount"] = roundMoney(*req.ProcessingFeeAmount)
+		// A fixed fee replaces the old percentage.
+		updates["processing_fee_rate"] = 0
+	}
+	if req.DBUMinAmount != nil || req.DBUMaxAmount != nil {
+		minV, maxV := p.DBUMinAmount, p.DBUMaxAmount
+		if req.DBUMinAmount != nil {
+			minV = roundMoney(*req.DBUMinAmount)
+		}
+		if req.DBUMaxAmount != nil {
+			maxV = roundMoney(*req.DBUMaxAmount)
+		}
+		if err := validateDBUQuota(minV, maxV); err != nil {
+			return nil, err
+		}
+		updates["dbu_min_amount"], updates["dbu_max_amount"] = minV, maxV
+	}
+	if req.ProcessingFeeTiers != nil {
+		tiers, err := validateFeeTiers(*req.ProcessingFeeTiers)
+		if err != nil {
+			return nil, serviceErr(http.StatusBadRequest, "%s", err.Error())
+		}
+		updates["processing_fee_tiers"] = encodeFeeTiers(tiers)
+	}
+
+	willBeActive := p.IsActive
+	if req.IsActive != nil {
+		willBeActive = *req.IsActive
+	}
+	willBeDefault := p.IsDefaultMemberLoan
+	if req.IsDefaultMemberLoan != nil {
+		willBeDefault = *req.IsDefaultMemberLoan
+	}
+	if willBeDefault && !willBeActive {
+		if req.IsDefaultMemberLoan != nil && *req.IsDefaultMemberLoan {
+			return nil, serviceErr(http.StatusBadRequest, "an inactive product cannot be the default member loan")
+		}
+		// Deactivating the current default: drop the flag with it.
+		willBeDefault = false
+	}
+	updates["is_default_member_loan"] = willBeDefault
+
+	wasDefault := p.IsDefaultMemberLoan
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if willBeDefault {
+			if err := clearDefaultMemberLoan(tx, id); err != nil {
+				return err
+			}
+		}
+		return tx.Model(&p).Updates(updates).Error
+	})
+	if err != nil {
 		return nil, err
+	}
+	// The app's loan terms come from the default member loan: when it changes (or its terms do),
+	// re-check every member's borrow status (minimum amount etc.) against the new terms.
+	if wasDefault || willBeDefault {
+		go RefreshAllBorrowStatus(fmt.Sprintf("member loan product %d updated", id))
 	}
 	return s.GetProduct(id)
 }
@@ -184,6 +309,10 @@ func (s *LoanModuleService) CreateApplication(req dtos.CreateLoanApplicationRequ
 	}
 	if !product.IsActive {
 		return nil, fmt.Errorf("loan product is inactive")
+	}
+	// The default member loan is applied for only from the mobile app (OTP, credit checks, M-Pesa payout).
+	if product.IsDefaultMemberLoan {
+		return nil, fmt.Errorf("%s can only be applied for from the mobile app; ask the member to apply on their phone", product.ProductName)
 	}
 	if req.RequestedAmount < product.MinAmount || req.RequestedAmount > product.MaxAmount {
 		return nil, fmt.Errorf("requested amount outside product limits (%.2f - %.2f)", product.MinAmount, product.MaxAmount)
@@ -229,6 +358,9 @@ func (s *LoanModuleService) CreateApplication(req dtos.CreateLoanApplicationRequ
 		s.logAudit(tx, "loan_application", app.ID, "CREATE", userID, nil, app)
 		return nil
 	})
+	if err == nil && app != nil {
+		NewMemberCreditService().RefreshBorrowStatusAsync(app.MemberID, "loan_application", app.ID, userID)
+	}
 	return app, err
 }
 
@@ -245,6 +377,7 @@ func (s *LoanModuleService) SubmitApplication(id, userID uint64) (*models.LoanAp
 	if err := db.DB.Save(&app).Error; err != nil {
 		return nil, err
 	}
+	NewMemberCreditService().RefreshBorrowStatusAsync(app.MemberID, "loan_application", app.ID, userID)
 	return &app, nil
 }
 
@@ -301,6 +434,11 @@ func (s *LoanModuleService) ApproveApplication(id uint64, req dtos.ApproveLoanAp
 	if err != nil {
 		return nil, err
 	}
+	if app.LoanContractID != nil {
+		s.refreshContractCredit(*app.LoanContractID, models.CreditActionLoanReserved, "loan_application", app.ID, app.ApplicationNo, userID)
+	} else {
+		NewMemberCreditService().RefreshBorrowStatusAsync(app.MemberID, "loan_application", app.ID, userID)
+	}
 	return s.GetApplication(id)
 }
 
@@ -309,12 +447,22 @@ func (s *LoanModuleService) RejectApplication(id uint64, req dtos.RejectLoanAppl
 	if err := db.DB.First(&app, id).Error; err != nil {
 		return nil, err
 	}
+	switch app.Status {
+	case models.LoanAppDraft, models.LoanAppSubmitted, models.LoanAppUnderReview:
+	default:
+		return nil, fmt.Errorf("application cannot be rejected in status %s", app.Status)
+	}
+	if strings.TrimSpace(req.Comments) == "" {
+		return nil, fmt.Errorf("a reason is required to reject an application")
+	}
 	app.Status = models.LoanAppRejected
-	app.RejectedReason = req.Comments
+	app.RejectedReason = strings.TrimSpace(req.Comments)
 	app.UpdatedBy = userID
+	expireApprovalOTPs(app.ID)
 	if err := db.DB.Save(&app).Error; err != nil {
 		return nil, err
 	}
+	NewMemberCreditService().RefreshBorrowStatusAsync(app.MemberID, "loan_application", app.ID, userID)
 	return &app, nil
 }
 
@@ -328,7 +476,26 @@ func (s *LoanModuleService) GetApplication(id uint64) (*models.LoanApplication, 
 	return &apps[0], nil
 }
 
-func (s *LoanModuleService) ListApplications(page, limit int, status string, memberID uint64) ([]models.LoanApplication, int64, error) {
+func applyLoanMemberSearch(q *gorm.DB, loanTable, search string) *gorm.DB {
+	term := strings.TrimSpace(search)
+	if term == "" {
+		return q
+	}
+	like := "%" + term + "%"
+	q = q.Joins(
+		"JOIN member_registrations AS m_search ON m_search.id = "+loanTable+".member_id AND m_search.deleted_at IS NULL",
+	)
+	return q.Where(`(
+		m_search.member_no LIKE ? OR
+		m_search.first_name LIKE ? OR
+		m_search.last_name LIKE ? OR
+		CONCAT(COALESCE(m_search.first_name, ''), ' ', COALESCE(m_search.last_name, '')) LIKE ? OR
+		m_search.primary_phone LIKE ? OR
+		m_search.secondary_phone LIKE ?
+	)`, like, like, like, like, like, like)
+}
+
+func (s *LoanModuleService) ListApplications(page, limit int, status string, memberID uint64, dateFrom, dateTo, search string) ([]models.LoanApplication, int64, error) {
 	var items []models.LoanApplication
 	var total int64
 	q := db.DB.Model(&models.LoanApplication{})
@@ -338,6 +505,13 @@ func (s *LoanModuleService) ListApplications(page, limit int, status string, mem
 	if memberID > 0 {
 		q = q.Where("member_id = ?", memberID)
 	}
+	if dateFrom != "" {
+		q = q.Where("DATE(date_applied) >= ?", dateFrom)
+	}
+	if dateTo != "" {
+		q = q.Where("DATE(date_applied) <= ?", dateTo)
+	}
+	q = applyLoanMemberSearch(q, "loan_applications", search)
 	q.Count(&total)
 	offset := (page - 1) * limit
 	err := q.Preload("LoanProduct").Order("id DESC").Limit(limit).Offset(offset).Find(&items).Error
@@ -345,6 +519,7 @@ func (s *LoanModuleService) ListApplications(page, limit int, status string, mem
 		return items, total, err
 	}
 	enrichApplicationsWithMembers(items)
+	enrichApplicationsCumulativeUnpaid(items)
 	return items, total, nil
 }
 
@@ -353,7 +528,7 @@ func (s *LoanModuleService) createContractFromApplication(tx *gorm.DB, app *mode
 	if err := tx.First(&product, app.LoanProductID).Error; err != nil {
 		return nil, err
 	}
-	contractNo := fmt.Sprintf("LN-%d-%d", app.MemberID, time.Now().Unix())
+	contractNo := fmt.Sprintf("LN-%d-%d", app.MemberID, time.Now().UnixNano())
 	contract := &models.LoanContract{
 		BaseModel:            models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		ContractNo:           contractNo,
@@ -377,12 +552,20 @@ func (s *LoanModuleService) createContractFromApplication(tx *gorm.DB, app *mode
 
 	procFee, insFee := computeProductFees(&product, amount)
 	scheduleProcFee, scheduleInsFee := procFee, insFee
-	if !feesSpreadOverInstallments(product.FeeCollectionMethod) {
+	if !feesAddedToRepayment(&product) {
 		scheduleProcFee, scheduleInsFee = 0, 0
 	}
 	startDate := time.Now()
 	if app.ExpectedDisbursementDate != nil {
 		startDate = *app.ExpectedDisbursementDate
+	}
+	fixedInterest, spread := spreadInterest(tx, &product, app.MemberID, amount)
+	if spread {
+		// Member loan: interest is the milk-rate spread (default vs credit rate), not the product rate.
+		contract.InterestMethod = models.LoanInterestFlat
+		if amount > 0 {
+			contract.InterestRate = roundMoney(fixedInterest / amount * 100)
+		}
 	}
 	lines := s.schedule.Generate(scheduleInput{
 		Principal:       amount,
@@ -393,7 +576,15 @@ func (s *LoanModuleService) createContractFromApplication(tx *gorm.DB, app *mode
 		StartDate:       startDate,
 		ProcessingFee:   scheduleProcFee,
 		InsuranceFee:    scheduleInsFee,
+		FixedInterest:   fixedInterest,
+		FeesUpfront:     product.IsDefaultMemberLoan,
 	})
+	if spread && fixedInterest <= 0 {
+		// No spread (rates equal): plain principal, no product interest.
+		lines = s.schedule.Generate(scheduleInput{Principal: amount, TermMonths: term, Method: models.LoanInterestFlat,
+			GracePeriodDays: product.GracePeriodDays, StartDate: startDate, ProcessingFee: scheduleProcFee, InsuranceFee: scheduleInsFee,
+			FeesUpfront: product.IsDefaultMemberLoan})
+	}
 	var installmentAmt float64
 	if len(lines) > 0 {
 		installmentAmt = lines[0].TotalDue
@@ -420,7 +611,7 @@ func (s *LoanModuleService) createContractFromApplication(tx *gorm.DB, app *mode
 			return nil, err
 		}
 	}
-	if feesSpreadOverInstallments(product.FeeCollectionMethod) && procFee > 0 {
+	if feesAddedToRepayment(&product) && procFee > 0 {
 		contract.OutstandingFees = procFee
 	}
 	return contract, tx.Save(contract).Error
@@ -447,7 +638,7 @@ func (s *LoanModuleService) GetDisbursementQuote(contractID uint64) (*dtos.LoanD
 		FeesDeducted:     contract.FeesDeductedAtDisbursement,
 		RemainingNet:     remainingNet,
 	}
-	if feesDeductedFromProceeds(product.FeeCollectionMethod) {
+	if feesOffPayout(&product) {
 		if contract.FeesDeductedAtDisbursement == 0 {
 			quote.NetDisbursement = roundMoney(contract.ApprovedAmount - totalFees)
 		} else {
@@ -475,7 +666,7 @@ func (s *LoanModuleService) GetContract(id uint64) (*models.LoanContract, error)
 	return &contracts[0], nil
 }
 
-func (s *LoanModuleService) ListContracts(page, limit int, status string, memberID uint64) ([]models.LoanContract, int64, error) {
+func (s *LoanModuleService) ListContracts(page, limit int, status string, memberID uint64, dateFrom, dateTo, search string) ([]models.LoanContract, int64, error) {
 	var items []models.LoanContract
 	var total int64
 	q := db.DB.Model(&models.LoanContract{})
@@ -485,6 +676,13 @@ func (s *LoanModuleService) ListContracts(page, limit int, status string, member
 	if memberID > 0 {
 		q = q.Where("member_id = ?", memberID)
 	}
+	if dateFrom != "" {
+		q = q.Where("DATE(COALESCE(disbursement_date, created_at)) >= ?", dateFrom)
+	}
+	if dateTo != "" {
+		q = q.Where("DATE(COALESCE(disbursement_date, created_at)) <= ?", dateTo)
+	}
+	q = applyLoanMemberSearch(q, "loan_contracts", search)
 	q.Count(&total)
 	offset := (page - 1) * limit
 	err := q.Preload("LoanProduct").Order("id DESC").Limit(limit).Offset(offset).Find(&items).Error
@@ -554,7 +752,7 @@ func (s *LoanModuleService) DisburseContract(id uint64, req dtos.DisburseLoanReq
 		}
 
 		cashAmount := req.Amount
-		feeMethod := normalizeFeeCollectionMethod(product.FeeCollectionMethod)
+		feeMethod := effectiveFeeCollectionMethod(&product)
 		var feesThisDisbursement float64
 
 		if feeMethod == models.LoanFeeDeductFromProceeds {
@@ -597,13 +795,33 @@ func (s *LoanModuleService) DisburseContract(id uint64, req dtos.DisburseLoanReq
 			Amount:                cashAmount,
 			Method:                s.channels.LegacyMethod(channel.ChannelType),
 			Reference:             req.Reference,
-			IdempotencyKey:        req.IdempotencyKey,
+			IdempotencyKey:        uniqueKeyOr(req.IdempotencyKey, "DISB", contract.ID),
 			ChannelPayload:        encodeChannelPayload(req.ChannelPayload),
 			DisbursementDate:      disbDate,
 			Notes:                 req.Notes,
 		}
 		if err := tx.Create(disbursement).Error; err != nil {
 			return err
+		}
+
+		if req.QueueOnly {
+			// Queued: the disbursement worker sends it to the provider later. The repayment deduction is
+			// added now, because the loan is already approved and counted against the credit limit.
+			disbursement.ChannelPayload = mergeChannelPayload([]byte(disbursement.ChannelPayload), map[string]interface{}{
+				"queued":    true,
+				"queued_at": time.Now().Format(time.RFC3339),
+			})
+			if req.CreateMilkDeduction && contract.MilkDeductionEnabled {
+				rdID, err := s.ensureMilkDeduction(tx, &contract, milkDeductionInstallment(tx, &contract, req.InstallmentAmount), userID)
+				if err != nil {
+					return err
+				}
+				contract.RecurrentDeductionID = &rdID
+				if err := tx.Model(&contract).Update("recurrent_deduction_id", rdID).Error; err != nil {
+					return err
+				}
+			}
+			return tx.Save(disbursement).Error
 		}
 
 		result := s.channels.Execute(DisbursementExecutionInput{
@@ -637,6 +855,9 @@ func (s *LoanModuleService) DisburseContract(id uint64, req dtos.DisburseLoanReq
 
 		return tx.Save(disbursement).Error
 	})
+	if err == nil && disbursement != nil && disbursement.Status == models.DisbursementStatusSuccess {
+		s.handleDisbursementOutcome(disbursement.ID, userID)
+	}
 	return disbursement, err
 }
 
@@ -648,8 +869,19 @@ func (s *LoanModuleService) ConfirmDisbursement(disbursementID uint64, req dtos.
 	if disbursement.Status == models.DisbursementStatusSuccess {
 		return &disbursement, nil
 	}
-	if disbursement.Status != models.DisbursementStatusProcessing && disbursement.Status != models.DisbursementStatusPending {
+	if disbursement.Status != models.DisbursementStatusProcessing && disbursement.Status != models.DisbursementStatusPending &&
+		disbursement.Status != models.DisbursementStatusMpesaFailed && disbursement.Status != models.DisbursementStatusMpesaError {
 		return nil, fmt.Errorf("disbursement cannot be confirmed in status %s", disbursement.Status)
+	}
+	// An M-Pesa payout that failed is parked as MPESA_FAILED (loan kept, member sees "Processing")
+	// unless the caller explicitly releases it or the loan failed re-validation.
+	if !req.Success && !req.Release && req.FailureCode != "REVALIDATION_FAILED" && isMpesaChannel(disbursement.ChannelCode) {
+		return s.markMpesaFailed(&disbursement, req.FailureCode, req.FailureMessage)
+	}
+	if disbursement.Status == models.DisbursementStatusMpesaFailed || disbursement.Status == models.DisbursementStatusMpesaError {
+		// Released or confirmed by hand: continue from a state the normal handling accepts.
+		db.DB.Model(&models.LoanDisbursement{}).Where("id = ?", disbursement.ID).Update("status", models.DisbursementStatusProcessing)
+		disbursement.Status = models.DisbursementStatusProcessing
 	}
 
 	var otpPayloadPatch []byte
@@ -684,13 +916,21 @@ func (s *LoanModuleService) ConfirmDisbursement(disbursementID uint64, req dtos.
 			patch["provider_response"] = result.Raw
 		}
 		otpPayloadPatch = mergeChannelPayload([]byte(disbursement.ChannelPayload), patch)
-	} else if disbursement.ChannelCode == models.DisbursementCodeMobileDtbMpesa && !req.Success && strings.TrimSpace(req.OTP) == "" {
+	} else if disbursement.ChannelCode == models.DisbursementCodeMobileDtbMpesa && !req.Success && !req.Release && strings.TrimSpace(req.OTP) == "" {
 		return nil, fmt.Errorf("DTB M-Pesa disbursement requires OTP confirmation")
 	}
 
+	alreadyFinal := false
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.First(&disbursement, disbursementID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&disbursement, disbursementID).Error; err != nil {
 			return err
+		}
+		if disbursement.Status == models.DisbursementStatusSuccess {
+			alreadyFinal = true
+			return nil
+		}
+		if disbursement.Status != models.DisbursementStatusProcessing && disbursement.Status != models.DisbursementStatusPending {
+			return fmt.Errorf("disbursement cannot be confirmed in status %s", disbursement.Status)
 		}
 		if len(otpPayloadPatch) > 0 {
 			disbursement.ChannelPayload = otpPayloadPatch
@@ -745,6 +985,9 @@ func (s *LoanModuleService) ConfirmDisbursement(disbursementID uint64, req dtos.
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !alreadyFinal {
+		s.handleDisbursementOutcome(disbursement.ID, userID)
 	}
 	return &disbursement, nil
 }
@@ -836,9 +1079,9 @@ type mobileCallbackOutcome struct {
 	Raw            map[string]interface{}
 }
 
-func (s *LoanModuleService) processMobileDisbursementCallback(channelCode, matchReference string, outcome mobileCallbackOutcome) error {
+func findOpenMobileDisbursements(channelCode, matchReference string) ([]models.LoanDisbursement, error) {
 	if matchReference == "" {
-		return fmt.Errorf("callback missing match reference")
+		return nil, fmt.Errorf("callback missing match reference")
 	}
 	var disbursements []models.LoanDisbursement
 	if err := db.DB.Where(
@@ -851,10 +1094,52 @@ func (s *LoanModuleService) processMobileDisbursementCallback(channelCode, match
 		[]string{models.DisbursementStatusProcessing, models.DisbursementStatusPending},
 		matchReference, matchReference, matchReference,
 	).Find(&disbursements).Error; err != nil {
-		return err
+		return nil, err
 	}
 	if len(disbursements) == 0 {
-		return fmt.Errorf("no matching loan disbursement for reference %s (channel %s)", matchReference, channelCode)
+		return nil, fmt.Errorf("no matching loan disbursement for reference %s (channel %s)", matchReference, channelCode)
+	}
+	return disbursements, nil
+}
+
+// flagForReconciliation keeps disbursements in their current state and records why they need a provider status check.
+func flagForReconciliation(disbursements []models.LoanDisbursement, reason, rawKey string, raw map[string]interface{}) {
+	for _, d := range disbursements {
+		patch := map[string]interface{}{
+			"reconcile_required": true,
+			"reconcile_reason":   reason,
+			"reconcile_flagged":  time.Now().Format(time.RFC3339),
+			rawKey:               raw,
+		}
+		_ = db.DB.Model(&models.LoanDisbursement{}).Where("id = ?", d.ID).
+			Update("channel_payload", mergeChannelPayload([]byte(d.ChannelPayload), patch))
+	}
+}
+
+// mpesaResultIssue returns why a successful B2C result must not be trusted for this disbursement, or "" if it is consistent.
+func mpesaResultIssue(d models.LoanDisbursement, res mpesaB2CResult) string {
+	if res.TransactionID == "" {
+		return "result has no TransactionID"
+	}
+	if !res.HasAmount {
+		return "result has no TransactionAmount"
+	}
+	if math.Round(res.Amount) != math.Round(d.Amount) {
+		return fmt.Sprintf("amount mismatch: provider paid %.2f, disbursement is %.2f", res.Amount, d.Amount)
+	}
+	var reused int64
+	db.DB.Model(&models.LoanDisbursement{}).
+		Where("external_reference = ? AND id <> ?", res.TransactionID, d.ID).Count(&reused)
+	if reused > 0 {
+		return fmt.Sprintf("TransactionID %s is already recorded on another disbursement", res.TransactionID)
+	}
+	return ""
+}
+
+func (s *LoanModuleService) processMobileDisbursementCallback(channelCode, matchReference string, outcome mobileCallbackOutcome) error {
+	disbursements, err := findOpenMobileDisbursements(channelCode, matchReference)
+	if err != nil {
+		return err
 	}
 
 	for _, d := range disbursements {
@@ -887,16 +1172,29 @@ func (s *LoanModuleService) processMobileDisbursementCallback(channelCode, match
 }
 
 func (s *LoanModuleService) ProcessMpesaB2CResult(data map[string]interface{}) error {
-	originatorID, transactionID, resultCode, resultDesc := parseMpesaResultCallback(data)
-	if originatorID == "" {
+	res := parseMpesaB2CResult(data)
+	if res.OriginatorID == "" {
 		return fmt.Errorf("mpesa callback missing OriginatorConversationID")
 	}
-	success := resultCode == "0"
+	success := res.ResultCode == "0"
+	if success {
+		disbursements, err := findOpenMobileDisbursements(models.DisbursementCodeMobileMpesa, res.OriginatorID)
+		if err != nil {
+			return err
+		}
+		for _, d := range disbursements {
+			if issue := mpesaResultIssue(d, res); issue != "" {
+				flagForReconciliation(disbursements, issue, "callback_result", data)
+				log.Printf("[MPESA] result for %s held for reconciliation: %s", res.OriginatorID, issue)
+				return fmt.Errorf("held for reconciliation: %s", issue)
+			}
+		}
+	}
 	outcome := mobileCallbackOutcome{
 		Success:        success,
-		ExternalRef:    transactionID,
-		FailureCode:    resultCode,
-		FailureMessage: resultDesc,
+		ExternalRef:    res.TransactionID,
+		FailureCode:    res.ResultCode,
+		FailureMessage: res.ResultDesc,
 		Raw:            data,
 	}
 	if !success && outcome.FailureCode == "" {
@@ -905,25 +1203,25 @@ func (s *LoanModuleService) ProcessMpesaB2CResult(data map[string]interface{}) e
 	if !success && outcome.FailureMessage == "" {
 		outcome.FailureMessage = "M-Pesa B2C disbursement failed"
 	}
-	return s.processMobileDisbursementCallback(models.DisbursementCodeMobileMpesa, originatorID, outcome)
+	return s.processMobileDisbursementCallback(models.DisbursementCodeMobileMpesa, res.OriginatorID, outcome)
 }
 
+// ProcessMpesaB2CTimeout records a queue timeout without failing the disbursement: the payout may still complete,
+// so it stays PROCESSING until a result callback or provider status query settles it.
 func (s *LoanModuleService) ProcessMpesaB2CTimeout(data map[string]interface{}) error {
-	originatorID, _, _, _ := parseMpesaResultCallback(data)
+	originatorID := parseMpesaB2CResult(data).OriginatorID
 	if originatorID == "" {
-		if v, ok := data["OriginatorConversationID"]; ok {
-			originatorID = fmt.Sprintf("%v", v)
-		}
+		originatorID = mpesaString(data["OriginatorConversationID"])
 	}
 	if originatorID == "" {
 		return fmt.Errorf("mpesa timeout callback missing reference")
 	}
-	return s.processMobileDisbursementCallback(models.DisbursementCodeMobileMpesa, originatorID, mobileCallbackOutcome{
-		Success:        false,
-		FailureCode:    "QUEUE_TIMEOUT",
-		FailureMessage: "M-Pesa B2C queue timeout",
-		Raw:            data,
-	})
+	disbursements, err := findOpenMobileDisbursements(models.DisbursementCodeMobileMpesa, originatorID)
+	if err != nil {
+		return err
+	}
+	flagForReconciliation(disbursements, "M-Pesa B2C queue timeout", "callback_timeout", data)
+	return nil
 }
 
 func (s *LoanModuleService) ProcessAirtelDisbursementCallback(data map[string]interface{}) error {
@@ -1040,10 +1338,19 @@ func (s *LoanModuleService) ensureMilkDeduction(tx *gorm.DB, contract *models.Lo
 	if err := tx.Where("reference = ? AND customer_id = ? AND settled = 0", ref, contract.MemberID).First(&existing).Error; err == nil {
 		return existing.ID, nil
 	}
+	// The deduction must recover everything owed (principal + interest + fees), not just the
+	// principal, so the loan is fully repaid through milk payroll.
+	totalRepayable := roundMoney(contractRemainingRepayable(tx, contract.ID) + contract.TotalPaid)
+	if totalRepayable < contract.ApprovedAmount {
+		totalRepayable = contract.ApprovedAmount
+	}
+	if installment <= 0 || installment > totalRepayable {
+		installment = totalRepayable
+	}
 	rd := &models.RecurrentDeduction{
 		BaseModel:       models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
 		CustomerID:      contract.MemberID,
-		TotalAmount:     contract.ApprovedAmount,
+		TotalAmount:     totalRepayable,
 		PaidAmount:      contract.TotalPaid,
 		RecurrentAmount: installment,
 		DeductionTypeID: dedTypeID,
@@ -1103,7 +1410,7 @@ func (s *LoanModuleService) RecordRepayment(contractID uint64, req dtos.RecordLo
 			Amount:          req.Amount,
 			Channel:         req.Channel,
 			Reference:       req.Reference,
-			IdempotencyKey:  req.IdempotencyKey,
+			IdempotencyKey:  uniqueKeyOr(req.IdempotencyKey, "REPAY", contractID),
 			PaymentDate:     payDate,
 			MemberPayrollID: req.MemberPayrollID,
 			MemberPayslipID: req.MemberPayslipID,
@@ -1154,10 +1461,36 @@ func (s *LoanModuleService) RecordRepayment(contractID uint64, req dtos.RecordLo
 		if contract.OutstandingPrincipal <= 0 && contract.OutstandingInterest <= 0 &&
 			contract.OutstandingFees <= 0 && contract.OutstandingPenalties <= 0 {
 			contract.Status = models.LoanContractSettled
+			if contract.SettledAt == nil {
+				settled := payDate
+				contract.SettledAt = &settled
+			}
 		}
 		return tx.Save(&contract).Error
 	})
+	if err == nil {
+		s.refreshContractCredit(contractID, models.CreditActionLoanRepayment, "loan_repayment", repayment.ID, req.Reference, userID)
+	}
 	return repayment, err
+}
+
+// refreshContractCredit recalculates the borrower's credit limit after a committed loan change.
+func (s *LoanModuleService) refreshContractCredit(contractID uint64, action, sourceType string, sourceID uint64, reference string, userID uint64) {
+	var contract models.LoanContract
+	if err := db.DB.Select("id, member_id, contract_no").First(&contract, contractID).Error; err != nil {
+		return
+	}
+	if reference == "" {
+		reference = contract.ContractNo
+	}
+	NewMemberCreditService().RecalculateAsync([]uint64{contract.MemberID}, CreditChange{
+		Action:     action,
+		SourceType: sourceType,
+		SourceID:   sourceID,
+		Reference:  reference,
+		Narration:  fmt.Sprintf("Loan %s", contract.ContractNo),
+		UserID:     userID,
+	})
 }
 
 func (s *LoanModuleService) allocatePayment(tx *gorm.DB, contract *models.LoanContract, repayment *models.LoanRepaymentRecord, userID uint64) ([]models.LoanRepaymentAllocation, error) {
@@ -1251,9 +1584,7 @@ func (s *LoanModuleService) syncRecurrentDeduction(tx *gorm.DB, contract *models
 	}
 	rd.PaidAmount = contract.TotalPaid
 	rd.PrincipalAmount = contract.OutstandingPrincipal
-	if contract.InstallmentAmount != nil {
-		rd.RecurrentAmount = *contract.InstallmentAmount
-	}
+	// recurrent_amount is left as it is: the full amount by default, or what was set by hand.
 	if contract.OutstandingPrincipal <= 0 && contract.OutstandingInterest <= 0 {
 		rd.Settled = 1
 	}
@@ -1348,6 +1679,7 @@ func (s *LoanModuleService) AccrueInterest(req dtos.AccrueInterestRequest, userI
 				db.DB.Save(accrual)
 			}
 		}
+		s.refreshContractCredit(c.ID, models.CreditActionLoanInterest, "loan_interest_accrual", accrual.ID, "", userID)
 		count++
 	}
 	return count, nil
@@ -1398,6 +1730,9 @@ func (s *LoanModuleService) WriteOffContract(id uint64, req dtos.WriteOffLoanReq
 		contract.UpdatedBy = userID
 		return tx.Save(&contract).Error
 	})
+	if err == nil {
+		s.refreshContractCredit(id, models.CreditActionLoanWrittenOff, "loan_write_off", record.ID, "", userID)
+	}
 	return record, err
 }
 
@@ -1457,6 +1792,9 @@ func (s *LoanModuleService) RestructureContract(id uint64, req dtos.RestructureL
 		}
 		return nil
 	})
+	if err == nil {
+		s.refreshContractCredit(id, models.CreditActionLoanRestructured, "loan_restructuring", record.ID, "", userID)
+	}
 	return record, err
 }
 
@@ -1481,16 +1819,28 @@ func (s *LoanModuleService) SettleContract(id uint64, req dtos.SettleLoanRequest
 		TotalSettlement: roundMoney(contract.OutstandingPrincipal + contract.OutstandingInterest +
 			contract.OutstandingFees + contract.OutstandingPenalties),
 	}
+	// The schedule is the source of truth for what is still owed (the contract's stored balances lag).
+	if remaining := contractRemainingRepayable(db.DB, contract.ID); remaining > quote.TotalSettlement {
+		quote.TotalSettlement = remaining
+	}
 	if req.QuoteOnly {
 		return quote, nil
 	}
+	channel := strings.ToUpper(strings.TrimSpace(req.Channel))
+	if channel == "" {
+		channel = models.LoanChannelCash
+	}
+	notes := strings.TrimSpace(req.Notes)
+	if notes == "" {
+		notes = "Full loan settlement"
+	}
 	_, err = s.RecordRepayment(id, dtos.RecordLoanRepaymentRequest{
 		Amount:      quote.TotalSettlement,
-		Channel:     models.LoanChannelCash,
+		Channel:     channel,
 		Reference:   fmt.Sprintf("SETTLE-%s-%d", contract.ContractNo, time.Now().Unix()),
 		PaymentDate: settleDate.Format("2006-01-02"),
 		PostToGL:    req.PostToGL,
-		Notes:       "Full loan settlement",
+		Notes:       notes,
 	}, userID)
 	return quote, err
 }
@@ -1742,7 +2092,12 @@ func (s *LoanModuleService) DisbursementsReport(status, channelCode string) (*dt
 			DisbursementDate:  d.DisbursementDate,
 			ExternalReference: d.ExternalReference,
 			Reference:         d.Reference,
+			FailureCode:       d.FailureCode,
+			FailureMessage:    d.FailureMessage,
 		})
+		if d.Status != models.DisbursementStatusSuccess {
+			continue // net disbursed counts money actually paid out
+		}
 		totalAmount += d.Amount
 	}
 	return &dtos.LoanDisbursementsReport{
@@ -1791,6 +2146,7 @@ func (s *LoanModuleService) RunPenalties(asOf time.Time, userID uint64) (int, er
 		contract.Status = models.LoanContractOverdue
 		contract.DaysInArrears = daysLate
 		db.DB.Save(&contract)
+		s.refreshContractCredit(contract.ID, models.CreditActionLoanPenalty, "loan_penalty", inst.ID, "", userID)
 		count++
 	}
 	return count, nil
@@ -1834,6 +2190,7 @@ func enrichApplicationsWithMembers(items []models.LoanApplication) {
 	if len(items) == 0 {
 		return
 	}
+	enrichApplicationsWithRepayable(items)
 	ids := make([]uint64, len(items))
 	for i := range items {
 		ids[i] = items[i].MemberID
@@ -1885,9 +2242,85 @@ func EnsureLoanSchema() error {
 		&models.LoanRestructuring{},
 		&models.LoanWriteOffRecord{},
 		&models.LoanAuditLog{},
+		&models.LoanApplicationOTP{},
 	); err != nil {
 		return err
 	}
+	if err := ensureMemberCreditSchema(); err != nil {
+		return err
+	}
+	if err := ensureMemberCreditPermissions(); err != nil {
+		return err
+	}
+	if err := ensureCashoutSettingsTable(); err != nil {
+		return err
+	}
+	if err := EnsureMemberSelfServiceSchema(); err != nil {
+		return err
+	}
+	EnsureMemberLoanProduct()
+	NewMemberCreditService().EnsureCreditBaselinesAsync()
 	return EnsureDefaultDisbursementChannels()
 }
 
+
+// enrichApplicationsWithRepayable fills borrowed / repayable / cost %: from the contract's schedule
+// when one exists, else projected from the product.
+func enrichApplicationsWithRepayable(items []models.LoanApplication) {
+	mobile := NewMobileLoanService()
+	products := map[uint64]*models.LoanProduct{}
+	for i := range items {
+		a := &items[i]
+		borrowed := a.RequestedAmount
+		if a.ApprovedAmount != nil && *a.ApprovedAmount > 0 {
+			borrowed = *a.ApprovedAmount
+		}
+		a.BorrowedAmount = roundMoney(borrowed)
+		repayable := 0.0
+		if a.LoanContractID != nil && *a.LoanContractID > 0 {
+			var cs struct {
+				Status    string
+				SettledAt *time.Time
+			}
+			db.DB.Raw(`SELECT status, settled_at FROM loan_contracts WHERE id = ?`, *a.LoanContractID).Scan(&cs)
+			a.ContractStatus, a.SettledAt = cs.Status, cs.SettledAt
+			db.DB.Raw(`SELECT status FROM loan_disbursements WHERE loan_contract_id = ? AND deleted_at IS NULL
+				ORDER BY id DESC LIMIT 1`, *a.LoanContractID).Scan(&a.DisbursementStatus)
+			db.DB.Raw(`SELECT COALESCE(SUM(principal_due + interest_due + fee_due + insurance_due), 0)
+				FROM loan_schedule_installments WHERE loan_contract_id = ? AND deleted_at IS NULL`, *a.LoanContractID).Scan(&repayable)
+		}
+		if repayable <= 0 {
+			p, ok := products[a.LoanProductID]
+			if !ok {
+				var prod models.LoanProduct
+				if err := db.DB.First(&prod, a.LoanProductID).Error; err == nil {
+					p = &prod
+				}
+				products[a.LoanProductID] = p
+			}
+			if p != nil {
+				term := a.RequestedTermMonths
+				if a.ApprovedTermMonths != nil && *a.ApprovedTermMonths > 0 {
+					term = *a.ApprovedTermMonths
+				}
+				if term <= 0 {
+					term = productTermMonths(p)
+				}
+				repayable = mobile.projectedRepayable(p, a.MemberID, borrowed, term)
+			}
+		}
+		a.RepayableAmount = roundMoney(repayable)
+		if borrowed > 0 && repayable > 0 {
+			a.CostPercent = roundMoney((repayable - borrowed) / borrowed * 100)
+		}
+	}
+}
+
+// uniqueKeyOr returns key, or a generated unique key when it is empty: idempotency_key is a UNIQUE
+// column, so storing "" for every request without a key made the second such row fail.
+func uniqueKeyOr(key, prefix string, id uint64) string {
+	if strings.TrimSpace(key) != "" {
+		return key
+	}
+	return fmt.Sprintf("%s-%d-%d", prefix, id, time.Now().UnixNano())
+}

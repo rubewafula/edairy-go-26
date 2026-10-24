@@ -34,11 +34,24 @@ func (s *StoreStockService) CreateStock(req dtos.CreateStoreStockRequest) (*mode
 	return stock, nil
 }
 
-func (s *StoreStockService) GetStocks(page, limit int) ([]dtos.StoreStockResponse, int64, error) {
+// GetStocks lists store stock; storeID <= 0 returns stock for all stores.
+func (s *StoreStockService) GetStocks(page, limit, storeID int) ([]dtos.StoreStockResponse, int64, error) {
 	var results []dtos.StoreStockResponse
 	var total int64
-	db.DB.Model(&models.StoreStock{}).Count(&total)
+	countQuery := db.DB.Model(&models.StoreStock{})
+	if storeID > 0 {
+		countQuery = countQuery.Where("store_id = ?", storeID)
+	}
+	countQuery.Count(&total)
 	offset := (page - 1) * limit
+
+	where := "ss.deleted_at IS NULL"
+	args := []interface{}{}
+	if storeID > 0 {
+		where += " AND ss.store_id = ?"
+		args = append(args, storeID)
+	}
+	args = append(args, limit, offset)
 
 	query := `
 		SELECT 
@@ -46,11 +59,11 @@ func (s *StoreStockService) GetStocks(page, limit int) ([]dtos.StoreStockRespons
 		FROM store_stocks ss
 		LEFT JOIN store_items si ON ss.item_id = si.id
 		LEFT JOIN stores s ON ss.store_id = s.id
-		WHERE ss.deleted_at IS NULL
+		WHERE ` + where + `
 		ORDER BY ss.id DESC
 		LIMIT ? OFFSET ?
 	`
-	err := db.DB.Raw(query, limit, offset).Scan(&results).Error
+	err := db.DB.Raw(query, args...).Scan(&results).Error
 	return results, total, err
 }
 

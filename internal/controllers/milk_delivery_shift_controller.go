@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -42,8 +41,8 @@ func (c *MilkDeliveryShiftController) CreateShift(ctx *gin.Context) {
 }
 
 func (c *MilkDeliveryShiftController) GetShifts(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
-	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
+	page := queryIntParam(ctx, 1, "page", "Page")
+	limit := queryIntParam(ctx, 10, "limit", "Limit")
 
 	shifts, total, err := c.service.GetShifts(page, limit)
 	if err != nil {

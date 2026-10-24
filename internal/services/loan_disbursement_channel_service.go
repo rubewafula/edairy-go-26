@@ -574,7 +574,7 @@ func (s *LoanModuleService) finalizeSuccessfulDisbursement(
 		if idem == "" {
 			idem = req.Reference
 		}
-		feeMethod := normalizeFeeCollectionMethod(product.FeeCollectionMethod)
+		feeMethod := effectiveFeeCollectionMethod(product)
 		var result *PostFromRuleResult
 		var err error
 		if feeMethod == models.LoanFeeDeductFromProceeds && feesThisDisbursement > 0 {
@@ -605,14 +605,7 @@ func (s *LoanModuleService) finalizeSuccessfulDisbursement(
 	}
 
 	if req.CreateMilkDeduction && contract.MilkDeductionEnabled {
-		installment := req.InstallmentAmount
-		if installment <= 0 && contract.InstallmentAmount != nil {
-			installment = *contract.InstallmentAmount
-		}
-		if installment <= 0 {
-			installment = roundMoney(contract.ApprovedAmount / float64(contract.TermMonths))
-		}
-		rdID, err := s.ensureMilkDeduction(tx, contract, installment, userID)
+		rdID, err := s.ensureMilkDeduction(tx, contract, milkDeductionInstallment(tx, contract, req.InstallmentAmount), userID)
 		if err != nil {
 			return err
 		}
@@ -627,4 +620,19 @@ func (s *LoanModuleService) finalizeSuccessfulDisbursement(
 		}
 	}
 	return tx.Save(contract).Error
+}
+
+// milkDeductionInstallment is the per-payroll repayment for a contract's milk deduction:
+// the explicit amount, else the contract instalment, else the full amount owed spread over the term.
+// milkDeductionInstallment is the recurrent (per payroll) amount for a loan's milk deduction. By default
+// it is the whole amount owed (0 here; ensureMilkDeduction then uses the total), so the member's
+// deductions due in the current payroll cover the full loan. Only an amount given explicitly on the
+// request is used instead; the deduction can also be changed by hand later.
+func milkDeductionInstallment(tx *gorm.DB, contract *models.LoanContract, explicit float64) float64 {
+	_ = tx
+	_ = contract
+	if explicit > 0 {
+		return explicit
+	}
+	return 0
 }

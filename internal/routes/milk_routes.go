@@ -7,6 +7,7 @@ import (
 
 func registerMilkRoutes(api *gin.RouterGroup) {
 	produceDashboardController := controllers.NewProduceDashboardController()
+	milkCollectionOverviewController := controllers.NewMilkCollectionOverviewController()
 	milkDeliveryShiftController := controllers.NewMilkDeliveryShiftController()
 	coolerMilkCollectionController := controllers.NewCoolerMilkCollectionController()
 	milkRejectController := controllers.NewMilkRejectController()
@@ -21,6 +22,7 @@ func registerMilkRoutes(api *gin.RouterGroup) {
 	specialRateController := controllers.NewMilkSpecialRateController()
 
 	api.GET("/produce-dashboard", produceDashboardController.GetDashboard)
+	api.GET("/milk-collection-overview", milkCollectionOverviewController.GetOverview)
 
 	api.POST("/milk-delivery-shifts", milkDeliveryShiftController.CreateShift)
 	api.GET("/milk-delivery-shifts", milkDeliveryShiftController.GetShifts)

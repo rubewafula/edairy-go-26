@@ -9,6 +9,10 @@ func registerLoanModuleRoutes(api *gin.RouterGroup) {
 	h := controllers.NewLoanModuleController()
 	g := api.Group("/loan-module")
 
+	// Cashout settings (support phone shown on Processing cashouts)
+	g.GET("/cashout-settings", h.GetCashoutSettings)
+	g.PUT("/cashout-settings", h.UpdateCashoutSettings)
+
 	// Products
 	g.GET("/products", h.ListProducts)
 	g.POST("/products", h.CreateProduct)
@@ -20,6 +24,10 @@ func registerLoanModuleRoutes(api *gin.RouterGroup) {
 	g.POST("/applications", h.CreateApplication)
 	g.GET("/applications/:id", h.GetApplication)
 	g.POST("/applications/:id/submit", h.SubmitApplication)
+	g.POST("/applications/settle", h.SettleApplications)
+	g.GET("/applications/settlement-summary", h.SettlementSummary)
+	g.POST("/applications/settle-month", h.SettleMonth)
+	g.POST("/applications/:id/approval-otp", h.SendApprovalOTP)
 	g.POST("/applications/:id/approve", h.ApproveApplication)
 	g.POST("/applications/:id/reject", h.RejectApplication)
 
@@ -36,6 +44,8 @@ func registerLoanModuleRoutes(api *gin.RouterGroup) {
 	g.PUT("/disbursement-channels/:id/config", h.UpdateDisbursementChannelConfig)
 	g.POST("/contracts/:id/disburse", h.DisburseContract)
 	g.POST("/disbursements/:id/confirm", h.ConfirmDisbursement)
+	g.POST("/disbursements/retry-mpesa-failed", h.RetryAllMpesaFailed)
+	g.POST("/disbursements/:id/retry", h.RetryDisbursement)
 	g.GET("/disbursements/:id/provider-status", h.GetDisbursementProviderStatus)
 	g.GET("/contracts/:id/schedule", h.GetSchedule)
 	g.POST("/contracts/:id/repayments", h.RecordRepayment)
@@ -47,6 +57,16 @@ func registerLoanModuleRoutes(api *gin.RouterGroup) {
 	// Interest & penalties
 	g.POST("/interest/accrue", h.AccrueInterest)
 	g.POST("/penalties/run", h.RunPenalties)
+
+	// Mobile loan requests (member OTP flow)
+	mobile := controllers.NewMobileLoanController()
+	g.POST("/mobile/loan-requests", mobile.RequestLoan)
+	g.GET("/mobile/loan-requests", mobile.ListRequests)
+	g.GET("/mobile/transactions", mobile.ListTransactions)
+	g.GET("/mobile/quote", mobile.Quote)
+	g.GET("/mobile/loan-requests/:id", mobile.GetRequest)
+	g.POST("/mobile/loan-requests/:id/resend-otp", mobile.ResendOTP)
+	g.POST("/mobile/loan-requests/:id/verify-otp", mobile.VerifyOTP)
 
 	// Reports
 	g.GET("/reports/portfolio", h.PortfolioReport)

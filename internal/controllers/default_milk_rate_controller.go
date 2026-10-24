@@ -80,6 +80,11 @@ func (c *DefaultMilkRateController) UpdateRate(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Return the saved rate (incl. advance_rate) so the frontend shows what was stored.
+	if response, err := c.service.GetDefaultMilkRate(ctx.Param("id")); err == nil {
+		ctx.JSON(http.StatusOK, gin.H{"data": response, "Message": "Default milk rate updated successfully"})
+		return
+	}
 	ctx.JSON(http.StatusOK, gin.H{"Message": "Default milk rate updated successfully"})
 }
 

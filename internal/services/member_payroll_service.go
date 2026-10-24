@@ -93,6 +93,11 @@ func (s *MemberPayrollService) Create(req dtos.CreateMemberPayrollRequest, userI
 }
 
 func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr models.MemberPayDateRange, req dtos.CreateMemberPayrollRequest, userID uint64) {
+	// Per-litre cashout charges for the period go onto the members' loan deductions before they are read below.
+	if _, err := NewLoanModuleService().ApplyPerLitreCharges(pdr, userID); err != nil {
+		log.Printf("[MemberPayroll] per-litre charges for payroll %d: %v", payrollID, err)
+	}
+
 	type milkSum struct {
 		MemberID uint64
 		Kilos    float64
@@ -1230,6 +1235,19 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 		"posted_at":   &now,
 		"posted_by":   &userID,
 		"updated_at":  utils.Now(),
+	})
+
+	paidMembers := make([]uint64, 0, len(payslips))
+	for _, ps := range payslips {
+		paidMembers = append(paidMembers, ps.MemberID)
+	}
+	NewMemberCreditService().RecalculateAsync(paidMembers, CreditChange{
+		Action:     models.CreditActionPayrollPaid,
+		SourceType: "member_payroll",
+		SourceID:   payrollID,
+		Reference:  fmt.Sprintf("MEMBER-PAYROLL-%d", payrollID),
+		Narration:  fmt.Sprintf("Member payroll %d %s", payrollID, finalStatus),
+		UserID:     userID,
 	})
 
 	// Send UI notification

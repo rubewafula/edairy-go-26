@@ -176,6 +176,7 @@ func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memb
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,
 			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.credit_limit, m.member_balance, m.can_borrow,
 			m.created_at, m.updated_at
 		FROM member_registrations m
 		LEFT JOIN member_types mt ON m.member_type_id = mt.id
@@ -243,6 +244,7 @@ func (s *MemberService) GetMember(id string) (*dtos.MemberResponse, error) {
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,
 			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.credit_limit, m.member_balance, m.can_borrow,
 			m.created_at, m.updated_at
 		FROM member_registrations m
 		LEFT JOIN member_types mt ON m.member_type_id = mt.id
@@ -325,7 +327,14 @@ func (s *MemberService) UpdateMember(
 	member.LastName = req.LastName
 	member.OtherNames = req.OtherNames
 	member.RouteID = req.RouteID
-	member.DateOfBirth = utils.ParseDate(req.DOB)
+	// The app sends dates as 2006-01-02 or 2006-01-02T00:00:00Z; keep the stored date when none parses
+	// (writing a zero date fails: MySQL rejects '0000-00-00').
+	if t := parseMemberDate(req.DOB); !t.IsZero() {
+		member.DateOfBirth = t
+	}
+	if st := normalizeMemberStatusValue(req.Status); st != "" {
+		member.Status = st
+	}
 	member.IDNo = req.IDNo
 	member.Gender = req.Gender
 	member.BirthCity = req.BirthCity
@@ -333,8 +342,7 @@ func (s *MemberService) UpdateMember(
 	member.SecondaryPhone = utils.NormalizePhone(req.SecondaryPhone)
 	member.Email = req.Email
 	member.NumberOfCows = req.NumberOfCows
-	if req.IDDateOfIssue != "" {
-		t := utils.ParseDate(req.IDDateOfIssue)
+	if t := parseMemberDate(req.IDDateOfIssue); !t.IsZero() {
 		member.IdDateOfIssue = &t
 	} else {
 		member.IdDateOfIssue = nil
@@ -344,7 +352,7 @@ func (s *MemberService) UpdateMember(
 	member.Title = req.Title
 
 	return db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(&member).Error; err != nil {
+		if err := tx.Omit(memberZeroDateColumns(&member)...).Save(&member).Error; err != nil {
 			return err
 		}
 
@@ -393,7 +401,7 @@ func (s *MemberService) UpdateMember(
 			member.NextOfKinFullName = ""
 			member.NextOfKinPhone = ""
 		}
-		if err := tx.Save(&member).Error; err != nil {
+		if err := tx.Omit(memberZeroDateColumns(&member)...).Save(&member).Error; err != nil {
 			return err
 		}
 
@@ -834,6 +842,7 @@ func (s *MemberService) processMemberExportInBackground(userID uint64, memberNo,
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,
 			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.credit_limit, m.member_balance, m.can_borrow,
 			m.created_at, m.updated_at,
 			b.bank_name, bb.branch_name AS bank_branch_name, mba.account_number, mba.account_name
 		FROM member_registrations m
