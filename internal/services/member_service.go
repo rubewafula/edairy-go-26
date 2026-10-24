@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -42,11 +43,16 @@ func (s *MemberService) CreateMember(
 	req dtos.CreateMemberRequest,
 	userID uint64) (*models.Member, error) {
 
-	// Validate ID number uniqueness before processing files or starting transaction
-	var count int64
-	db.DB.Model(&models.Member{}).Where("id_no = ?", req.IDNo).Count(&count)
-	if count > 0 {
-		return nil, fmt.Errorf("a member with ID number %s is already registered", req.IDNo)
+	// Validate ID number uniqueness before processing files or starting transaction. Organisation
+	// member types (school, company, …) have no ID number: it is stored as NULL, not '', so the unique
+	// index on id_no allows any number of them.
+	req.IDNo = strings.TrimSpace(req.IDNo)
+	if req.IDNo != "" {
+		var count int64
+		db.DB.Model(&models.Member{}).Where("id_no = ?", req.IDNo).Count(&count)
+		if count > 0 {
+			return nil, serviceErr(http.StatusConflict, "A member with ID number %s is already registered.", req.IDNo)
+		}
 	}
 
 	memberNo := req.MemberNo
@@ -101,7 +107,11 @@ func (s *MemberService) CreateMember(
 	}
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error { // Start of transaction
-		if err := tx.Create(newMember).Error; err != nil {
+		create := tx
+		if newMember.IDNo == "" {
+			create = tx.Omit("id_no") // NULL, not ''
+		}
+		if err := create.Create(newMember).Error; err != nil {
 			return err // Return error to transaction, not nil, err
 		}
 
@@ -335,7 +345,7 @@ func (s *MemberService) UpdateMember(
 	if st := normalizeMemberStatusValue(req.Status); st != "" {
 		member.Status = st
 	}
-	member.IDNo = req.IDNo
+	member.IDNo = strings.TrimSpace(req.IDNo)
 	member.Gender = req.Gender
 	member.BirthCity = req.BirthCity
 	member.PrimaryPhone = utils.NormalizePhone(req.PrimaryPhone)
@@ -352,8 +362,13 @@ func (s *MemberService) UpdateMember(
 	member.Title = req.Title
 
 	return db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Omit(memberZeroDateColumns(&member)...).Save(&member).Error; err != nil {
+		if err := tx.Omit(memberSaveOmit(&member)...).Save(&member).Error; err != nil {
 			return err
+		}
+		if member.IDNo == "" { // no ID number (organisation members): NULL, never ''
+			if err := tx.Exec(`UPDATE member_registrations SET id_no = NULL WHERE id = ?`, member.ID).Error; err != nil {
+				return err
+			}
 		}
 
 		// Handle NextOfKins: Delete existing and re-create
@@ -401,7 +416,7 @@ func (s *MemberService) UpdateMember(
 			member.NextOfKinFullName = ""
 			member.NextOfKinPhone = ""
 		}
-		if err := tx.Omit(memberZeroDateColumns(&member)...).Save(&member).Error; err != nil {
+		if err := tx.Omit(memberSaveOmit(&member)...).Save(&member).Error; err != nil {
 			return err
 		}
 
@@ -1198,4 +1213,47 @@ func (s *MemberService) generateAGMReportPDF(results []memberExportQueryResult) 
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)
 	return buf.Bytes(), err
+}
+
+// NormalizeEmptyMemberIDNumbers makes member_registrations.id_no nullable (organisation members —
+// school, company, … — have no ID number) and stores blank ID numbers as NULL, so the unique index on
+// id_no allows any number of members without one. The column keeps its type, charset and collation.
+func NormalizeEmptyMemberIDNumbers() {
+	var col struct {
+		IsNullable    string  `gorm:"column:IS_NULLABLE"`
+		ColumnType    string  `gorm:"column:COLUMN_TYPE"`
+		CharacterSet  *string `gorm:"column:CHARACTER_SET_NAME"`
+		CollationName *string `gorm:"column:COLLATION_NAME"`
+	}
+	db.DB.Raw(`SELECT IS_NULLABLE, COLUMN_TYPE, CHARACTER_SET_NAME, COLLATION_NAME FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'member_registrations' AND COLUMN_NAME = 'id_no'`).Scan(&col)
+	if strings.EqualFold(col.IsNullable, "NO") && col.ColumnType != "" {
+		def := col.ColumnType
+		if col.CharacterSet != nil && *col.CharacterSet != "" {
+			def += " CHARACTER SET " + *col.CharacterSet
+		}
+		if col.CollationName != nil && *col.CollationName != "" {
+			def += " COLLATE " + *col.CollationName
+		}
+		if err := db.DB.Exec("ALTER TABLE member_registrations MODIFY COLUMN id_no " + def + " NULL DEFAULT NULL").Error; err != nil {
+			log.Printf("[Members] could not make id_no nullable: %v", err)
+			return
+		}
+		log.Printf("[Members] member_registrations.id_no is now nullable (%s)", col.ColumnType)
+	}
+	res := db.DB.Exec(`UPDATE member_registrations SET id_no = NULL WHERE id_no IS NOT NULL AND TRIM(id_no) = ''`)
+	if res.Error != nil {
+		log.Printf("[Members] could not clear blank ID numbers: %v", res.Error)
+	} else if res.RowsAffected > 0 {
+		log.Printf("[Members] cleared %d blank ID numbers (now NULL)", res.RowsAffected)
+	}
+}
+
+// memberSaveOmit is memberZeroDateColumns plus id_no when the member has no ID number (kept NULL).
+func memberSaveOmit(member *models.Member) []string {
+	omit := memberZeroDateColumns(member)
+	if strings.TrimSpace(member.IDNo) == "" {
+		omit = append(omit, "id_no")
+	}
+	return omit
 }

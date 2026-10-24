@@ -88,7 +88,25 @@ func (c *MemberController) CreateMember(ctx *gin.Context) {
 	member, err := c.service.CreateMember(ctx.Request.Context(), req, userID)
 	if err != nil {
 		log.Printf("[MemberController.CreateMember] Service Error: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create member"})
+		var se *services.ServiceError
+		if errors.As(err, &se) {
+			ctx.JSON(se.Status, gin.H{"error": se.Message})
+			return
+		}
+		msg := "Failed to create member"
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			switch {
+			case strings.Contains(err.Error(), "member_no"):
+				msg = "A member with this member number is already registered."
+			case strings.Contains(err.Error(), "id_no"):
+				msg = "A member with this ID number is already registered."
+			default:
+				msg = "A member with these details is already registered."
+			}
+			ctx.JSON(http.StatusConflict, gin.H{"error": msg})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 		return
 	}
 	if err := services.SetMemberPin(member.ID, req.Pin); err != nil {

@@ -42,6 +42,7 @@ func main() {
 	go services.FixLoanRecurrentAmounts()
 	services.StartDisbursementWorker()
 	go services.EnsureMilkOverviewPermission()
+	services.NormalizeEmptyMemberIDNumbers() // id_no nullable before any member is created
 	go services.EnsureDefaultMemberTypes()
 	go services.SeedDevCustomers()
 	go services.SeedDevMpesaTestMembers()

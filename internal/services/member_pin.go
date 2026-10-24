@@ -166,10 +166,12 @@ func normalizeIDNo(v string) string {
 	return strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(v), " ", ""))
 }
 
-// findMemberByPhoneAndID is used for PIN setup/reset: phone and ID number must belong to one member.
+// findMemberByPhoneAndID is used for PIN setup/reset: phone and ID number (or member number) must
+// belong to one member.
 func findMemberByPhoneAndID(phone, idNo string) *memberLoginCandidate {
 	for _, m := range membersByPhone(phone) {
-		if normalizeIDNo(m.IDNo) == idNo && idNo != "" {
+		// Organisation members (school, company, …) have no ID number: their member number is accepted.
+		if idNo != "" && (normalizeIDNo(m.IDNo) == idNo || normalizeIDNo(m.MemberNo) == idNo) {
 			c := m
 			return &c
 		}
