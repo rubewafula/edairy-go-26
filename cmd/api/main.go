@@ -46,6 +46,7 @@ func main() {
 	go services.EnsureDefaultMemberTypes()
 	go services.SeedDevCustomers()
 	go services.SeedDevMpesaTestMembers()
+	go services.EnsureOnlyActiveMembersBorrow()
 	go services.EnsureBankBranchViewPermission()
 	go services.EnsureApprovalOTPPermission()
 	go services.EnsureSettlementPermission()

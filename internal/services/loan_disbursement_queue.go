@@ -250,7 +250,7 @@ func revalidateBeforeDisbursement(contract *models.LoanContract) string {
 		return "member not found"
 	}
 	if !memberCanBorrow(member.Status) {
-		return fmt.Sprintf("Member account is %s and cannot borrow.", strings.ToLower(strings.TrimSpace(member.Status)))
+		return OnlyActiveMembersMessage
 	}
 	if contract.LoanApplicationID != nil {
 		var app models.LoanApplication

@@ -361,7 +361,7 @@ func (s *MemberService) UpdateMember(
 	member.MaritalStatus = req.MaritalStatus
 	member.Title = req.Title
 
-	return db.DB.Transaction(func(tx *gorm.DB) error {
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit(memberSaveOmit(&member)...).Save(&member).Error; err != nil {
 			return err
 		}
@@ -423,6 +423,11 @@ func (s *MemberService) UpdateMember(
 		// Handle Member Bank Account (assuming one primary bank account per member for simplicity)
 		return s.handleMemberBankAccount(tx, member.ID, req.BankID, req.BankBranch, req.AccountNo, req.AccountName, userID)
 	})
+	if err == nil {
+		// Status may have changed: only active members can borrow.
+		go refreshMemberBorrowStatus(member.ID)
+	}
+	return err
 }
 
 func (s *MemberService) DeleteMember(id string) error {
@@ -441,7 +446,11 @@ func (s *MemberService) SuspendMember(id string) error {
 	if err := db.DB.First(&member, id).Error; err != nil {
 		return err
 	}
-	return db.DB.Model(&member).Update("status", "SUSPENDED").Error
+	if err := db.DB.Model(&member).Update("status", "SUSPENDED").Error; err != nil {
+		return err
+	}
+	go refreshMemberBorrowStatus(member.ID)
+	return nil
 }
 
 type routeImportCache struct {

@@ -257,7 +257,7 @@ func (s *MobileLoanService) RequestLoan(req dtos.MobileLoanRequest, userID uint6
 		return nil, serviceErr(http.StatusNotFound, "member not found")
 	}
 	if !memberCanBorrow(member.Status) {
-		return nil, serviceErr(http.StatusForbidden, "member is not allowed to borrow (status %s)", member.Status)
+		return nil, serviceErr(http.StatusForbidden, "%s", OnlyActiveMembersMessage)
 	}
 	phone := utils.NormalizePhone(member.PrimaryPhone)
 	if phone == "" {

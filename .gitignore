@@ -1,0 +1,13 @@
+# Local secrets and environment backups (never commit)
+.env.bak*
+*.env.local
+
+# Build output, caches, runtime data
+bin/
+.gocache/
+logs/
+uploads/
+*.tgz
+
+# Local backups
+_backup_*/

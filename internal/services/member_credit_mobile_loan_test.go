@@ -150,12 +150,13 @@ func TestProductionPayoutBlockedInDevelopment(t *testing.T) {
 }
 
 func TestMemberCanBorrow(t *testing.T) {
-	for _, status := range []string{"pending", "ACTIVE", ""} {
+	for _, status := range []string{"ACTIVE", "active", " Active "} {
 		if !memberCanBorrow(status) {
 			t.Fatalf("status %q should be allowed to borrow", status)
 		}
 	}
-	for _, status := range []string{"SUSPENDED", "suspended", "Exited"} {
+	// Only active members may borrow.
+	for _, status := range []string{"pending", "", "INACTIVE", "SUSPENDED", "suspended", "Exited", "closed"} {
 		if memberCanBorrow(status) {
 			t.Fatalf("status %q must not be allowed to borrow", status)
 		}

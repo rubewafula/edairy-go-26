@@ -310,6 +310,9 @@ func (s *LoanModuleService) CreateApplication(req dtos.CreateLoanApplicationRequ
 	if !product.IsActive {
 		return nil, fmt.Errorf("loan product is inactive")
 	}
+	if err := requireActiveMember(req.MemberID); err != nil {
+		return nil, err
+	}
 	// The default member loan is applied for only from the mobile app (OTP, credit checks, M-Pesa payout).
 	if product.IsDefaultMemberLoan {
 		return nil, fmt.Errorf("%s can only be applied for from the mobile app; ask the member to apply on their phone", product.ProductName)
@@ -388,6 +391,9 @@ func (s *LoanModuleService) ApproveApplication(id uint64, req dtos.ApproveLoanAp
 	}
 	if app.Status != models.LoanAppSubmitted && app.Status != models.LoanAppUnderReview {
 		return nil, fmt.Errorf("application cannot be approved in status %s", app.Status)
+	}
+	if err := requireActiveMember(app.MemberID); err != nil {
+		return nil, err
 	}
 
 	approvedAmt := req.ApprovedAmount

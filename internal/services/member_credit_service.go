@@ -708,7 +708,7 @@ func (s *MemberCreditService) evaluateBorrowStatus(tx *gorm.DB, memberID uint64,
 
 	if !memberCanBorrow(memberStatus) {
 		result.Code = strPtr(BorrowBlockMemberStatus)
-		result.Reason = strPtr(fmt.Sprintf("Member account is %s and cannot borrow.", strings.ToLower(strings.TrimSpace(memberStatus))))
+		result.Reason = strPtr(OnlyActiveMembersMessage)
 		return result
 	}
 
@@ -967,12 +967,11 @@ func (s *MemberCreditService) ListLogs(memberID uint64, page, limit int) ([]mode
 	return logs, total, err
 }
 
-// memberCanBorrow blocks members whose registration has been suspended or ended.
+// OnlyActiveMembersMessage is the reason given whenever a member who is not ACTIVE tries to borrow.
+const OnlyActiveMembersMessage = "Only active members are allowed to borrow."
+
+// memberCanBorrow: only ACTIVE members may borrow or receive loans (pending, inactive, suspended,
+// closed... may not).
 func memberCanBorrow(status string) bool {
-	switch strings.ToUpper(strings.TrimSpace(status)) {
-	case "SUSPENDED", "INACTIVE", "EXITED", "DECEASED", "DELETED", "CLOSED", "REJECTED":
-		return false
-	default:
-		return true
-	}
+	return strings.EqualFold(strings.TrimSpace(status), "ACTIVE")
 }
