@@ -6,3 +6,15 @@ pkg
 uploads
 storage
 arithi-erp-api
+.env.bak*
+*.env.local
+
+# Build output, caches, runtime data
+bin/
+.gocache/
+logs/
+uploads/
+*.tgz
+
+# Local backups
+_backup_*/

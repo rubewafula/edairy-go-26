@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/rubewafula/edairy-go-26/internal/db"
@@ -29,7 +30,17 @@ func (s *MilkJournalEntryService) CreateEntry(req dtos.CreateMilkJournalEntryReq
 	if err := db.DB.Create(entry).Error; err != nil {
 		return nil, err
 	}
+	recalculateCreditForEntry(entry.ID, entry.MemberID)
 	return entry, nil
+}
+
+func recalculateCreditForEntry(entryID uint64, memberIDs ...uint64) {
+	NewMemberCreditService().RecalculateAsync(memberIDs, CreditChange{
+		Action:     models.CreditActionMilkEntryChanged,
+		SourceType: "milk_journal_entry",
+		SourceID:   entryID,
+		Reference:  fmt.Sprintf("MILK-ENTRY-%d", entryID),
+	})
 }
 
 func (s *MilkJournalEntryService) GetEntries(page, limit int, filters dtos.MilkJournalListFilters) ([]dtos.MilkJournalEntryResponse, int64, error) {
@@ -113,6 +124,7 @@ func (s *MilkJournalEntryService) UpdateEntry(id string, req dtos.UpdateMilkJour
 	if err := db.DB.First(&entry, id).Error; err != nil {
 		return err
 	}
+	previousMemberID := entry.MemberID
 
 	entry.MemberID = req.MemberID
 	entry.MilkJournalID = req.MilkJournalID
@@ -122,11 +134,23 @@ func (s *MilkJournalEntryService) UpdateEntry(id string, req dtos.UpdateMilkJour
 	entry.RouteCenterID = req.RouteCenterID
 	entry.CanID = req.CanID
 
-	return db.DB.Save(&entry).Error
+	if err := db.DB.Save(&entry).Error; err != nil {
+		return err
+	}
+	recalculateCreditForEntry(entry.ID, previousMemberID, entry.MemberID)
+	return nil
 }
 
 func (s *MilkJournalEntryService) DeleteEntry(id string) error {
-	return db.DB.Delete(&models.MilkJournalEntry{}, id).Error
+	var entry models.MilkJournalEntry
+	if err := db.DB.First(&entry, id).Error; err != nil {
+		return err
+	}
+	if err := db.DB.Delete(&models.MilkJournalEntry{}, entry.ID).Error; err != nil {
+		return err
+	}
+	recalculateCreditForEntry(entry.ID, entry.MemberID)
+	return nil
 }
 
 func (s *MilkJournalEntryService) GetStrayEntries(page, limit int) ([]dtos.StrayMilkCollectionResponse, int64, error) {

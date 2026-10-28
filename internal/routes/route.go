@@ -26,12 +26,16 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
 	corsAllowAll := os.Getenv("CORS_ALLOW_ALL") == "true"
+	isDevelopment := os.Getenv("ENV") == "development"
 
 	r.Use(cors.New(cors.Config{
 		// DO NOT use "*" with AllowCredentials: true.
 		// This function dynamically mirrors the incoming origin safely.
 		AllowOriginFunc: func(origin string) bool {
 			if corsAllowAll {
+				return true
+			}
+			if isDevelopment && ws.IsLocalOrigin(origin) {
 				return true
 			}
 			allowed := map[string]bool{
@@ -53,6 +57,7 @@ func SetupRouter() *gin.Engine {
 				"https://api.s-butsotso.edairy.africa":   true,
 				"https://edairy.africa":                  true,
 				"http://localhost:5173":                  true,
+				"http://127.0.0.1:5173":                  true,
 			}
 			return allowed[origin]
 		},
@@ -68,6 +73,7 @@ func SetupRouter() *gin.Engine {
 	authMiddleware := middleware.AuthMiddleware([]byte(jwtSecret))
 
 	registerPublicRoutes(r)
+	registerGlobalDataRoute(r)
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
@@ -75,6 +81,7 @@ func SetupRouter() *gin.Engine {
 
 	api := r.Group("/api")
 	api.Use(authMiddleware)
+	api.Use(middleware.MemberSelfServiceScope())
 	api.Use(middleware.RequireAutoPermission())
 	{
 		registerAuthenticatedRoutes(api)
@@ -88,6 +95,9 @@ func registerPublicRoutes(r *gin.Engine) {
 	r.POST("/api/signup", authController.Signup)
 	r.GET("/api/verify", authController.Verify)
 	r.POST("/api/login", authController.Login)
+	r.POST("/api/member-login", authController.MemberLogin)
+	r.POST("/api/member-pin/otp", authController.MemberPinOTP)
+	r.POST("/api/member-pin/reset", authController.MemberPinReset)
 	r.POST("/api/forgot-password", authController.ForgotPassword)
 	r.POST("/api/reset-password", authController.ResetPassword)
 	r.POST("/api/withdrawal-callback", loanModuleController.WithdrawalCallback)
@@ -111,6 +121,7 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	registerTransporterRoutes(api)
 	registerLoanRoutes(api)
 	registerLoanModuleRoutes(api)
+	registerMemberCreditRoutes(api)
 	registerShareRoutes(api)
 	registerOrgRoutes(api)
 	registerAssetRoutes(api)
@@ -127,6 +138,10 @@ func registerAuthenticatedRoutes(api *gin.RouterGroup) {
 	authController := controllers.NewAuthController()
 	adminDashboardController := controllers.NewAdminDashboardController()
 	api.POST("/change-password", authController.ChangePassword)
+	api.GET("/member-me", authController.MemberMe)
+	api.POST("/member-pin/change", authController.MemberPinChange)
+	api.POST("/members/:id/reset-pin", authController.ResetMemberPin)
+	api.GET("/members/:id/pin-status", authController.MemberPinStatus)
 	api.GET("/admin-dashboard", adminDashboardController.GetDashboard)
 
 }

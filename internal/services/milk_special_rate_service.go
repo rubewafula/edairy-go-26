@@ -36,6 +36,7 @@ func (s *MilkSpecialRateService) Create(req dtos.CreateMilkSpecialRateRequest, u
 	if err := db.DB.Create(rate).Error; err != nil {
 		return nil, err
 	}
+	recalcCreditAfterMilkRateChange(fmt.Sprintf("Special milk rate added: KES %.2f", rate.Rate))
 	return rate, nil
 }
 
@@ -132,9 +133,17 @@ func (s *MilkSpecialRateService) Update(id string, req dtos.UpdateMilkSpecialRat
 		updates["confirmed"] = req.Confirmed
 	}
 
-	return db.DB.Model(&rate).Updates(updates).Error
+	if err := db.DB.Model(&rate).Updates(updates).Error; err != nil {
+		return err
+	}
+	recalcCreditAfterMilkRateChange(fmt.Sprintf("Special milk rate changed: KES %.2f", req.Rate))
+	return nil
 }
 
 func (s *MilkSpecialRateService) Delete(id string) error {
-	return db.DB.Delete(&models.MilkSpecialRate{}, id).Error
+	if err := db.DB.Delete(&models.MilkSpecialRate{}, id).Error; err != nil {
+		return err
+	}
+	recalcCreditAfterMilkRateChange("Special milk rate removed")
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -42,11 +43,16 @@ func (s *MemberService) CreateMember(
 	req dtos.CreateMemberRequest,
 	userID uint64) (*models.Member, error) {
 
-	// Validate ID number uniqueness before processing files or starting transaction
-	var count int64
-	db.DB.Model(&models.Member{}).Where("id_no = ?", req.IDNo).Count(&count)
-	if count > 0 {
-		return nil, fmt.Errorf("a member with ID number %s is already registered", req.IDNo)
+	// Validate ID number uniqueness before processing files or starting transaction. Organisation
+	// member types (school, company, …) have no ID number: it is stored as NULL, not '', so the unique
+	// index on id_no allows any number of them.
+	req.IDNo = strings.TrimSpace(req.IDNo)
+	if req.IDNo != "" {
+		var count int64
+		db.DB.Model(&models.Member{}).Where("id_no = ?", req.IDNo).Count(&count)
+		if count > 0 {
+			return nil, serviceErr(http.StatusConflict, "A member with ID number %s is already registered.", req.IDNo)
+		}
 	}
 
 	memberNo := req.MemberNo
@@ -101,7 +107,11 @@ func (s *MemberService) CreateMember(
 	}
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error { // Start of transaction
-		if err := tx.Create(newMember).Error; err != nil {
+		create := tx
+		if newMember.IDNo == "" {
+			create = tx.Omit("id_no") // NULL, not ''
+		}
+		if err := create.Create(newMember).Error; err != nil {
 			return err // Return error to transaction, not nil, err
 		}
 
@@ -176,6 +186,7 @@ func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memb
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,
 			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.credit_limit, m.member_balance, m.can_borrow,
 			m.created_at, m.updated_at
 		FROM member_registrations m
 		LEFT JOIN member_types mt ON m.member_type_id = mt.id
@@ -243,6 +254,7 @@ func (s *MemberService) GetMember(id string) (*dtos.MemberResponse, error) {
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,
 			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.credit_limit, m.member_balance, m.can_borrow,
 			m.created_at, m.updated_at
 		FROM member_registrations m
 		LEFT JOIN member_types mt ON m.member_type_id = mt.id
@@ -325,16 +337,22 @@ func (s *MemberService) UpdateMember(
 	member.LastName = req.LastName
 	member.OtherNames = req.OtherNames
 	member.RouteID = req.RouteID
-	member.DateOfBirth = utils.ParseDate(req.DOB)
-	member.IDNo = req.IDNo
+	// The app sends dates as 2006-01-02 or 2006-01-02T00:00:00Z; keep the stored date when none parses
+	// (writing a zero date fails: MySQL rejects '0000-00-00').
+	if t := parseMemberDate(req.DOB); !t.IsZero() {
+		member.DateOfBirth = t
+	}
+	if st := normalizeMemberStatusValue(req.Status); st != "" {
+		member.Status = st
+	}
+	member.IDNo = strings.TrimSpace(req.IDNo)
 	member.Gender = req.Gender
 	member.BirthCity = req.BirthCity
 	member.PrimaryPhone = utils.NormalizePhone(req.PrimaryPhone)
 	member.SecondaryPhone = utils.NormalizePhone(req.SecondaryPhone)
 	member.Email = req.Email
 	member.NumberOfCows = req.NumberOfCows
-	if req.IDDateOfIssue != "" {
-		t := utils.ParseDate(req.IDDateOfIssue)
+	if t := parseMemberDate(req.IDDateOfIssue); !t.IsZero() {
 		member.IdDateOfIssue = &t
 	} else {
 		member.IdDateOfIssue = nil
@@ -343,9 +361,14 @@ func (s *MemberService) UpdateMember(
 	member.MaritalStatus = req.MaritalStatus
 	member.Title = req.Title
 
-	return db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(&member).Error; err != nil {
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Omit(memberSaveOmit(&member)...).Save(&member).Error; err != nil {
 			return err
+		}
+		if member.IDNo == "" { // no ID number (organisation members): NULL, never ''
+			if err := tx.Exec(`UPDATE member_registrations SET id_no = NULL WHERE id = ?`, member.ID).Error; err != nil {
+				return err
+			}
 		}
 
 		// Handle NextOfKins: Delete existing and re-create
@@ -393,13 +416,18 @@ func (s *MemberService) UpdateMember(
 			member.NextOfKinFullName = ""
 			member.NextOfKinPhone = ""
 		}
-		if err := tx.Save(&member).Error; err != nil {
+		if err := tx.Omit(memberSaveOmit(&member)...).Save(&member).Error; err != nil {
 			return err
 		}
 
 		// Handle Member Bank Account (assuming one primary bank account per member for simplicity)
 		return s.handleMemberBankAccount(tx, member.ID, req.BankID, req.BankBranch, req.AccountNo, req.AccountName, userID)
 	})
+	if err == nil {
+		// Status may have changed: only active members can borrow.
+		go refreshMemberBorrowStatus(member.ID)
+	}
+	return err
 }
 
 func (s *MemberService) DeleteMember(id string) error {
@@ -418,7 +446,11 @@ func (s *MemberService) SuspendMember(id string) error {
 	if err := db.DB.First(&member, id).Error; err != nil {
 		return err
 	}
-	return db.DB.Model(&member).Update("status", "SUSPENDED").Error
+	if err := db.DB.Model(&member).Update("status", "SUSPENDED").Error; err != nil {
+		return err
+	}
+	go refreshMemberBorrowStatus(member.ID)
+	return nil
 }
 
 type routeImportCache struct {
@@ -834,6 +866,7 @@ func (s *MemberService) processMemberExportInBackground(userID uint64, memberNo,
 			m.id_front_photo, m.id_back_photo, m.passport_photo, m.id_date_of_issue,
 			m.tax_number, m.marital_status, m.title,
 			m.next_of_kin_full_name, m.next_of_kin_phone, m.status, m.date_registered,
+			m.credit_limit, m.member_balance, m.can_borrow,
 			m.created_at, m.updated_at,
 			b.bank_name, bb.branch_name AS bank_branch_name, mba.account_number, mba.account_name
 		FROM member_registrations m
@@ -1189,4 +1222,47 @@ func (s *MemberService) generateAGMReportPDF(results []memberExportQueryResult) 
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)
 	return buf.Bytes(), err
+}
+
+// NormalizeEmptyMemberIDNumbers makes member_registrations.id_no nullable (organisation members —
+// school, company, … — have no ID number) and stores blank ID numbers as NULL, so the unique index on
+// id_no allows any number of members without one. The column keeps its type, charset and collation.
+func NormalizeEmptyMemberIDNumbers() {
+	var col struct {
+		IsNullable    string  `gorm:"column:IS_NULLABLE"`
+		ColumnType    string  `gorm:"column:COLUMN_TYPE"`
+		CharacterSet  *string `gorm:"column:CHARACTER_SET_NAME"`
+		CollationName *string `gorm:"column:COLLATION_NAME"`
+	}
+	db.DB.Raw(`SELECT IS_NULLABLE, COLUMN_TYPE, CHARACTER_SET_NAME, COLLATION_NAME FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'member_registrations' AND COLUMN_NAME = 'id_no'`).Scan(&col)
+	if strings.EqualFold(col.IsNullable, "NO") && col.ColumnType != "" {
+		def := col.ColumnType
+		if col.CharacterSet != nil && *col.CharacterSet != "" {
+			def += " CHARACTER SET " + *col.CharacterSet
+		}
+		if col.CollationName != nil && *col.CollationName != "" {
+			def += " COLLATE " + *col.CollationName
+		}
+		if err := db.DB.Exec("ALTER TABLE member_registrations MODIFY COLUMN id_no " + def + " NULL DEFAULT NULL").Error; err != nil {
+			log.Printf("[Members] could not make id_no nullable: %v", err)
+			return
+		}
+		log.Printf("[Members] member_registrations.id_no is now nullable (%s)", col.ColumnType)
+	}
+	res := db.DB.Exec(`UPDATE member_registrations SET id_no = NULL WHERE id_no IS NOT NULL AND TRIM(id_no) = ''`)
+	if res.Error != nil {
+		log.Printf("[Members] could not clear blank ID numbers: %v", res.Error)
+	} else if res.RowsAffected > 0 {
+		log.Printf("[Members] cleared %d blank ID numbers (now NULL)", res.RowsAffected)
+	}
+}
+
+// memberSaveOmit is memberZeroDateColumns plus id_no when the member has no ID number (kept NULL).
+func memberSaveOmit(member *models.Member) []string {
+	omit := memberZeroDateColumns(member)
+	if strings.TrimSpace(member.IDNo) == "" {
+		omit = append(omit, "id_no")
+	}
+	return omit
 }

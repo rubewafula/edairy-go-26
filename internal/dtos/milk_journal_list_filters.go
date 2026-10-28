@@ -8,6 +8,9 @@ type MilkJournalListFilters struct {
 	RouteID  string
 	ShiftID  string
 	MemberNo string
+	// Entry-level filters (milk-journal-entries only).
+	MemberID string
+	Status   string
 }
 
 func ParseMilkJournalListFilters(ctx *gin.Context) MilkJournalListFilters {
@@ -17,5 +20,7 @@ func ParseMilkJournalListFilters(ctx *gin.Context) MilkJournalListFilters {
 		RouteID:  ctx.Query("route_id"),
 		ShiftID:  ctx.Query("milk_delivery_shift_id"),
 		MemberNo: ctx.Query("member_no"),
+		MemberID: ctx.Query("member_id"),
+		Status:   ctx.Query("status"),
 	}
 }

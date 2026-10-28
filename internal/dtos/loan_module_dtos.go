@@ -1,6 +1,10 @@
 package dtos
 
-import "time"
+import (
+	"time"
+
+	"github.com/rubewafula/edairy-go-26/internal/models"
+)
 
 // --- Loan Products ---
 
@@ -23,6 +27,16 @@ type CreateLoanProductRequest struct {
 	AllocationPriority    []string `json:"allocation_priority"`
 	RecoveryPriority      int      `json:"recovery_priority"`
 	IsActive              *bool    `json:"is_active"`
+	IsDefaultMemberLoan   *bool    `json:"is_default_member_loan"`
+	// ChargePerLitre: KES per litre delivered in a pay period with a cashout (0 = none).
+	ChargePerLitre *float64 `json:"charge_per_litre"`
+	// ProcessingFeeAmount: fixed processing fee per loan (KES). Setting it clears processing_fee_rate.
+	ProcessingFeeAmount *float64 `json:"processing_fee_amount"`
+	// DBU allocation quota (KES). nil = default (create) / unchanged (update).
+	DBUMinAmount *float64 `json:"dbu_min_amount"`
+	DBUMaxAmount *float64 `json:"dbu_max_amount"`
+	// ProcessingFeeTiers: processing fee by amount band (non-overlapping). nil = unchanged.
+	ProcessingFeeTiers *[]models.ProcessingFeeTier `json:"processing_fee_tiers"`
 }
 
 type UpdateLoanProductRequest struct {
@@ -43,6 +57,16 @@ type UpdateLoanProductRequest struct {
 	AllocationPriority    []string `json:"allocation_priority"`
 	RecoveryPriority      *int     `json:"recovery_priority"`
 	IsActive              *bool    `json:"is_active"`
+	IsDefaultMemberLoan   *bool    `json:"is_default_member_loan"`
+	// ChargePerLitre: KES per litre delivered in a pay period with a cashout (0 = none).
+	ChargePerLitre *float64 `json:"charge_per_litre"`
+	// ProcessingFeeAmount: fixed processing fee per loan (KES). Setting it clears processing_fee_rate.
+	ProcessingFeeAmount *float64 `json:"processing_fee_amount"`
+	// DBU allocation quota (KES). nil = default (create) / unchanged (update).
+	DBUMinAmount *float64 `json:"dbu_min_amount"`
+	DBUMaxAmount *float64 `json:"dbu_max_amount"`
+	// ProcessingFeeTiers: processing fee by amount band (non-overlapping). nil = unchanged.
+	ProcessingFeeTiers *[]models.ProcessingFeeTier `json:"processing_fee_tiers"`
 }
 
 // --- Disbursement Channels ---
@@ -118,6 +142,8 @@ type ApproveLoanApplicationRequest struct {
 	Comments           string  `json:"comments"`
 	Conditions         string  `json:"conditions"`
 	FinalApproval      bool    `json:"final_approval"`
+	// OTP is the approval code sent to the member's phone (POST /applications/:id/approval-otp).
+	OTP string `json:"otp"`
 }
 
 type RejectLoanApplicationRequest struct {
@@ -149,6 +175,9 @@ type DisburseLoanRequest struct {
 	CreateMilkDeduction bool                   `json:"create_milk_deduction"`
 	InstallmentAmount   float64                `json:"installment_amount"`
 	Notes               string                 `json:"notes"`
+	// QueueOnly records the disbursement as PENDING for the disbursement worker instead of calling
+	// the provider in this request. Not settable from JSON.
+	QueueOnly bool `json:"-"`
 }
 
 type ConfirmLoanDisbursementRequest struct {
@@ -160,6 +189,9 @@ type ConfirmLoanDisbursementRequest struct {
 	CreateMilkDeduction bool `json:"create_milk_deduction"`
 	OTP               string `json:"otp"`
 	ScaIntentID       string `json:"sca_intent_id"`
+	// Release, with success=false, gives up on the payout and releases the loan (application cancelled,
+	// credit restored). Without it an M-Pesa failure is only marked MPESA_FAILED.
+	Release bool `json:"release"`
 }
 
 type RecordLoanRepaymentRequest struct {
@@ -199,6 +231,14 @@ type SettleLoanRequest struct {
 	SettlementDate string `json:"settlement_date"`
 	QuoteOnly      bool   `json:"quote_only"`
 	PostToGL       bool   `json:"post_to_gl"`
+	// Channel of the settling payment (default CASH); Notes override the repayment note.
+	Channel string `json:"channel"`
+	Notes   string `json:"notes"`
+}
+
+// SettleApplicationsRequest queues disbursed loan applications to be settled one by one.
+type SettleApplicationsRequest struct {
+	ApplicationIDs []uint64 `json:"application_ids" validate:"required,min=1"`
 }
 
 // --- Reports ---
@@ -289,6 +329,8 @@ type LoanDisbursementReportRow struct {
 	DisbursementDate  time.Time  `json:"disbursement_date"`
 	ExternalReference string     `json:"external_reference"`
 	Reference         string     `json:"reference"`
+	FailureCode       string     `json:"failure_code"`
+	FailureMessage    string     `json:"failure_message"`
 }
 
 type LoanDisbursementsReport struct {

@@ -3,7 +3,6 @@ package controllers
 import (
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
@@ -48,10 +47,11 @@ func (c *StoreStockController) CreateStock(ctx *gin.Context) {
 }
 
 func (c *StoreStockController) GetStocks(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("Page", "1"))
-	limit, _ := strconv.Atoi(ctx.DefaultQuery("Limit", "10"))
+	page := queryIntParam(ctx, 1, "page", "Page")
+	limit := queryIntParam(ctx, 10, "limit", "Limit")
+	storeID := queryIntParam(ctx, 0, "store_id", "storeId")
 
-	results, total, err := c.service.GetStocks(page, limit)
+	results, total, err := c.service.GetStocks(page, limit, storeID)
 	if err != nil {
 		log.Printf("[StoreStockController.GetStocks] Service Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve store stocks"})

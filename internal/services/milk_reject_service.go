@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/models"
@@ -31,6 +33,7 @@ func (s *MilkRejectService) CreateReject(req dtos.CreateMilkRejectRequest) (*mod
 	if err := db.DB.Create(reject).Error; err != nil {
 		return nil, err
 	}
+	recalculateCreditForReject(*reject, models.CreditActionMilkRejected)
 	return reject, nil
 }
 
@@ -90,5 +93,23 @@ func (s *MilkRejectService) GetReject(id string) (*dtos.MilkRejectResponse, erro
 }
 
 func (s *MilkRejectService) DeleteReject(id string) error {
-	return db.DB.Delete(&models.MilkReject{}, id).Error
+	var reject models.MilkReject
+	if err := db.DB.First(&reject, id).Error; err != nil {
+		return err
+	}
+	if err := db.DB.Delete(&models.MilkReject{}, reject.ID).Error; err != nil {
+		return err
+	}
+	recalculateCreditForReject(reject, models.CreditActionMilkRejectReversed)
+	return nil
+}
+
+func recalculateCreditForReject(reject models.MilkReject, action string) {
+	NewMemberCreditService().RecalculateAsync([]uint64{reject.MemberID}, CreditChange{
+		Action:     action,
+		SourceType: "milk_reject",
+		SourceID:   reject.ID,
+		Reference:  fmt.Sprintf("MILK-REJECT-%d", reject.ID),
+		Narration:  fmt.Sprintf("%.2f kg rejected: %s", reject.Quantity, reject.Reason),
+	})
 }

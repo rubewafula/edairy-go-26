@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -398,6 +399,11 @@ func EnsureLedgerSchema() error {
 		if err := migrator.AddColumn(&models.Transaction{}, "IdempotencyKey"); err != nil {
 			return err
 		}
+	}
+	// Headers saved before every transaction got a key hold '' and block the next one: give them a key.
+	if res := db.DB.Exec(`UPDATE transactions SET idempotency_key = CONCAT('AUTO-', COALESCE(NULLIF(reference, ''), CONCAT('ID-', id)))
+		WHERE idempotency_key = ''`); res.Error == nil && res.RowsAffected > 0 {
+		log.Printf("[Ledger] gave %d transaction(s) with an empty idempotency key a unique key", res.RowsAffected)
 	}
 	if !migrator.HasColumn(&models.Transaction{}, "reversal_of_id") {
 		if err := migrator.AddColumn(&models.Transaction{}, "ReversalOfID"); err != nil {

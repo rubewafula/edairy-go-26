@@ -8,6 +8,10 @@ type MemberResponse struct {
 	IDNo              string                      `json:"id_no"`
 	MemberTypeID      uint64                      `json:"member_type_id"`
 	MemberTypeName    string                      `json:"member_type_name"` // From member_types table
+	// CreditLimit (credit rate) and MemberBalance (same balance at the default milk rate).
+	CreditLimit   float64 `json:"credit_limit"`
+	MemberBalance float64 `json:"member_balance"`
+	CanBorrow     bool    `json:"can_borrow"`
 	FirstName         string                      `json:"first_name"`
 	LastName          string                      `json:"last_name"`
 	OtherNames        string                      `json:"other_names"`

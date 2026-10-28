@@ -23,16 +23,38 @@ func init() {
 	if err := services.EnsureLedgerSchema(); err != nil {
 		log.Printf("ledger schema migration warning: %v", err)
 	}
+	services.EnsureAdvanceRateSchema() // before credit baselines: credit is valued at the advance rate
 	if err := services.EnsureLoanSchema(); err != nil {
 		log.Printf("loan schema migration warning: %v", err)
 	}
 	if err := services.EnsureOutliersSMSProvider(); err != nil {
 		log.Printf("sms provider seed warning: %v", err)
+    }
+    if n, err := services.EnsureRouteCenters(); err != nil {
+		log.Printf("route centers seed warning: %v", err)
+	} else if n > 0 {
+		log.Printf("seeded %d default route center(s) for routes without one", n)
 	}
 }
 
 func main() {
 	router := routes.SetupRouter()
+	services.LogAPIStart()
+	services.RequeueParkedMpesaFailures()
+	services.EnsureLoanProductDBUColumns()
+	go services.FixLoanRecurrentAmounts()
+	services.StartDisbursementWorker()
+	go services.EnsureMilkOverviewPermission()
+	services.NormalizeEmptyMemberIDNumbers() // id_no nullable before any member is created
+	go services.EnsureDefaultMemberTypes()
+	go services.SeedDevCustomers()
+	go services.SeedDevMpesaTestMembers()
+	go services.EnsureOnlyActiveMembersBorrow()
+	go services.EnsureBankBranchViewPermission()
+	go services.EnsureApprovalOTPPermission()
+	go services.EnsureSettlementPermission()
+	go services.EnsureContractSettledDates()
+	services.StartSettlementWorker()
 
 	addr := "0.0.0.0:" + initializers.GetEnv("PORT", "8000")
 	srv := &http.Server{

@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -54,6 +55,10 @@ func NewMpesaDarajaServiceWithConfig(cfg config.MpesaConfig) *MpesaDarajaService
 
 func (s *MpesaDarajaService) Configured() bool {
 	return s.cfg.Configured()
+}
+
+func (s *MpesaDarajaService) Env() string {
+	return s.cfg.Env
 }
 
 func (s *MpesaDarajaService) getAccessToken() (string, error) {
@@ -136,6 +141,10 @@ type MpesaB2CResponse struct {
 func (s *MpesaDarajaService) InitiateB2C(originatorID, partyB string, amount int, remarks string) (*MpesaB2CResponse, error) {
 	if !s.Configured() {
 		return nil, fmt.Errorf("M-Pesa Daraja is not configured")
+	}
+	// Last line of defence: a development API only pays the allow-listed test phones.
+	if err := checkDevPayoutPhone(partyB); err != nil {
+		return nil, err
 	}
 	token, err := s.getAccessToken()
 	if err != nil {
@@ -229,14 +238,83 @@ func (s *MpesaDarajaService) QueryTransactionStatus(originatorID, transactionID 
 	return out, nil
 }
 
-func parseMpesaResultCallback(data map[string]interface{}) (originatorID, transactionID, resultCode, resultDesc string) {
+// mpesaB2CResult is the part of a Daraja B2C result callback used to settle a disbursement.
+type mpesaB2CResult struct {
+	OriginatorID   string
+	ConversationID string
+	TransactionID  string
+	ResultCode     string
+	ResultDesc     string
+	Receiver       string
+	Amount         float64
+	HasAmount      bool
+}
+
+func mpesaString(v interface{}) string {
+	switch t := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return strings.TrimSpace(t)
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	case json.Number:
+		return t.String()
+	default:
+		return strings.TrimSpace(fmt.Sprintf("%v", t))
+	}
+}
+
+func mpesaFloat(v interface{}) (float64, bool) {
+	switch t := v.(type) {
+	case float64:
+		return t, true
+	case json.Number:
+		f, err := t.Float64()
+		return f, err == nil
+	case string:
+		f, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimSpace(t), ",", ""), 64)
+		return f, err == nil
+	default:
+		return 0, false
+	}
+}
+
+func parseMpesaB2CResult(data map[string]interface{}) mpesaB2CResult {
 	result, ok := data["Result"].(map[string]interface{})
 	if !ok {
-		return "", "", "", ""
+		return mpesaB2CResult{}
 	}
-	originatorID = fmt.Sprintf("%v", result["OriginatorConversationID"])
-	transactionID = fmt.Sprintf("%v", result["TransactionID"])
-	resultCode = fmt.Sprintf("%v", result["ResultCode"])
-	resultDesc = fmt.Sprintf("%v", result["ResultDesc"])
-	return originatorID, transactionID, resultCode, strings.TrimSpace(resultDesc)
+	res := mpesaB2CResult{
+		OriginatorID:   mpesaString(result["OriginatorConversationID"]),
+		ConversationID: mpesaString(result["ConversationID"]),
+		TransactionID:  mpesaString(result["TransactionID"]),
+		ResultCode:     mpesaString(result["ResultCode"]),
+		ResultDesc:     mpesaString(result["ResultDesc"]),
+	}
+	params, _ := result["ResultParameters"].(map[string]interface{})
+	var items []interface{}
+	switch p := params["ResultParameter"].(type) {
+	case []interface{}:
+		items = p
+	case map[string]interface{}:
+		items = []interface{}{p}
+	}
+	for _, item := range items {
+		kv, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		switch mpesaString(kv["Key"]) {
+		case "TransactionAmount":
+			res.Amount, res.HasAmount = mpesaFloat(kv["Value"])
+		case "TransactionReceipt":
+			if res.TransactionID == "" {
+				res.TransactionID = mpesaString(kv["Value"])
+			}
+		case "ReceiverPartyPublicName":
+			res.Receiver = mpesaString(kv["Value"])
+		}
+	}
+	return res
 }

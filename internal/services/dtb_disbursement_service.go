@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -48,6 +49,9 @@ func (s *DtbDisbursementService) InitiateMpesaTransfer(channelID, memberID uint6
 	if err != nil {
 		return nil, err
 	}
+	if err := checkDevPayoutPhone(phone); err != nil {
+		return nil, err
+	}
 
 	cfg, err := s.clients.configSvc.BuildAstraConfig(channelID)
 	if err != nil {
@@ -82,7 +86,7 @@ func (s *DtbDisbursementService) InitiateMpesaTransfer(channelID, memberID uint6
 				msg = message
 			}
 		}
-		return nil, fmt.Errorf(msg)
+		return nil, errors.New(msg)
 	}
 
 	return &DtbMpesaInitiateResult{

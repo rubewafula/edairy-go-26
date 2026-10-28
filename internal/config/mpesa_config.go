@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/subtle"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -84,14 +86,36 @@ func LoadMpesaConfig() MpesaConfig {
 		InitiatorPassword: os.Getenv("MPESA_INITIATOR_PASSWORD"),
 		CertPath:          os.Getenv("MPESA_CERT_PATH"),
 		B2CCommandID:      cmd,
-		B2CResultURL:      resultURL,
-		B2CTimeoutURL:     timeoutURL,
+		B2CResultURL:      WithMpesaCallbackToken(resultURL),
+		B2CTimeoutURL:     WithMpesaCallbackToken(timeoutURL),
 		OAuthURL:          oauthURL,
 		B2CURL:            b2cURL,
 		StatusQueryURL:    statusURL,
 		VerifySSL:         verifySSL,
 		RequestTimeoutSec: timeout,
 	}
+}
+
+// WithMpesaCallbackToken appends MPESA_CALLBACK_TOKEN to a Daraja callback URL so callbacks can be authenticated.
+func WithMpesaCallbackToken(rawURL string) string {
+	token := strings.TrimSpace(os.Getenv("MPESA_CALLBACK_TOKEN"))
+	if token == "" || rawURL == "" || strings.Contains(rawURL, "token=") {
+		return rawURL
+	}
+	sep := "?"
+	if strings.Contains(rawURL, "?") {
+		sep = "&"
+	}
+	return rawURL + sep + "token=" + url.QueryEscape(token)
+}
+
+// MpesaCallbackTokenValid reports whether a callback carries the configured token. It accepts all callbacks when no token is set.
+func MpesaCallbackTokenValid(token string) bool {
+	expected := strings.TrimSpace(os.Getenv("MPESA_CALLBACK_TOKEN"))
+	if expected == "" {
+		return true
+	}
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(strings.TrimSpace(token))) == 1
 }
 
 func (c MpesaConfig) Configured() bool {

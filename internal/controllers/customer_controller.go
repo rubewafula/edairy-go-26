@@ -58,7 +58,7 @@ func (c *CustomerController) GetCustomers(ctx *gin.Context) {
 }
 
 func (c *CustomerController) GetCustomer(ctx *gin.Context) {
-	customer, err := c.service.GetCustomer(ctx.Param("id"))
+	customer, err := c.service.GetCustomerResponse(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Customer not found"})
 		return
@@ -82,6 +82,10 @@ func (c *CustomerController) UpdateCustomer(ctx *gin.Context) {
 	if err := c.service.UpdateCustomer(ctx.Param("id"), req, userID); err != nil {
 		log.Printf("[CustomerController.UpdateCustomer] Error updating customer %s: %v", ctx.Param("id"), err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if updated, err := c.service.GetCustomerResponse(ctx.Param("id")); err == nil {
+		ctx.JSON(http.StatusOK, gin.H{"data": updated, "message": "Customer updated successfully"})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Customer updated successfully"})

@@ -34,7 +34,7 @@ type CreateTransporterPayrollRequest struct {
 	PayDateRangeID uint64 `json:"pay_date_range_id" validate:"required"`
 	DateOpened     string `json:"date_opened" validate:"required"`
 	Description    string `json:"description"`
-	FiscalPeriod   string `json:fiscal_period"`
+	FiscalPeriod   string `json:"fiscal_period"`
 }
 
 type UpdateTransporterPayrollRequest struct {

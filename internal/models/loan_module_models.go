@@ -1,9 +1,12 @@
 package models
 
 import (
+	"encoding/json"
+	"strings"
 	"time"
 
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 // --- Loan Products ---
@@ -20,6 +23,9 @@ type LoanProduct struct {
 	RepaymentPeriodMonths int            `gorm:"column:repayment_period_months;not null" json:"repayment_period_months"`
 	GracePeriodDays       int            `gorm:"column:grace_period_days;not null;default:0" json:"grace_period_days"`
 	ProcessingFeeRate     float64        `gorm:"column:processing_fee_rate;type:decimal(8,4)" json:"processing_fee_rate"`
+	// ProcessingFeeAmount is the fixed processing fee per loan (KES). When it is set, the legacy
+	// ProcessingFeeRate (%) is not used. Amount bands (ProcessingFeeTiers) still take precedence.
+	ProcessingFeeAmount   float64        `gorm:"column:processing_fee_amount;type:decimal(15,2);not null;default:0" json:"processing_fee_amount"`
 	InsuranceFeeRate      float64        `gorm:"column:insurance_fee_rate;type:decimal(8,4)" json:"insurance_fee_rate"`
 	FeeCollectionMethod   string         `gorm:"column:fee_collection_method;size:32;not null;default:DEDUCT_FROM_PROCEEDS" json:"fee_collection_method"`
 	PenaltyRateDaily      float64        `gorm:"column:penalty_rate_daily;type:decimal(8,4)" json:"penalty_rate_daily"`
@@ -30,6 +36,43 @@ type LoanProduct struct {
 	EligibilityRules      datatypes.JSON `gorm:"column:eligibility_rules;type:json" json:"eligibility_rules"`
 	ApprovalWorkflow      datatypes.JSON `gorm:"column:approval_workflow;type:json" json:"approval_workflow"`
 	IsActive              bool           `gorm:"column:is_active;default:1" json:"is_active"`
+	// IsDefaultMemberLoan marks the product used for mobile (member self-service) loan applications.
+	// At most one product carries this flag.
+	IsDefaultMemberLoan bool `gorm:"column:is_default_member_loan;not null;default:0;index" json:"is_default_member_loan"`
+	// ChargePerLitre (KES) is charged at payroll on every litre a member delivers in a pay period in which
+	// they took a cashout on this product (e.g. 2.00). 0 disables it.
+	ChargePerLitre float64 `gorm:"column:charge_per_litre;type:decimal(10,2);not null;default:0" json:"charge_per_litre"`
+	// DBU allocation quota (KES): the minimum and maximum DBU allocation on this product.
+	// Defaults: minimum 0, maximum 500,000.
+	DBUMinAmount float64 `gorm:"column:dbu_min_amount;type:decimal(15,2);not null;default:0" json:"dbu_min_amount"`
+	DBUMaxAmount float64 `gorm:"column:dbu_max_amount;type:decimal(15,2);not null;default:500000" json:"dbu_max_amount"`
+	// ProcessingFeeTiers (JSON) sets the processing fee by amount band; when the amount falls in no band
+	// ProcessingFeeRate (%) applies. FeeTiers is the parsed list (API field processing_fee_tiers).
+	ProcessingFeeTiers string              `gorm:"column:processing_fee_tiers;type:text" json:"-"`
+	FeeTiers           []ProcessingFeeTier `gorm:"-" json:"processing_fee_tiers"`
+}
+
+// ProcessingFeeTier: amounts from MinAmount to MaxAmount (inclusive) pay Charge, either a flat KES
+// amount (FLAT) or a percentage of the amount (PERCENT). Bands may not overlap.
+type ProcessingFeeTier struct {
+	MinAmount  float64 `json:"min_amount"`
+	MaxAmount  float64 `json:"max_amount"`
+	Charge     float64 `json:"charge"`
+	ChargeType string  `json:"charge_type"`
+}
+
+// AfterFind fills FeeTiers from the stored JSON.
+func (p *LoanProduct) AfterFind(tx *gorm.DB) error {
+	p.FeeTiers = nil
+	if strings.TrimSpace(p.ProcessingFeeTiers) != "" {
+		_ = json.Unmarshal([]byte(p.ProcessingFeeTiers), &p.FeeTiers)
+	}
+	if p.FeeTiers == nil {
+		p.FeeTiers = []ProcessingFeeTier{}
+	}
+	// The default member loan's charges are handled in services.effectiveFeeCollectionMethod; the stored
+	// collection method is returned as saved.
+	return nil
 }
 
 func (LoanProduct) TableName() string { return "loan_products" }
@@ -51,8 +94,25 @@ type LoanApplication struct {
 	ExpectedDisbursementDate *time.Time `gorm:"column:expected_disbursement_date;type:date" json:"expected_disbursement_date"`
 	RejectedReason           string     `gorm:"column:rejected_reason;type:text" json:"rejected_reason"`
 	LoanContractID           *uint64    `gorm:"column:loan_contract_id" json:"loan_contract_id"`
+	Source                   string     `gorm:"column:source;size:20;default:BACKOFFICE" json:"source"`
 	MemberNo                 string     `gorm:"-" json:"member_no,omitempty"`
 	MemberName               string     `gorm:"-" json:"member_name,omitempty"`
+	// BorrowedAmount (approved, else requested) and RepayableAmount (principal + interest + fees: the
+	// total deducted from milk) with CostPercent = (repayable - borrowed) / borrowed x 100. Read-only.
+	BorrowedAmount  float64 `gorm:"-" json:"borrowed_amount"`
+	RepayableAmount float64 `gorm:"-" json:"repayable_amount"`
+	CostPercent     float64 `gorm:"-" json:"cost_percent"`
+	// UnpaidAmount: what is still to be repaid on this loan if it is DISBURSED and not settled (else 0).
+	// CumulativeUnpaid: the member's running total of UnpaidAmount over their loans up to and including
+	// this one (ordered by date applied).
+	UnpaidAmount     float64 `gorm:"-" json:"unpaid_amount"`
+	CumulativeUnpaid float64 `gorm:"-" json:"cumulative_unpaid"`
+	// ContractStatus of the loan (e.g. SETTLED once a disbursed loan is settled).
+	ContractStatus string     `gorm:"-" json:"contract_status,omitempty"`
+	SettledAt      *time.Time `gorm:"-" json:"settled_at,omitempty"`
+	// DisbursementStatus of the latest payout (e.g. MPESA_ERROR) — shown as-is on the desktop; the
+	// mobile app keeps showing "Processing" for anything not yet paid.
+	DisbursementStatus string `gorm:"-" json:"disbursement_status,omitempty"`
 	LoanProduct              *LoanProduct `gorm:"foreignKey:LoanProductID" json:"loan_product,omitempty"`
 	Guarantors               []LoanGuarantor `gorm:"foreignKey:LoanApplicationID" json:"guarantors,omitempty"`
 }
@@ -124,6 +184,8 @@ type LoanContract struct {
 	DaysInArrears           int        `gorm:"column:days_in_arrears;default:0" json:"days_in_arrears"`
 	DisbursementDate        *time.Time `gorm:"column:disbursement_date;type:date" json:"disbursement_date"`
 	MaturityDate            *time.Time `gorm:"column:maturity_date;type:date" json:"maturity_date"`
+	// SettledAt is the date the loan was fully repaid / settled (set when status becomes SETTLED).
+	SettledAt *time.Time `gorm:"column:settled_at;type:date;index" json:"settled_at"`
 	LastPaymentDate         *time.Time `gorm:"column:last_payment_date;type:date" json:"last_payment_date"`
 	InstallmentAmount       *float64   `gorm:"column:installment_amount;type:decimal(15,2)" json:"installment_amount"`
 	MilkDeductionEnabled    bool       `gorm:"column:milk_deduction_enabled;default:1" json:"milk_deduction_enabled"`
@@ -380,5 +442,12 @@ const (
 	DisbursementStatusProcessing = "PROCESSING"
 	DisbursementStatusSuccess    = "SUCCESS"
 	DisbursementStatusFailed     = "FAILED"
+	// DisbursementStatusMpesaFailed: M-Pesa could not pay (provider rejected it, could not be reached
+	// after all retries, or payouts are not available). The loan stays approved and NOT released; the
+	// member still sees "Processing" and an admin retries it (or releases it) from the desktop.
+	DisbursementStatusMpesaFailed = "MPESA_FAILED"
+	// DisbursementStatusMpesaError: the last attempt to send via M-Pesa failed; the payout stays queued
+	// and the worker keeps retrying (backoff up to 32 min). Members see "Processing".
+	DisbursementStatusMpesaError = "MPESA_ERROR"
 	DisbursementStatusCancelled  = "CANCELLED"
 )

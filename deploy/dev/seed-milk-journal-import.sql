@@ -1,6 +1,8 @@
 -- Dev seed data for milk journal CSV import (POST /api/milk-journals/import)
 -- Run against dev_dairy_erp:
 --   mysql -uedairy -p dev_dairy_erp < deploy/dev/seed-milk-journal-import.sql
+-- Then seed centers (every route needs at least one):
+--   mysql -uedairy -p dev_dairy_erp < deploy/dev/seed-route-centers.sql
 
 -- 1. Delivery shifts (required — import falls back to first shift when lookup fails)
 INSERT INTO milk_delivery_shifts (name, description, created_by, updated_by)

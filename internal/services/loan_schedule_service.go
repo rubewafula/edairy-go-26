@@ -17,6 +17,11 @@ type scheduleInput struct {
 	StartDate       time.Time
 	ProcessingFee   float64
 	InsuranceFee    float64
+	// FixedInterest, when > 0, is the total interest (spread evenly; used for rate-spread advances).
+	FixedInterest float64
+	// FeesUpfront puts the whole processing fee and insurance on the first instalment instead of
+	// splitting them across instalments (default member loan).
+	FeesUpfront bool
 }
 
 type scheduleLine struct {
@@ -37,6 +42,9 @@ func NewLoanScheduleService() *LoanScheduleService {
 }
 
 func (s *LoanScheduleService) Generate(input scheduleInput) []scheduleLine {
+	if input.FixedInterest > 0 {
+		return s.flatSchedule(input)
+	}
 	switch input.Method {
 	case models.LoanInterestFlat:
 		return s.flatSchedule(input)
@@ -66,20 +74,36 @@ func roundMoney(v float64) float64 {
 func (s *LoanScheduleService) flatSchedule(input scheduleInput) []scheduleLine {
 	monthlyRate := input.AnnualRate / 100 / 12
 	totalInterest := roundMoney(input.Principal * monthlyRate * float64(input.TermMonths))
+	if input.FixedInterest > 0 {
+		totalInterest = roundMoney(input.FixedInterest)
+	}
 	totalPrincipal := input.Principal
 	installmentPrincipal := roundMoney(totalPrincipal / float64(input.TermMonths))
 	installmentInterest := roundMoney(totalInterest / float64(input.TermMonths))
 	feePer := roundMoney(input.ProcessingFee / float64(input.TermMonths))
 	insPer := roundMoney(input.InsuranceFee / float64(input.TermMonths))
+	if input.FeesUpfront {
+		feePer, insPer = roundMoney(input.ProcessingFee), roundMoney(input.InsuranceFee)
+	}
 
 	lines := make([]scheduleLine, 0, input.TermMonths)
 	balance := totalPrincipal
 	due := s.firstDueDate(input.StartDate, input.GracePeriodDays)
+	interestLeft, feeLeft, insLeft := totalInterest, roundMoney(input.ProcessingFee), roundMoney(input.InsuranceFee)
 	for i := 1; i <= input.TermMonths; i++ {
 		principal := installmentPrincipal
-		if i == input.TermMonths {
-			principal = roundMoney(balance)
+		interest, fee, ins := installmentInterest, feePer, insPer
+		if input.FeesUpfront && i > 1 {
+			fee, ins = 0, 0
 		}
+		if i == input.TermMonths {
+			// Last instalment takes the rounding remainders so totals are exact.
+			principal = roundMoney(balance)
+			interest, fee, ins = roundMoney(interestLeft), roundMoney(feeLeft), roundMoney(insLeft)
+		}
+		interestLeft = roundMoney(interestLeft - interest)
+		feeLeft = roundMoney(feeLeft - fee)
+		insLeft = roundMoney(insLeft - ins)
 		balance = roundMoney(balance - principal)
 		if balance < 0 {
 			balance = 0
@@ -88,10 +112,10 @@ func (s *LoanScheduleService) flatSchedule(input scheduleInput) []scheduleLine {
 			InstallmentNo: i,
 			DueDate:       due,
 			PrincipalDue:  principal,
-			InterestDue:   installmentInterest,
-			FeeDue:        feePer,
-			InsuranceDue:  insPer,
-			TotalDue:      roundMoney(principal + installmentInterest + feePer + insPer),
+			InterestDue:   interest,
+			FeeDue:        fee,
+			InsuranceDue:  ins,
+			TotalDue:      roundMoney(principal + interest + fee + ins),
 			BalanceAfter:  balance,
 		})
 		due = due.AddDate(0, 1, 0)

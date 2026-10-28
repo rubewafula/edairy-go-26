@@ -25,20 +25,20 @@ func NewMilkRejectController() *MilkRejectController {
 func (c *MilkRejectController) CreateReject(ctx *gin.Context) {
 	var req dtos.CreateMilkRejectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Println("CreateReject error reading request: %s", err.Error())
+		log.Printf("CreateReject error reading request: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := validator.Validate.Struct(req); err != nil {
-		log.Println("CreateReject error validation request: %s", err.Error())
+		log.Printf("CreateReject error validation request: %s", err.Error())
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": utils.FormatValidationError(err)})
 		return
 	}
 
 	reject, err := c.service.CreateReject(req)
 	if err != nil {
-		log.Println("CreateReject error saving request: %s", err.Error())
+		log.Printf("CreateReject error saving request: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
