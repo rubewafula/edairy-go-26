@@ -1,11 +1,8 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -258,7 +255,7 @@ func (s *SMSCampaignService) processCampaignInBackground(campaignID uint64, user
 			defer wg.Done()
 			for outbox := range jobs {
 				reference := fmt.Sprintf("CMP-%d-%d", campaignID, outbox.ID)
-				err := s.dispatchSMS(&provider, outbox.PhoneNo, message, reference)
+				err := DispatchOutliersV2(&provider, outbox.PhoneNo, message, reference)
 
 				mu.Lock()
 				if err != nil {
@@ -307,38 +304,3 @@ func (s *SMSCampaignService) processCampaignInBackground(campaignID uint64, user
 	})
 }
 
-func (s *SMSCampaignService) dispatchSMS(provider *models.SMSProvider, recipient, message, reference string) error {
-	payload := map[string]interface{}{
-		"message":      message,
-		"short_code":   provider.SenderID,
-		"client_code":  provider.ProviderCode,
-		"key":          provider.ApiKey,
-		"recipients":   []string{recipient},
-		"reference":    reference,
-		"message_type": "BULK",
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", provider.ApiUrl, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("provider returned status: %d", resp.StatusCode)
-	}
-
-	return nil
-}

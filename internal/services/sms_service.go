@@ -1,14 +1,11 @@
 package services
 
 import (
-	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"mime/multipart"
-	"net/http"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -391,12 +388,14 @@ func (s *SMSService) CreateSMSOutbox(req dtos.CreateSMSOutboxRequest, userID uin
 	}
 
 	// 3. Create the outbox entry with associated IDs
+	campaignID := req.SMSCampaignID
 	outbox := &models.SMSOutbox{
-		BaseModel:    models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
-		PhoneNo:      req.PhoneNo,
-		SMSMessageID: &smsMsg.ID,
-		SMSContactID: &contact.ID,
-		Status:       "pending",
+		BaseModel:     models.BaseModel{CreatedBy: userID, UpdatedBy: userID},
+		SMSCampaignID: &campaignID,
+		PhoneNo:       req.PhoneNo,
+		SMSMessageID:  &smsMsg.ID,
+		SMSContactID:  &contact.ID,
+		Status:        "pending",
 	}
 
 	if err := db.DB.Create(outbox).Error; err != nil {
@@ -516,42 +515,7 @@ func (s *SMSService) DeleteSMSOutbox(id string) error {
 }
 
 func (s *SMSService) dispatchSMS(provider *models.SMSProvider, recipient, message, reference string) error {
-	payload := map[string]interface{}{
-		"message":      message,
-		"short_code":   provider.SenderID,
-		"link_id":      nil,
-		"call_back":    "",
-		"client_code":  provider.ProviderCode,
-		"key":          provider.ApiKey,
-		"recipients":   []string{recipient},
-		"reference":    reference,
-		"message_type": "BULK",
-		"bulk":         1,
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal sms payload: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", provider.ApiUrl, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("provider connection error: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("sms provider error status: %d", resp.StatusCode)
-	}
-
-	return nil
+	return DispatchOutliersV2(provider, recipient, message, reference)
 }
 
 func (s *SMSService) handleOutboxFailure(outbox *models.SMSOutbox, errMsg string, userID uint64) {

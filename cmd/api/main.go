@@ -26,6 +26,9 @@ func init() {
 	if err := services.EnsureLoanSchema(); err != nil {
 		log.Printf("loan schema migration warning: %v", err)
 	}
+	if err := services.EnsureOutliersSMSProvider(); err != nil {
+		log.Printf("sms provider seed warning: %v", err)
+	}
 }
 
 func main() {
