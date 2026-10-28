@@ -18,3 +18,5 @@ uploads/
 
 # Local backups
 _backup_*/
+bin
+bin/*
