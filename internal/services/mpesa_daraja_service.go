@@ -186,16 +186,35 @@ func (s *MpesaDarajaService) InitiateB2C(originatorID, partyB string, amount int
 	if err != nil {
 		return nil, err
 	}
+	// Unified / production B2C: PartyA must be the live shortcode from env (e.g. 4188531),
+	// never a sandbox 600XXX value — wrong PartyA surfaces as "insufficient funds".
+	partyA := strings.TrimSpace(os.Getenv("MPESA_B2C_SHORTCODE"))
+	if partyA == "" {
+		partyA = strings.TrimSpace(s.cfg.B2CShortcode)
+	}
+	if partyA == "" {
+		return nil, fmt.Errorf("M-Pesa B2C PartyA/shortcode is required (set MPESA_B2C_SHORTCODE)")
+	}
+	if strings.EqualFold(strings.TrimSpace(s.cfg.Env), "production") && strings.HasPrefix(partyA, "600") {
+		return nil, fmt.Errorf("refusing production B2C with sandbox PartyA %q; set MPESA_B2C_SHORTCODE to the live shortcode", partyA)
+	}
+	commandID := strings.TrimSpace(s.cfg.B2CCommandID)
+	if commandID == "" {
+		commandID = "BusinessPayment"
+	}
+	if v := strings.TrimSpace(os.Getenv("MPESA_B2C_COMMAND_ID")); v != "" {
+		commandID = v
+	}
 	certPath := s.resolveCertPath()
-	log.Printf("[MPESA] B2C initiate env=%s shortcode=%s initiator_name=%q initiator_password=%q initiator_pw_len=%d cert=%s amount=%d partyB=%s originator=%s",
-		s.cfg.Env, s.cfg.B2CShortcode, s.cfg.InitiatorName, s.cfg.InitiatorPassword, len(s.cfg.InitiatorPassword), certPath, amount, partyB, originatorID)
+	log.Printf("[MPESA] B2C initiate env=%s PartyA=%s PartyB=%s Amount=%d CommandID=%s url=%s initiator_name=%q initiator_password=%q cert=%s originator=%s",
+		s.cfg.Env, partyA, partyB, amount, commandID, s.cfg.B2CURL, s.cfg.InitiatorName, s.cfg.InitiatorPassword, certPath, originatorID)
 	body := MpesaB2CRequest{
 		OriginatorConversationID: originatorID,
 		InitiatorName:            s.cfg.InitiatorName,
 		SecurityCredential:       secCred,
-		CommandID:                s.cfg.B2CCommandID,
+		CommandID:                commandID,
 		Amount:                   fmt.Sprintf("%d", amount),
-		PartyA:                   s.cfg.B2CShortcode,
+		PartyA:                   partyA,
 		PartyB:                   partyB,
 		Remarks:                  remarks,
 		QueueTimeOutURL:          s.cfg.B2CTimeoutURL,

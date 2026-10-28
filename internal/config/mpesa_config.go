@@ -79,12 +79,12 @@ func LoadMpesaConfig() MpesaConfig {
 
 	return MpesaConfig{
 		Env:               env,
-		ConsumerKey:       os.Getenv("MPESA_CONSUMER_KEY"),
-		ConsumerSecret:    os.Getenv("MPESA_CONSUMER_SECRET"),
-		B2CShortcode:      os.Getenv("MPESA_B2C_SHORTCODE"),
-		InitiatorName:     os.Getenv("MPESA_INITIATOR_NAME"),
-		InitiatorPassword: os.Getenv("MPESA_INITIATOR_PASSWORD"),
-		CertPath:          os.Getenv("MPESA_CERT_PATH"),
+		ConsumerKey:       strings.TrimSpace(os.Getenv("MPESA_CONSUMER_KEY")),
+		ConsumerSecret:    strings.TrimSpace(os.Getenv("MPESA_CONSUMER_SECRET")),
+		B2CShortcode:      strings.TrimSpace(os.Getenv("MPESA_B2C_SHORTCODE")),
+		InitiatorName:     strings.TrimSpace(os.Getenv("MPESA_INITIATOR_NAME")),
+		InitiatorPassword: strings.TrimSpace(os.Getenv("MPESA_INITIATOR_PASSWORD")),
+		CertPath:          strings.TrimSpace(os.Getenv("MPESA_CERT_PATH")),
 		B2CCommandID:      cmd,
 		B2CResultURL:      WithMpesaCallbackToken(resultURL),
 		B2CTimeoutURL:     WithMpesaCallbackToken(timeoutURL),
