@@ -1,0 +1,8 @@
+migrations/edairy_schema_only.sql
+.env
+.gitignore
+vendor
+pkg
+uploads
+storage
+arithi-erp-api
