@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -93,10 +94,41 @@ func (s *MpesaDarajaService) getAccessToken() (string, error) {
 	return s.token, nil
 }
 
+// resolveCertPath picks a readable M-Pesa public certificate.
+// DB sync from a Windows machine can leave cert_path like C:/Users/.../production.cer;
+// on Linux/docker that path is unusable, so we skip host-foreign paths and fall back to
+// MPESA_CERT_PATH / /app/mpesa/production.cer (the volume mount used in deploy).
+func (s *MpesaDarajaService) resolveCertPath() string {
+	candidates := []string{
+		strings.TrimSpace(s.cfg.CertPath),
+		strings.TrimSpace(os.Getenv("MPESA_CERT_PATH")),
+		"/app/mpesa/production.cer",
+		"mpesa/production.cer",
+	}
+	for _, p := range candidates {
+		if p == "" || certPathUnusableOnThisHost(p) {
+			continue
+		}
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return strings.TrimSpace(s.cfg.CertPath)
+}
+
+func certPathUnusableOnThisHost(p string) bool {
+	// Windows drive path (C:\... or C:/...) cannot be opened inside Linux containers.
+	if len(p) >= 2 && ((p[0] >= 'A' && p[0] <= 'Z') || (p[0] >= 'a' && p[0] <= 'z')) && p[1] == ':' {
+		return runtime.GOOS != "windows"
+	}
+	return false
+}
+
 func (s *MpesaDarajaService) encryptSecurityCredential(password string) (string, error) {
-	certPEM, err := os.ReadFile(s.cfg.CertPath)
+	certPath := s.resolveCertPath()
+	certPEM, err := os.ReadFile(certPath)
 	if err != nil {
-		return "", fmt.Errorf("read mpesa cert: %w", err)
+		return "", fmt.Errorf("read mpesa cert %q: %w", certPath, err)
 	}
 	block, _ := pem.Decode(certPEM)
 	if block == nil {
@@ -154,6 +186,9 @@ func (s *MpesaDarajaService) InitiateB2C(originatorID, partyB string, amount int
 	if err != nil {
 		return nil, err
 	}
+	certPath := s.resolveCertPath()
+	log.Printf("[MPESA] B2C initiate env=%s shortcode=%s initiator_name=%q initiator_password=%q initiator_pw_len=%d cert=%s amount=%d partyB=%s originator=%s",
+		s.cfg.Env, s.cfg.B2CShortcode, s.cfg.InitiatorName, s.cfg.InitiatorPassword, len(s.cfg.InitiatorPassword), certPath, amount, partyB, originatorID)
 	body := MpesaB2CRequest{
 		OriginatorConversationID: originatorID,
 		InitiatorName:            s.cfg.InitiatorName,

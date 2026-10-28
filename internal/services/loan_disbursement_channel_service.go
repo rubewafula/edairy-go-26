@@ -373,10 +373,12 @@ func (s *LoanDisbursementChannelService) executeDtbMpesa(input DisbursementExecu
 
 func (s *LoanDisbursementChannelService) executeMobileMpesa(input DisbursementExecutionInput) DisbursementExecutionResult {
 	phone := payloadString(input.Payload, "phone_number", "msisdn", "phone")
-	ref := input.Reference
-	if ref == "" {
-		ref = fmt.Sprintf("MPESA-%s-%d", input.ContractNo, time.Now().UnixNano())
+	// Unique OriginatorConversationID on every attempt — Safaricom rejects retries that reuse the same ID.
+	base := input.Reference
+	if base == "" {
+		base = fmt.Sprintf("MPESA-%s", input.ContractNo)
 	}
+	ref := fmt.Sprintf("%s-%d", base, time.Now().UnixNano())
 	result, err := s.mpesa.InitiateB2C(input.Channel.ID, input.MemberID, input.NetAmount, phone, input.ContractNo, ref)
 	if err != nil {
 		return DisbursementExecutionResult{

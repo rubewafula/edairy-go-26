@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -27,23 +26,10 @@ func DevPayoutPhones() []string {
 	return out
 }
 
-// checkDevPayoutPhone blocks a payout in ENV=development unless the phone is on the allow-list.
-// The error text contains "payouts are disabled" so the disbursement queue treats it as a
-// configuration problem: the loan waits (retried every 5 min, no attempts used) instead of failing.
+// checkDevPayoutPhone used to block payouts in ENV=development unless the phone was on
+// DevPayoutPhones / MPESA_DEV_ALLOWED_PHONES. Disabled for now so any applying/forwarded
+// number can receive money from this local API.
 func checkDevPayoutPhone(phone string) error {
-	if !strings.EqualFold(strings.TrimSpace(os.Getenv("ENV")), "development") {
-		return nil
-	}
-	n, err := utils.NormalizeKenyaPhone(phone, "")
-	if err != nil {
-		return fmt.Errorf("real payouts are disabled in development for invalid phone %q", phone)
-	}
-	allowed := DevPayoutPhones()
-	for _, a := range allowed {
-		if a == n {
-			return nil
-		}
-	}
-	return fmt.Errorf("real payouts are disabled in development for %s: only %s may receive money (MPESA_DEV_ALLOWED_PHONES)",
-		n, strings.Join(allowed, ", "))
+	_ = phone
+	return nil
 }

@@ -54,14 +54,17 @@ func (s *DisbursementChannelConfigService) resolveForProvider(channelCode, provi
 	}
 	out := make(map[string]string, len(template))
 	for _, def := range template {
-		if v := strings.TrimSpace(dbValues[def.Key]); v != "" {
-			out[def.Key] = v
-			continue
-		}
+		// Env always wins when set. Docker/production deploys keep M-Pesa (and other
+		// channel) credentials in .env; DB values can lag or carry host-specific paths
+		// after a dump/restore from another machine.
 		if def.EnvVar != "" {
 			if v := strings.TrimSpace(os.Getenv(def.EnvVar)); v != "" {
 				out[def.Key] = v
+				continue
 			}
+		}
+		if v := strings.TrimSpace(dbValues[def.Key]); v != "" {
+			out[def.Key] = v
 		}
 	}
 	return out, nil
