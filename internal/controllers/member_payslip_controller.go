@@ -25,9 +25,9 @@ func NewMemberPayslipController() *MemberPayslipController {
 func (c *MemberPayslipController) GetPayslips(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
-	payrollID := ctx.Query("payroll_id")
-	memberID := ctx.Query("member_id")
-	routeID := ctx.Query("route_id")
+	payrollID := firstNonEmptyQuery(ctx, "member_payroll_id", "payroll_id", "payrollID")
+	memberID := firstNonEmptyQuery(ctx, "member_id", "memberID")
+	routeID := firstNonEmptyQuery(ctx, "route_id", "routeID")
 
 	res, total, err := c.service.GetPayslips(payrollID, memberID, routeID, page, limit)
 	if err != nil {
@@ -39,9 +39,9 @@ func (c *MemberPayslipController) GetPayslips(ctx *gin.Context) {
 }
 
 func (c *MemberPayslipController) ExportPayslips(ctx *gin.Context) {
-	payrollID := ctx.Query("payroll_id")
-	memberID := ctx.Query("member_id")
-	routeID := ctx.Query("route_id")
+	payrollID := firstNonEmptyQuery(ctx, "member_payroll_id", "payroll_id", "payrollID")
+	memberID := firstNonEmptyQuery(ctx, "member_id", "memberID")
+	routeID := firstNonEmptyQuery(ctx, "route_id", "routeID")
 	format := ctx.DefaultQuery("format", "csv")
 
 	userID := ctx.GetUint64("user_id")

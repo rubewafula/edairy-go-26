@@ -499,16 +499,19 @@ func (s *MemberPayrollService) GetPayslips(payrollID string, memberID string, ro
 	var results []dtos.MemberPayslipResponse
 	var total int64
 
-	queryBuilder := db.DB.Model(&models.MemberPayslip{})
-
+	countQuery := db.DB.Table("member_payslips mp").
+		Joins("LEFT JOIN member_registrations mr ON mp.member_id = mr.id").
+		Where("mp.deleted_at IS NULL")
 	if payrollID != "" {
-		queryBuilder = queryBuilder.Where("payroll_id = ?", payrollID)
+		countQuery = countQuery.Where("mp.payroll_id = ?", payrollID)
 	}
 	if memberID != "" {
-		queryBuilder = queryBuilder.Where("member_id = ?", memberID)
+		countQuery = countQuery.Where("mp.member_id = ?", memberID)
 	}
-
-	queryBuilder.Count(&total)
+	if routeID != "" {
+		countQuery = countQuery.Where("mr.route_id = ?", routeID)
+	}
+	countQuery.Count(&total)
 	offset := (page - 1) * limit
 
 	query := `
@@ -516,7 +519,9 @@ func (s *MemberPayrollService) GetPayslips(payrollID string, memberID string, ro
 			mp.id, mp.member_id,
 			mr.member_no,
 			CONCAT(mr.first_name, ' ', mr.last_name) as member_name,
-			mp.payroll_id, mp.pay_date_range_id, mp.date_opened, mp.description, mp.status, mp.rate_used,
+			r.route_name,
+			mp.payroll_id, mp.pay_date_range_id, pdr.name as pay_date_range_name,
+			mp.date_opened, mp.description, mp.status, mp.rate_used,
 			mp.posted_at, u_post.name as posted_by_name,
 			mp.confirmed_at, u_conf.name as confirmed_by_name,
 			mp.approved_at, u_appr.name as approved_by_name,
@@ -524,6 +529,8 @@ func (s *MemberPayrollService) GetPayslips(payrollID string, memberID string, ro
 			mp.created_at, mp.updated_at
 		FROM member_payslips mp
 		LEFT JOIN member_registrations mr ON mp.member_id = mr.id
+		LEFT JOIN routes r ON mr.route_id = r.id
+		LEFT JOIN member_pay_date_ranges pdr ON mp.pay_date_range_id = pdr.id
 		LEFT JOIN users u_post ON mp.posted_by = u_post.id
 		LEFT JOIN users u_conf ON mp.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON mp.approved_by = u_appr.id
@@ -555,12 +562,16 @@ func (s *MemberPayrollService) GetPayslip(id string) (*dtos.MemberPayslipRespons
 	query := `
 		SELECT
 			mp.id, mp.member_id, mr.member_no, CONCAT(mr.first_name, ' ', mr.last_name) as member_name,
-			mp.payroll_id, mp.pay_date_range_id, mp.date_opened, mp.description, mp.status, mp.rate_used,
+			r.route_name,
+			mp.payroll_id, mp.pay_date_range_id, pdr.name as pay_date_range_name,
+			mp.date_opened, mp.description, mp.status, mp.rate_used,
 			mp.posted_at, u_post.name as posted_by_name, mp.confirmed_at, u_conf.name as confirmed_by_name,
 			mp.approved_at, u_appr.name as approved_by_name, mp.gross_kilos, mp.reject_kilos, mp.net_kilos,
 			mp.gross_pay, mp.total_deductions, mp.net_pay, mp.fiscal_period, mp.created_at, mp.updated_at
 		FROM member_payslips mp
 		LEFT JOIN member_registrations mr ON mp.member_id = mr.id
+		LEFT JOIN routes r ON mr.route_id = r.id
+		LEFT JOIN member_pay_date_ranges pdr ON mp.pay_date_range_id = pdr.id
 		LEFT JOIN users u_post ON mp.posted_by = u_post.id
 		LEFT JOIN users u_conf ON mp.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON mp.approved_by = u_appr.id
@@ -591,7 +602,9 @@ func (s *MemberPayrollService) processPayslipExportInBackground(userID uint64, p
 			mp.id, mp.member_id,
 			mr.member_no,
 			CONCAT(mr.first_name, ' ', mr.last_name) as member_name,
-			mp.payroll_id, mp.pay_date_range_id, mp.date_opened, mp.description, mp.status, mp.rate_used,
+			r.route_name,
+			mp.payroll_id, mp.pay_date_range_id, pdr.name as pay_date_range_name,
+			mp.date_opened, mp.description, mp.status, mp.rate_used,
 			mp.posted_at, u_post.name as posted_by_name,
 			mp.confirmed_at, u_conf.name as confirmed_by_name,
 			mp.approved_at, u_appr.name as approved_by_name,
@@ -599,6 +612,8 @@ func (s *MemberPayrollService) processPayslipExportInBackground(userID uint64, p
 			mp.created_at, mp.updated_at
 		FROM member_payslips mp
 		LEFT JOIN member_registrations mr ON mp.member_id = mr.id
+		LEFT JOIN routes r ON mr.route_id = r.id
+		LEFT JOIN member_pay_date_ranges pdr ON mp.pay_date_range_id = pdr.id
 		LEFT JOIN users u_post ON mp.posted_by = u_post.id
 		LEFT JOIN users u_conf ON mp.confirmed_by = u_conf.id
 		LEFT JOIN users u_appr ON mp.approved_by = u_appr.id

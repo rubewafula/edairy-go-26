@@ -1465,14 +1465,7 @@ func (s *LoanModuleService) RecordRepayment(contractID uint64, req dtos.RecordLo
 		contract.LastPaymentDate = &payDate
 		contract.TotalPaid = roundMoney(contract.TotalPaid + req.Amount)
 		contract.UpdatedBy = userID
-		if contract.OutstandingPrincipal <= 0 && contract.OutstandingInterest <= 0 &&
-			contract.OutstandingFees <= 0 && contract.OutstandingPenalties <= 0 {
-			contract.Status = models.LoanContractSettled
-			if contract.SettledAt == nil {
-				settled := payDate
-				contract.SettledAt = &settled
-			}
-		}
+		// Do not auto-mark SETTLED here — that only happens via Settle All / SettleContract.
 		return tx.Save(&contract).Error
 	})
 	if err == nil {
@@ -1592,9 +1585,7 @@ func (s *LoanModuleService) syncRecurrentDeduction(tx *gorm.DB, contract *models
 	rd.PaidAmount = contract.TotalPaid
 	rd.PrincipalAmount = contract.OutstandingPrincipal
 	// recurrent_amount is left as it is: the full amount by default, or what was set by hand.
-	if contract.OutstandingPrincipal <= 0 && contract.OutstandingInterest <= 0 {
-		rd.Settled = 1
-	}
+	// Do not set rd.Settled here — milk deductions stop only when Settle All / SettleContract runs.
 	tx.Save(&rd)
 }
 
@@ -1849,7 +1840,17 @@ func (s *LoanModuleService) SettleContract(id uint64, req dtos.SettleLoanRequest
 		PostToGL:    req.PostToGL,
 		Notes:       notes,
 	}, userID)
-	return quote, err
+	if err != nil {
+		return quote, err
+	}
+	// Explicit settle (Settle All / settle-month / settle API) — not triggered by ordinary repayments.
+	settleDay := settleDate.Format("2006-01-02")
+	_ = db.DB.Exec(`UPDATE loan_contracts SET status = ?, settled_at = COALESCE(settled_at, ?), updated_by = ?, updated_at = NOW()
+		WHERE id = ? AND deleted_at IS NULL`, models.LoanContractSettled, settleDay, userID, id).Error
+	_ = db.DB.Exec(`UPDATE recurrent_deductions SET settled = 1, updated_at = NOW()
+		WHERE reference = ? AND customer_id = ? AND customer_type = 'member' AND settled = 0`,
+		"LOAN-"+contract.ContractNo, contract.MemberID).Error
+	return quote, nil
 }
 
 // --- Statement ---
