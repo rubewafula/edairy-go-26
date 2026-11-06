@@ -24,6 +24,21 @@ func NewMemberPayrollDeductionController() *MemberPayrollDeductionController {
 	}
 }
 
+func (c *MemberPayrollDeductionController) parseFilters(ctx *gin.Context) services.MemberPayrollDeductionFilters {
+	return services.MemberPayrollDeductionFilters{
+		MemberID:        firstNonEmptyQuery(ctx, "member_id", "memberID"),
+		MemberNo:        firstNonEmptyQuery(ctx, "member_no", "memberNo"),
+		PayrollID:       firstNonEmptyQuery(ctx, "member_payroll_id", "payroll_id", "payrollID"),
+		DeductionTypeID: firstNonEmptyQuery(ctx, "deduction_type_id", "deductionTypeID"),
+		DeductionMonth:  firstNonEmptyQuery(ctx, "deduction_month", "deductionMonth"),
+		FiscalYear:      firstNonEmptyQuery(ctx, "fiscal_year", "fiscalYear"),
+		Settled:         firstNonEmptyQuery(ctx, "settled"),
+		Confirmed:       firstNonEmptyQuery(ctx, "confirmed"),
+		DateFrom:        firstNonEmptyQuery(ctx, "date_from", "dateFrom"),
+		DateTo:          firstNonEmptyQuery(ctx, "date_to", "dateTo"),
+	}
+}
+
 // GetMemberPayrollDeductions godoc
 // @Summary Get all member payroll deductions
 // @Description Get a list of all member payroll deductions with optional filtering and pagination
@@ -32,8 +47,12 @@ func NewMemberPayrollDeductionController() *MemberPayrollDeductionController {
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Number of items per page" default(10)
-// @Param memberID query string false "Filter by member ID"
-// @Param payrollID query string false "Filter by payroll ID"
+// @Param member_id query string false "Filter by member ID"
+// @Param member_no query string false "Filter by member number"
+// @Param member_payroll_id query string false "Filter by payroll ID"
+// @Param deduction_type_id query string false "Filter by deduction type ID"
+// @Param date_from query string false "Filter by transaction date from (YYYY-MM-DD)"
+// @Param date_to query string false "Filter by transaction date to (YYYY-MM-DD)"
 // @Param deductionMonth query string false "Filter by deduction month"
 // @Param fiscalYear query string false "Filter by fiscal year"
 // @Param settled query string false "Filter by settled status (e.g., '0' or '1')"
@@ -44,14 +63,9 @@ func NewMemberPayrollDeductionController() *MemberPayrollDeductionController {
 func (c *MemberPayrollDeductionController) GetMemberPayrollDeductions(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
-	memberID := ctx.Query("memberID")
-	payrollID := ctx.Query("payrollID")
-	deductionMonth := ctx.Query("deductionMonth")
-	fiscalYear := ctx.Query("fiscalYear")
-	settled := ctx.Query("settled")
-	confirmed := ctx.Query("confirmed")
+	filters := c.parseFilters(ctx)
 
-	deductions, total, err := c.service.GetMemberPayrollDeductions(page, limit, memberID, payrollID, deductionMonth, fiscalYear, settled, confirmed)
+	deductions, total, err := c.service.GetMemberPayrollDeductions(page, limit, filters)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -93,16 +107,11 @@ func (c *MemberPayrollDeductionController) GetMemberPayrollDeduction(ctx *gin.Co
 }
 
 func (c *MemberPayrollDeductionController) ExportDeductions(ctx *gin.Context) {
-	memberID := ctx.Query("memberID")
-	payrollID := ctx.Query("payrollID")
-	deductionMonth := ctx.Query("deductionMonth")
-	fiscalYear := ctx.Query("fiscalYear")
-	settled := ctx.Query("settled")
-	confirmed := ctx.Query("confirmed")
+	filters := c.parseFilters(ctx)
 	format := ctx.DefaultQuery("format", "csv")
 
 	userID := ctx.GetUint64("user_id")
-	if err := c.service.ExportDeductions(userID, memberID, payrollID, deductionMonth, fiscalYear, settled, confirmed, format); err != nil {
+	if err := c.service.ExportDeductions(userID, filters, format); err != nil {
 		log.Printf("[MemberPayrollDeductionController.ExportDeductions] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
