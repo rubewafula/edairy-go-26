@@ -14,7 +14,6 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
-	"github.com/rubewafula/edairy-go-26/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -38,8 +37,6 @@ type MemberPayrollDeductionFilters struct {
 	FiscalYear      string
 	Settled         string
 	Confirmed       string
-	DateFrom        string
-	DateTo          string
 }
 
 type memberPayrollDeductionExportTitle struct {
@@ -87,12 +84,6 @@ func (s *MemberPayrollDeductionService) applyFilters(query *gorm.DB, filters Mem
 	}
 	if filters.Confirmed != "" {
 		query = query.Where("mpd.confirmed = ?", filters.Confirmed)
-	}
-	if filters.DateFrom != "" {
-		query = query.Where("DATE(COALESCE(mpd.transaction_date, mpd.date_captured, mpd.created_at)) >= ?", filters.DateFrom)
-	}
-	if filters.DateTo != "" {
-		query = query.Where("DATE(COALESCE(mpd.transaction_date, mpd.date_captured, mpd.created_at)) <= ?", filters.DateTo)
 	}
 	return query
 }
@@ -176,17 +167,6 @@ func (s *MemberPayrollDeductionService) processDeductionExportInBackground(userI
 		NotificationType: "SUCCESS",
 		DownloadLink:     fmt.Sprintf("/api/member-payroll-deductions/export/download/%s", filename),
 	})
-}
-
-func (s *MemberPayrollDeductionService) formatExportDate(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return ""
-	}
-	if t := utils.ParseDate(value); !t.IsZero() {
-		return t.Format("02 Jan 2006")
-	}
-	return value
 }
 
 func (s *MemberPayrollDeductionService) resolveMemberLabel(filters MemberPayrollDeductionFilters, results []dtos.MemberPayrollDeductionResponse) string {
@@ -290,22 +270,11 @@ func (s *MemberPayrollDeductionService) buildExportTitle(filters MemberPayrollDe
 	}
 
 	reportTitle := "Member Payroll Deductions"
-	fromLabel := s.formatExportDate(filters.DateFrom)
-	toLabel := s.formatExportDate(filters.DateTo)
-	switch {
-	case fromLabel != "" && toLabel != "":
-		reportTitle = fmt.Sprintf("Member Payroll Deductions From %s To %s", fromLabel, toLabel)
-	case fromLabel != "":
-		reportTitle = fmt.Sprintf("Member Payroll Deductions From %s", fromLabel)
-	case toLabel != "":
-		reportTitle = fmt.Sprintf("Member Payroll Deductions To %s", toLabel)
+	if payrollLabel := s.resolvePayrollLabel(filters, results); payrollLabel != "" {
+		reportTitle = fmt.Sprintf("Member Payroll Deductions - Payroll %s", payrollLabel)
 	}
-
 	if memberLabel := s.resolveMemberLabel(filters, results); memberLabel != "" {
 		reportTitle = fmt.Sprintf("%s - Member %s", reportTitle, memberLabel)
-	}
-	if payrollLabel := s.resolvePayrollLabel(filters, results); payrollLabel != "" {
-		reportTitle = fmt.Sprintf("%s - Payroll %s", reportTitle, payrollLabel)
 	}
 	if typeName := s.resolveDeductionTypeName(filters, results); typeName != "" {
 		reportTitle = fmt.Sprintf("%s - %s", reportTitle, typeName)

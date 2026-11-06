@@ -34,8 +34,6 @@ func (c *MemberPayrollDeductionController) parseFilters(ctx *gin.Context) servic
 		FiscalYear:      firstNonEmptyQuery(ctx, "fiscal_year", "fiscalYear"),
 		Settled:         firstNonEmptyQuery(ctx, "settled"),
 		Confirmed:       firstNonEmptyQuery(ctx, "confirmed"),
-		DateFrom:        firstNonEmptyQuery(ctx, "date_from", "dateFrom"),
-		DateTo:          firstNonEmptyQuery(ctx, "date_to", "dateTo"),
 	}
 }
 
@@ -51,8 +49,6 @@ func (c *MemberPayrollDeductionController) parseFilters(ctx *gin.Context) servic
 // @Param member_no query string false "Filter by member number"
 // @Param member_payroll_id query string false "Filter by payroll ID"
 // @Param deduction_type_id query string false "Filter by deduction type ID"
-// @Param date_from query string false "Filter by transaction date from (YYYY-MM-DD)"
-// @Param date_to query string false "Filter by transaction date to (YYYY-MM-DD)"
 // @Param deductionMonth query string false "Filter by deduction month"
 // @Param fiscalYear query string false "Filter by fiscal year"
 // @Param settled query string false "Filter by settled status (e.g., '0' or '1')"
