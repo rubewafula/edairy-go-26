@@ -24,6 +24,18 @@ func NewRecurrentDeductionController() *RecurrentDeductionController {
 	}
 }
 
+func (c *RecurrentDeductionController) parseFilters(ctx *gin.Context) services.RecurrentDeductionFilters {
+	return services.RecurrentDeductionFilters{
+		CustomerID:      firstNonEmptyQuery(ctx, "customerID", "customer_id", "member_id"),
+		CustomerType:    firstNonEmptyQuery(ctx, "customerType", "customer_type"),
+		Settled:         firstNonEmptyQuery(ctx, "settled"),
+		MemberNo:        firstNonEmptyQuery(ctx, "member_no", "memberNo"),
+		DeductionTypeID: firstNonEmptyQuery(ctx, "deduction_type_id", "deductionTypeID"),
+		DateFrom:        firstNonEmptyQuery(ctx, "date_from", "dateFrom"),
+		DateTo:          firstNonEmptyQuery(ctx, "date_to", "dateTo"),
+	}
+}
+
 // GetRecurrentDeductions godoc
 // @Summary Get all recurrent deductions
 // @Description Get a list of all recurrent deductions with optional filtering and pagination
@@ -33,19 +45,22 @@ func NewRecurrentDeductionController() *RecurrentDeductionController {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Number of items per page" default(10)
 // @Param customerID query string false "Filter by customer ID"
+// @Param member_id query string false "Filter by member ID"
+// @Param member_no query string false "Filter by member number"
+// @Param deduction_type_id query string false "Filter by deduction type ID"
 // @Param customerType query string false "Filter by customer type (e.g., member, transporter)"
 // @Param settled query string false "Filter by settled status (0 for unsettled, 1 for settled)"
+// @Param date_from query string false "Filter by transaction date from (YYYY-MM-DD)"
+// @Param date_to query string false "Filter by transaction date to (YYYY-MM-DD)"
 // @Success 200 {object} map[string]interface{} "data: []dtos.RecurrentDeductionResponse"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /member-deductions [get]
 func (c *RecurrentDeductionController) GetRecurrentDeductions(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
-	customerID := ctx.Query("customerID")
-	customerType := ctx.Query("customerType")
-	settled := ctx.Query("settled")
+	filters := c.parseFilters(ctx)
 
-	deductions, total, err := c.recurrentDeductionService.GetRecurrentDeductions(page, limit, customerID, customerType, settled)
+	deductions, total, err := c.recurrentDeductionService.GetRecurrentDeductions(page, limit, filters)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -93,20 +108,23 @@ func (c *RecurrentDeductionController) GetRecurrentDeduction(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param customerID query string false "Filter by customer ID"
+// @Param member_id query string false "Filter by member ID"
+// @Param member_no query string false "Filter by member number"
+// @Param deduction_type_id query string false "Filter by deduction type ID"
 // @Param customerType query string false "Filter by customer type (e.g., member, transporter)"
 // @Param settled query string false "Filter by settled status (0 for unsettled, 1 for settled)"
+// @Param date_from query string false "Filter by transaction date from (YYYY-MM-DD)"
+// @Param date_to query string false "Filter by transaction date to (YYYY-MM-DD)"
 // @Param format query string false "Export format (csv or pdf)" default(csv)
 // @Success 202 {object} map[string]interface{} "message: Export started in the background"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /member-deductions/export [get]
 func (c *RecurrentDeductionController) ExportRecurrentDeductions(ctx *gin.Context) {
-	customerID := ctx.Query("customerID")
-	customerType := ctx.Query("customerType")
-	settled := ctx.Query("settled")
+	filters := c.parseFilters(ctx)
 	format := ctx.DefaultQuery("format", "csv")
 
 	userID := ctx.GetUint64("user_id")
-	if err := c.recurrentDeductionService.ExportRecurrentDeductions(userID, customerID, customerType, settled, format); err != nil {
+	if err := c.recurrentDeductionService.ExportRecurrentDeductions(userID, filters, format); err != nil {
 		log.Printf("[RecurrentDeductionController.ExportRecurrentDeductions] Error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
