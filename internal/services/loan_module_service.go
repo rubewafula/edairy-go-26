@@ -2114,6 +2114,139 @@ func (s *LoanModuleService) DisbursementsReport(status, channelCode string) (*dt
 	}, nil
 }
 
+// BorrowerSummaryReport returns per-member borrowed / repayable totals for loans whose
+// disbursement (else application) date falls in [dateFrom, dateTo]. Period is required.
+func (s *LoanModuleService) BorrowerSummaryReport(dateFrom, dateTo string, productID uint64, perms []string) (*dtos.LoanBorrowerSummaryReport, error) {
+	from := utils.ParseFlexibleDate(dateFrom)
+	to := utils.ParseFlexibleDate(dateTo)
+	if from.IsZero() || to.IsZero() {
+		return nil, serviceErr(http.StatusBadRequest, "date_from and date_to are required (YYYY-MM-DD)")
+	}
+	if to.Before(from) {
+		return nil, serviceErr(http.StatusBadRequest, "date_to must be on or after date_from")
+	}
+	// Inclusive end of day for date_to.
+	toEnd := time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 0, to.Location())
+
+	type aggRow struct {
+		MemberID     uint64
+		LoanCount    int64
+		Borrowed     float64
+		Repayable    float64
+		LastBorrowed time.Time
+		ProductNames string
+	}
+	repayableExpr := contractRepayableSQL
+	args := []interface{}{from.Format("2006-01-02"), toEnd}
+	productFilter := ""
+	productName := ""
+	if productID > 0 {
+		productFilter = " AND a.loan_product_id = ?"
+		args = append(args, productID)
+		var p models.LoanProduct
+		if err := db.DB.Select("id, product_name").First(&p, productID).Error; err == nil {
+			productName = p.ProductName
+		}
+	}
+
+	var aggs []aggRow
+	err := db.DB.Raw(`
+		SELECT a.member_id AS member_id,
+			COUNT(*) AS loan_count,
+			COALESCE(SUM(c.principal_amount), 0) AS borrowed,
+			COALESCE(SUM(`+repayableExpr+`), 0) AS repayable,
+			MAX(COALESCE(c.disbursement_date, a.date_applied)) AS last_borrowed,
+			GROUP_CONCAT(DISTINCT COALESCE(p.product_name, CONCAT('Product #', a.loan_product_id)) SEPARATOR ', ') AS product_names
+		FROM loan_applications a
+		JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
+		LEFT JOIN loan_products p ON p.id = a.loan_product_id AND p.deleted_at IS NULL
+		WHERE a.deleted_at IS NULL
+			AND a.loan_contract_id IS NOT NULL
+			AND c.principal_amount > 0
+			AND COALESCE(c.disbursement_date, a.date_applied) >= ?
+			AND COALESCE(c.disbursement_date, a.date_applied) <= ?
+			`+productFilter+`
+		GROUP BY a.member_id
+		ORDER BY MAX(COALESCE(c.disbursement_date, a.date_applied)) DESC, a.member_id ASC
+	`, args...).Scan(&aggs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	memberIDs := make([]uint64, 0, len(aggs))
+	for _, a := range aggs {
+		memberIDs = append(memberIDs, a.MemberID)
+	}
+	memberMap := map[uint64]models.Member{}
+	if len(memberIDs) > 0 {
+		var members []models.Member
+		db.DB.Where("id IN ?", memberIDs).Find(&members)
+		for _, m := range members {
+			memberMap[m.ID] = m
+		}
+	}
+
+	rows := make([]dtos.LoanBorrowerSummaryRow, 0, len(aggs))
+	var totalBorrowed, totalRepayable, totalInterest float64
+	var loanCount int64
+	for _, a := range aggs {
+		m := memberMap[a.MemberID]
+		interest := roundMoney(a.Repayable - a.Borrowed)
+		if interest < 0 {
+			interest = 0
+		}
+		rows = append(rows, dtos.LoanBorrowerSummaryRow{
+			MemberID:     a.MemberID,
+			MemberNo:     m.MemberNo,
+			MemberName:   memberDisplayName(m),
+			ProductNames: a.ProductNames,
+			LoanCount:    a.LoanCount,
+			Borrowed:     roundMoney(a.Borrowed),
+			Repayable:    roundMoney(a.Repayable),
+			Interest:     interest,
+			LastBorrowed: a.LastBorrowed,
+		})
+		totalBorrowed += a.Borrowed
+		totalRepayable += a.Repayable
+		totalInterest += interest
+		loanCount += a.LoanCount
+	}
+
+	isDBU := CanClearDairyLoans(perms)
+	viewer := "edairy"
+	showInterest := true
+	showBorrowedPayable := true
+	if isDBU {
+		viewer = "dbu"
+		// DBU accountant: interest in the summary; dairy (eDairy) staff get full totals.
+		showBorrowedPayable = false
+	}
+
+	fromLabel := from.Format("02 Jan 2006")
+	toLabel := to.Format("02 Jan 2006")
+	title := fmt.Sprintf("Loan Summary Sheet for the period %s - %s", fromLabel, toLabel)
+	if productName != "" {
+		title = fmt.Sprintf("%s - %s", title, productName)
+	}
+
+	return &dtos.LoanBorrowerSummaryReport{
+		Title:               title,
+		DateFrom:            from.Format("2006-01-02"),
+		DateTo:              to.Format("2006-01-02"),
+		ProductID:           productID,
+		ProductName:         productName,
+		Viewer:              viewer,
+		ShowInterest:        showInterest,
+		ShowBorrowedPayable: showBorrowedPayable,
+		Rows:                rows,
+		MemberCount:         int64(len(rows)),
+		LoanCount:           loanCount,
+		TotalBorrowed:       roundMoney(totalBorrowed),
+		TotalRepayable:      roundMoney(totalRepayable),
+		TotalInterest:       roundMoney(totalInterest),
+	}, nil
+}
+
 func (s *LoanModuleService) RunPenalties(asOf time.Time, userID uint64) (int, error) {
 	if asOf.IsZero() {
 		asOf = time.Now()

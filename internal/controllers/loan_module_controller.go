@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -687,6 +688,20 @@ func (h *LoanModuleController) DisbursementsReport(c *gin.Context) {
 	r, err := h.svc.DisbursementsReport(status, channelCode)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": r})
+}
+
+// BorrowerSummaryReport serves GET /api/loan-module/reports/borrower-summary?date_from=&date_to=&product_id=
+// Period (date_from / date_to) is required. Rows are totals per member for loans borrowed in the period.
+func (h *LoanModuleController) BorrowerSummaryReport(c *gin.Context) {
+	dateFrom := strings.TrimSpace(c.Query("date_from"))
+	dateTo := strings.TrimSpace(c.Query("date_to"))
+	productID, _ := strconv.ParseUint(c.Query("product_id"), 10, 64)
+	r, err := h.svc.BorrowerSummaryReport(dateFrom, dateTo, productID, c.GetStringSlice("permissions"))
+	if err != nil {
+		respondServiceError(c, err, nil)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": r})

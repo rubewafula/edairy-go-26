@@ -340,6 +340,37 @@ type LoanDisbursementsReport struct {
 	TotalAmount float64                  `json:"total_amount"`
 }
 
+// LoanBorrowerSummaryRow is one member's totals for the Loan Summary Sheet (period filter required).
+type LoanBorrowerSummaryRow struct {
+	MemberID      uint64    `json:"member_id"`
+	MemberNo      string    `json:"member_no"`
+	MemberName    string    `json:"member_name"`
+	ProductNames  string    `json:"product_names"`
+	LoanCount     int64     `json:"loan_count"`
+	Borrowed      float64   `json:"borrowed"`
+	Repayable     float64   `json:"repayable"`
+	Interest      float64   `json:"interest"`
+	LastBorrowed  time.Time `json:"last_borrowed"`
+}
+
+// LoanBorrowerSummaryReport powers the downloadable Loan Summary Sheet.
+type LoanBorrowerSummaryReport struct {
+	Title            string                   `json:"title"`
+	DateFrom         string                   `json:"date_from"`
+	DateTo           string                   `json:"date_to"`
+	ProductID        uint64                   `json:"product_id,omitempty"`
+	ProductName      string                   `json:"product_name,omitempty"`
+	Viewer           string                   `json:"viewer"` // "edairy" | "dbu"
+	ShowInterest     bool                     `json:"show_interest"`
+	ShowBorrowedPayable bool                  `json:"show_borrowed_payable"`
+	Rows             []LoanBorrowerSummaryRow `json:"rows"`
+	MemberCount      int64                    `json:"member_count"`
+	LoanCount        int64                    `json:"loan_count"`
+	TotalBorrowed    float64                  `json:"total_borrowed"`
+	TotalRepayable   float64                  `json:"total_repayable"`
+	TotalInterest    float64                  `json:"total_interest"`
+}
+
 type LoanSettlementQuote struct {
 	ContractID           uint64    `json:"contract_id"`
 	SettlementDate       time.Time `json:"settlement_date"`

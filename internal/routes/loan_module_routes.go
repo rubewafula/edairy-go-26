@@ -75,4 +75,5 @@ func registerLoanModuleRoutes(api *gin.RouterGroup) {
 	g.GET("/reports/register", h.RegisterReport)
 	g.GET("/reports/applications", h.ApplicationsPipelineReport)
 	g.GET("/reports/disbursements", h.DisbursementsReport)
+	g.GET("/reports/borrower-summary", h.BorrowerSummaryReport)
 }
