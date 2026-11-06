@@ -2468,15 +2468,15 @@ func enrichApplicationsWithRepayable(items []models.LoanApplication) {
 		repayable := 0.0
 		if a.LoanContractID != nil && *a.LoanContractID > 0 {
 			var cs struct {
-				Status       string
-				SettledAt    *time.Time
-				DBUSettled   bool
-				DBUSettledAt *time.Time
+				Status      string     `gorm:"column:status"`
+				SettledAt   *time.Time `gorm:"column:settled_at"`
+				DBURepaid   bool       `gorm:"column:dbu_repaid"`
+				DBURepaidAt *time.Time `gorm:"column:dbu_repaid_at"`
 			}
-			db.DB.Raw(`SELECT status, settled_at, COALESCE(dbu_settled, 0) AS dbu_settled, dbu_settled_at
+			db.DB.Raw(`SELECT status, settled_at, COALESCE(dbu_repaid, 0) AS dbu_repaid, dbu_repaid_at
 				FROM loan_contracts WHERE id = ?`, *a.LoanContractID).Scan(&cs)
 			a.ContractStatus, a.SettledAt = cs.Status, cs.SettledAt
-			a.DBUSettled, a.DBUSettledAt = cs.DBUSettled, cs.DBUSettledAt
+			a.DBURepaid, a.DBURepaidAt = cs.DBURepaid, cs.DBURepaidAt
 			db.DB.Raw(`SELECT status FROM loan_disbursements WHERE loan_contract_id = ? AND deleted_at IS NULL
 				ORDER BY id DESC LIMIT 1`, *a.LoanContractID).Scan(&a.DisbursementStatus)
 			db.DB.Raw(`SELECT COALESCE(SUM(principal_due + interest_due + fee_due + insurance_due), 0)
