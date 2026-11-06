@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rubewafula/edairy-go-26/internal/dtos"
 	"github.com/rubewafula/edairy-go-26/internal/services"
 	"gorm.io/gorm"
 )
@@ -100,6 +101,31 @@ func (c *MemberPayrollDeductionController) GetMemberPayrollDeduction(ctx *gin.Co
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"data": deduction})
+}
+
+// UpdateMemberPayrollDeduction reviews a deduction amount (draft/incomplete/rejected payroll only).
+// Default member loan deductions cannot be reduced.
+func (c *MemberPayrollDeductionController) UpdateMemberPayrollDeduction(ctx *gin.Context) {
+	id := ctx.Param("id")
+	var req dtos.UpdateMemberPayrollDeductionRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data: amount is required"})
+		return
+	}
+
+	userID := ctx.GetUint64("user_id")
+	deduction, err := c.service.UpdateMemberPayrollDeductionAmount(id, req, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member payroll deduction not found"})
+			return
+		}
+		log.Printf("[MemberPayrollDeductionController.UpdateMemberPayrollDeduction] Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": deduction, "message": "Deduction updated successfully"})
 }
 
 func (c *MemberPayrollDeductionController) ExportDeductions(ctx *gin.Context) {

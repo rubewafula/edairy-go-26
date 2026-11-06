@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -27,7 +28,7 @@ func (c *MemberPayrollController) Create(ctx *gin.Context) {
 	var req dtos.CreateMemberPayrollRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Printf("[MemberPayrollController.Create] Binding Error: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request data: %v", err)})
 		return
 	}
 	if err := validator.Validate.Struct(req); err != nil {
@@ -40,7 +41,7 @@ func (c *MemberPayrollController) Create(ctx *gin.Context) {
 	res, err := c.service.Create(req, userID)
 	if err != nil {
 		log.Printf("[MemberPayrollController.Create] Error: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create member payroll"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusCreated, res)

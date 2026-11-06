@@ -14,6 +14,7 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	"github.com/rubewafula/edairy-go-26/internal/db"
 	"github.com/rubewafula/edairy-go-26/internal/dtos"
+	"github.com/rubewafula/edairy-go-26/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -51,13 +52,84 @@ func (s *MemberPayrollDeductionService) baseQuery() *gorm.DB {
 			mpd.id, mpd.member_id, mr.member_no, CONCAT(mr.first_name, ' ', mr.last_name) AS member_name,
 			mpd.deduction_month, mpd.fiscal_year, mpd.deduction_type_id, dt.description AS deduction_type_name,
 			mpd.amount, mpd.priority, mpd.settled, mpd.transaction_date, mpd.date_captured,
-			mpd.confirmed, mpd.payroll_id, mp.fiscal_period, mpd.reference, mpd.settlement_type,
+			mpd.confirmed, mpd.payroll_id, mp.fiscal_period, mp.status AS payroll_status,
+			mpd.reference, mpd.settlement_type,
 			mpd.created_at, mpd.updated_at
 		`).
 		Joins("LEFT JOIN member_registrations mr ON mpd.member_id = mr.id").
 		Joins("LEFT JOIN deduction_types dt ON mpd.deduction_type_id = dt.id").
 		Joins("LEFT JOIN member_payrolls mp ON mpd.payroll_id = mp.id").
 		Where("mpd.deleted_at IS NULL")
+}
+
+func (s *MemberPayrollDeductionService) enrichDefaultLoanFlags(rows []dtos.MemberPayrollDeductionResponse) {
+	contractNos := make([]string, 0)
+	seen := map[string]struct{}{}
+	for _, row := range rows {
+		ref := strings.TrimSpace(row.Reference)
+		if !strings.HasPrefix(strings.ToUpper(ref), "LOAN-") {
+			continue
+		}
+		contractNo := strings.TrimPrefix(ref, "LOAN-")
+		contractNo = strings.TrimPrefix(contractNo, "loan-")
+		if contractNo == "" {
+			continue
+		}
+		if _, ok := seen[contractNo]; ok {
+			continue
+		}
+		seen[contractNo] = struct{}{}
+		contractNos = append(contractNos, contractNo)
+	}
+	if len(contractNos) == 0 {
+		return
+	}
+
+	type loanFlag struct {
+		ContractNo          string `gorm:"column:contract_no"`
+		IsDefaultMemberLoan bool   `gorm:"column:is_default_member_loan"`
+	}
+	var flags []loanFlag
+	_ = db.DB.Table("loan_contracts lc").
+		Select("lc.contract_no, COALESCE(lp.is_default_member_loan, 0) AS is_default_member_loan").
+		Joins("LEFT JOIN loan_products lp ON lp.id = lc.loan_product_id").
+		Where("lc.contract_no IN ? AND lc.deleted_at IS NULL", contractNos).
+		Scan(&flags).Error
+
+	byContract := map[string]bool{}
+	for _, f := range flags {
+		byContract[f.ContractNo] = f.IsDefaultMemberLoan
+	}
+
+	for i := range rows {
+		ref := strings.TrimSpace(rows[i].Reference)
+		if !strings.HasPrefix(strings.ToUpper(ref), "LOAN-") {
+			continue
+		}
+		contractNo := strings.TrimPrefix(ref, "LOAN-")
+		contractNo = strings.TrimPrefix(contractNo, "loan-")
+		if byContract[contractNo] {
+			rows[i].IsDefaultMemberLoan = true
+			rows[i].CannotReduceAmount = true
+		}
+	}
+}
+
+func (s *MemberPayrollDeductionService) isDefaultMemberLoanReference(reference string) bool {
+	ref := strings.TrimSpace(reference)
+	if !strings.HasPrefix(strings.ToUpper(ref), "LOAN-") {
+		return false
+	}
+	contractNo := strings.TrimPrefix(ref, "LOAN-")
+	contractNo = strings.TrimPrefix(contractNo, "loan-")
+	var isDefault bool
+	_ = db.DB.Table("loan_contracts lc").
+		Select("COALESCE(lp.is_default_member_loan, 0)").
+		Joins("LEFT JOIN loan_products lp ON lp.id = lc.loan_product_id").
+		Where("lc.contract_no = ? AND lc.deleted_at IS NULL", contractNo).
+		Limit(1).
+		Scan(&isDefault).Error
+	return isDefault
 }
 
 func (s *MemberPayrollDeductionService) applyFilters(query *gorm.DB, filters MemberPayrollDeductionFilters) *gorm.DB {
@@ -98,8 +170,11 @@ func (s *MemberPayrollDeductionService) GetMemberPayrollDeductions(page, limit i
 
 	offset := (page - 1) * limit
 	err := query.Limit(limit).Offset(offset).Order("mpd.id DESC").Scan(&deductions).Error
-
-	return deductions, total, err
+	if err != nil {
+		return deductions, total, err
+	}
+	s.enrichDefaultLoanFlags(deductions)
+	return deductions, total, nil
 }
 
 // GetMemberPayrollDeduction retrieves a single member payroll deduction by its ID.
@@ -116,7 +191,86 @@ func (s *MemberPayrollDeductionService) GetMemberPayrollDeduction(id string) (*d
 	if deduction.ID == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
-	return &deduction, nil
+	rows := []dtos.MemberPayrollDeductionResponse{deduction}
+	s.enrichDefaultLoanFlags(rows)
+	return &rows[0], nil
+}
+
+// UpdateMemberPayrollDeductionAmount reviews/updates a deduction amount while payroll is still editable.
+// Default member loan deductions cannot be reduced.
+func (s *MemberPayrollDeductionService) UpdateMemberPayrollDeductionAmount(id string, req dtos.UpdateMemberPayrollDeductionRequest, userID uint64) (*dtos.MemberPayrollDeductionResponse, error) {
+	newAmount, err := strconv.ParseFloat(strings.TrimSpace(req.Amount), 64)
+	if err != nil || newAmount < 0 {
+		return nil, fmt.Errorf("amount must be a valid non-negative number")
+	}
+
+	var deduction models.MemberPayrollDeduction
+	if err := db.DB.Where("id = ? AND deleted_at IS NULL", id).First(&deduction).Error; err != nil {
+		return nil, err
+	}
+
+	var payroll models.MemberPayroll
+	if err := db.DB.Where("id = ? AND deleted_at IS NULL", deduction.PayrollID).First(&payroll).Error; err != nil {
+		return nil, fmt.Errorf("parent payroll not found")
+	}
+
+	status := strings.ToLower(strings.TrimSpace(payroll.Status))
+	editable := map[string]bool{"draft": true, "incomplete": true, "rejected": true}
+	if !editable[status] {
+		return nil, fmt.Errorf("payroll deductions can only be reviewed while payroll status is draft, incomplete, or rejected (current: %s)", payroll.Status)
+	}
+
+	oldAmount, _ := strconv.ParseFloat(strings.TrimSpace(deduction.Amount), 64)
+	isDefaultLoan := s.isDefaultMemberLoanReference(deduction.Reference)
+	if isDefaultLoan && newAmount+0.0001 < oldAmount {
+		return nil, fmt.Errorf("default member loan deductions cannot be reduced during payroll review")
+	}
+
+	amountStr := fmt.Sprintf("%.2f", newAmount)
+	if err := db.DB.Model(&deduction).Updates(map[string]interface{}{
+		"amount":     amountStr,
+		"updated_by": userID,
+		"updated_at": time.Now(),
+	}).Error; err != nil {
+		return nil, err
+	}
+
+	// Keep payslip totals in sync for this member.
+	var total float64
+	_ = db.DB.Table("member_payroll_deductions").
+		Select("COALESCE(SUM(CAST(amount AS DECIMAL(15,2))), 0)").
+		Where("payroll_id = ? AND member_id = ? AND deleted_at IS NULL", deduction.PayrollID, deduction.MemberID).
+		Scan(&total).Error
+
+	var payslip models.MemberPayslip
+	if err := db.DB.Where("payroll_id = ? AND member_id = ? AND deleted_at IS NULL", deduction.PayrollID, deduction.MemberID).First(&payslip).Error; err == nil {
+		net := payslip.GrossPay - total
+		_ = db.DB.Model(&payslip).Updates(map[string]interface{}{
+			"total_deductions": total,
+			"net_pay":          net,
+			"updated_by":       userID,
+			"updated_at":       time.Now(),
+		}).Error
+	}
+
+	var payrollTotal float64
+	_ = db.DB.Table("member_payroll_deductions").
+		Select("COALESCE(SUM(CAST(amount AS DECIMAL(15,2))), 0)").
+		Where("payroll_id = ? AND deleted_at IS NULL", deduction.PayrollID).
+		Scan(&payrollTotal).Error
+	var payrollGross float64
+	_ = db.DB.Table("member_payslips").
+		Select("COALESCE(SUM(gross_pay), 0)").
+		Where("payroll_id = ? AND deleted_at IS NULL", deduction.PayrollID).
+		Scan(&payrollGross).Error
+	_ = db.DB.Model(&payroll).Updates(map[string]interface{}{
+		"total_deductions": payrollTotal,
+		"net_pay":          payrollGross - payrollTotal,
+		"updated_by":       userID,
+		"updated_at":       time.Now(),
+	}).Error
+
+	return s.GetMemberPayrollDeduction(id)
 }
 
 // ExportDeductions initiates a background process to export member payroll deductions.

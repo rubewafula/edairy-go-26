@@ -46,12 +46,14 @@ func (s *MemberPayrollService) Create(req dtos.CreateMemberPayrollRequest, userI
 		"draft":      true,
 		"incomplete": true,
 		"rejected":   true,
-		"DRAFT":      true,
-		"INCOMPLTE":  true,
+		"processing": true, // allow retry when generation got stuck
 	}
 
-	if err == nil && !allowedStatuses[existing.Status] {
-		return nil, fmt.Errorf("payroll for this period is already %s and cannot be regenerated", existing.Status)
+	if err == nil && !allowedStatuses[strings.ToLower(existing.Status)] {
+		return nil, fmt.Errorf(
+			"payroll for this period is already %s and cannot be regenerated. Revoke or reject it first, or pick another pay date range",
+			existing.Status,
+		)
 	}
 
 	dateOpened := utils.ParseDate(req.DateOpened)
@@ -93,6 +95,29 @@ func (s *MemberPayrollService) Create(req dtos.CreateMemberPayrollRequest, userI
 }
 
 func (s *MemberPayrollService) generatePayrollInBackground(payrollID uint64, pdr models.MemberPayDateRange, req dtos.CreateMemberPayrollRequest, userID uint64) {
+	// If generation panics or aborts while still "processing", move payroll to incomplete
+	// so it can be reviewed / regenerated instead of blocking forever.
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic during payroll generation: %v", r)
+			s.handleProcessingError(payrollID, userID, "Member Payroll Generation Failed", "Unexpected error while generating payroll", err, "incomplete")
+			return
+		}
+		var status string
+		if err := db.DB.Model(&models.MemberPayroll{}).Select("status").Where("id = ?", payrollID).Scan(&status).Error; err == nil {
+			if strings.EqualFold(strings.TrimSpace(status), "processing") {
+				s.handleProcessingError(
+					payrollID,
+					userID,
+					"Member Payroll Generation Failed",
+					"Payroll generation ended without completing; status moved to incomplete for review",
+					fmt.Errorf("stuck in processing"),
+					"incomplete",
+				)
+			}
+		}
+	}()
+
 	// Per-litre cashout charges for the period go onto the members' loan deductions before they are read below.
 	if _, err := NewLoanModuleService().ApplyPerLitreCharges(pdr, userID); err != nil {
 		log.Printf("[MemberPayroll] per-litre charges for payroll %d: %v", payrollID, err)

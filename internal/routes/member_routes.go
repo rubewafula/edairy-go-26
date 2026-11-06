@@ -91,5 +91,6 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/member-payroll-deductions/export", memberPayrollDeductionController.ExportDeductions)
 	api.GET("/member-payroll-deductions/export/download/:filename", memberPayrollDeductionController.DownloadExportFile)
 	api.GET("/member-payroll-deductions/:id", memberPayrollDeductionController.GetMemberPayrollDeduction)
+	api.PUT("/member-payroll-deductions/:id", memberPayrollDeductionController.UpdateMemberPayrollDeduction)
 
 }
