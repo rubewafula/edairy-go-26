@@ -222,9 +222,9 @@ func (s *MemberService) GetMembers(page, limit int, memberNo, primaryPhone, memb
 		args = append(args, routeID)
 	}
 	if q != "" {
-		whereClauses = append(whereClauses, "(m.first_name LIKE ? OR m.last_name LIKE ? OR m.id_no LIKE ?)")
+		whereClauses = append(whereClauses, "(m.member_no LIKE ? OR m.first_name LIKE ? OR m.last_name LIKE ? OR m.id_no LIKE ?)")
 		search := "%" + q + "%"
-		args = append(args, search, search, search)
+		args = append(args, search, search, search, search)
 	}
 
 	whereSql := " WHERE " + strings.Join(whereClauses, " AND ")
