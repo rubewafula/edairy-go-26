@@ -1606,11 +1606,17 @@ func (s *LoanModuleService) updateContractBalances(tx *gorm.DB, contract *models
 }
 
 // RecordRepaymentFromPayroll updates loan balances after milk payroll GL is already posted.
+// reference must be stable per payroll+loan (e.g. PAYROLL-{id}-LOAN-{contractNo}) so re-approval is idempotent.
 func (s *LoanModuleService) RecordRepaymentFromPayroll(contractID uint64, amount float64, payslipID, payrollID, userID uint64, reference string) error {
+	idem := strings.TrimSpace(reference)
+	if idem == "" {
+		idem = fmt.Sprintf("PAYROLL-%d-CONTRACT-%d", payrollID, contractID)
+	}
 	_, err := s.RecordRepayment(contractID, dtos.RecordLoanRepaymentRequest{
 		Amount:          amount,
 		Channel:         models.LoanChannelMilkDeduction,
-		Reference:       reference + "-SCHED",
+		Reference:       idem + "-SCHED",
+		IdempotencyKey:  idem,
 		PostToGL:        false,
 		MemberPayrollID: &payrollID,
 		MemberPayslipID: &payslipID,
