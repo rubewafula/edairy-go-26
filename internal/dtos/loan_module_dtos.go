@@ -28,6 +28,8 @@ type CreateLoanProductRequest struct {
 	RecoveryPriority      int      `json:"recovery_priority"`
 	IsActive              *bool    `json:"is_active"`
 	IsDefaultMemberLoan   *bool    `json:"is_default_member_loan"`
+	// SettlesOnConfirmRepayment: officer Confirm repayment settles contracts for this product.
+	SettlesOnConfirmRepayment *bool `json:"settles_on_confirm_repayment"`
 	// ChargePerLitre: KES per litre delivered in a pay period with a cashout (0 = none).
 	ChargePerLitre *float64 `json:"charge_per_litre"`
 	// ProcessingFeeAmount: fixed processing fee per loan (KES). Setting it clears processing_fee_rate.
@@ -58,6 +60,8 @@ type UpdateLoanProductRequest struct {
 	RecoveryPriority      *int     `json:"recovery_priority"`
 	IsActive              *bool    `json:"is_active"`
 	IsDefaultMemberLoan   *bool    `json:"is_default_member_loan"`
+	// SettlesOnConfirmRepayment: officer Confirm repayment settles contracts for this product.
+	SettlesOnConfirmRepayment *bool `json:"settles_on_confirm_repayment"`
 	// ChargePerLitre: KES per litre delivered in a pay period with a cashout (0 = none).
 	ChargePerLitre *float64 `json:"charge_per_litre"`
 	// ProcessingFeeAmount: fixed processing fee per loan (KES). Setting it clears processing_fee_rate.

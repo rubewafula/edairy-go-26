@@ -233,12 +233,14 @@ func (h *LoanModuleController) SettlementSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": res})
 }
 
-// SettleMonth serves POST /api/loan-module/applications/settle-month {"month":"YYYY-MM"}: queues every
-// unsettled disbursed loan of the month; each is settled separately with a notification per loan.
+// SettleMonth serves POST /api/loan-module/applications/settle-month
+// {"month":"YYYY-MM","product_id":N}: Confirm repayment for the selected loan type in that month.
+// Each loan is settled separately with a notification. Payroll deductions do not settle contracts.
 func (h *LoanModuleController) SettleMonth(c *gin.Context) {
 	var req struct {
-		Month  string `json:"month"`
-		DryRun bool   `json:"dry_run"` // only check that the caller may clear dairy loans
+		Month     string `json:"month"`
+		ProductID uint64 `json:"product_id"`
+		DryRun    bool   `json:"dry_run"` // only check that the caller may clear dairy loans
 	}
 	_ = c.ShouldBindJSON(&req)
 	if !services.CanClearDairyLoans(c.GetStringSlice("permissions")) {
@@ -249,7 +251,7 @@ func (h *LoanModuleController) SettleMonth(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"data": gin.H{"allowed": true}})
 		return
 	}
-	res, err := h.svc.QueueMonthSettlement(req.Month, h.userID(c))
+	res, err := h.svc.QueueMonthSettlement(req.Month, req.ProductID, h.userID(c))
 	if err != nil {
 		respondServiceError(c, err, nil)
 		return

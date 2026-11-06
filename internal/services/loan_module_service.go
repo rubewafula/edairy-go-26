@@ -89,6 +89,8 @@ func (s *LoanModuleService) CreateProduct(req dtos.CreateLoanProductRequest, use
 		RecoveryPriority:      recoveryPriority,
 		IsActive:              active,
 		IsDefaultMemberLoan:   req.IsDefaultMemberLoan != nil && *req.IsDefaultMemberLoan,
+		// Officer confirm settles by default; turn off on products that must stay open after milk recoveries.
+		SettlesOnConfirmRepayment: req.SettlesOnConfirmRepayment == nil || *req.SettlesOnConfirmRepayment,
 	}
 	if req.ChargePerLitre != nil {
 		if *req.ChargePerLitre < 0 {
@@ -280,6 +282,9 @@ func (s *LoanModuleService) UpdateProduct(id uint64, req dtos.UpdateLoanProductR
 		willBeDefault = false
 	}
 	updates["is_default_member_loan"] = willBeDefault
+	if req.SettlesOnConfirmRepayment != nil {
+		updates["settles_on_confirm_repayment"] = *req.SettlesOnConfirmRepayment
+	}
 
 	wasDefault := p.IsDefaultMemberLoan
 	err := db.DB.Transaction(func(tx *gorm.DB) error {

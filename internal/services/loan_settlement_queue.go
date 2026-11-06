@@ -48,6 +48,9 @@ func ensureSettlementSchema() {
 		if err := db.DB.AutoMigrate(&LoanSettlementJob{}); err != nil {
 			log.Printf("[LoanSettlement] migrate: %v", err)
 		}
+		if err := db.DB.AutoMigrate(&models.LoanProduct{}); err != nil {
+			log.Printf("[LoanSettlement] migrate loan_products: %v", err)
+		}
 	})
 }
 
@@ -70,6 +73,15 @@ func (s *LoanModuleService) QueueSettlements(appIDs []uint64, userID uint64) (*S
 		found[a.ID] = true
 		if a.Status != models.LoanAppDisbursed || a.LoanContractID == nil {
 			res.Skipped[a.ID] = fmt.Sprintf("only disbursed loans can be settled (status %s)", a.Status)
+			continue
+		}
+		var product models.LoanProduct
+		if err := db.DB.Select("id, settles_on_confirm_repayment").First(&product, a.LoanProductID).Error; err != nil {
+			res.Skipped[a.ID] = "loan product not found"
+			continue
+		}
+		if !product.SettlesOnConfirmRepayment {
+			res.Skipped[a.ID] = "product is not set to settle on Confirm repayment"
 			continue
 		}
 		var c models.LoanContract
@@ -395,28 +407,37 @@ const contractOutstandingSQL = `(SELECT COALESCE(SUM(GREATEST((i.principal_due +
 const monthCondition = ` AND DATE_FORMAT(COALESCE(c.disbursement_date, a.date_applied), '%Y-%m') = ?`
 
 // SettlementSummary returns the month's figures (month "" = current month).
+// When productID > 0, month unsettled/settled counts are limited to that product.
 func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*MonthSettlementSummary, error) {
 	ensureSettlementSchema()
 	month = normalizeMonth(month)
 	out := &MonthSettlementSummary{Month: month}
+	productFilter := ""
+	var productArgs []interface{}
+	if productID > 0 {
+		productFilter = ` AND a.loan_product_id = ?`
+		productArgs = append(productArgs, productID)
+	}
 	var r struct {
 		N           int64
 		Borrowed    float64
 		Repayable   float64
 		Outstanding float64
 	}
+	unsettledArgs := append([]interface{}{month}, productArgs...)
 	db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(c.principal_amount), 0) AS borrowed,
 		COALESCE(SUM(`+contractRepayableSQL+`), 0) AS repayable, COALESCE(SUM(`+contractOutstandingSQL+`), 0) AS outstanding
-		`+unsettledDisbursedSQL+monthCondition, month).Scan(&r)
+		`+unsettledDisbursedSQL+monthCondition+productFilter, unsettledArgs...).Scan(&r)
 	out.UnsettledLoans, out.Borrowed, out.TotalRepayable, out.Outstanding = r.N, roundMoney(r.Borrowed), roundMoney(r.Repayable), roundMoney(r.Outstanding)
 
 	var st struct {
 		N      int64
 		Amount float64
 	}
+	settledArgs := append([]interface{}{month}, productArgs...)
 	db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(`+contractRepayableSQL+`), 0) AS amount
 		FROM loan_applications a JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
-		WHERE a.deleted_at IS NULL AND c.status = 'SETTLED'`+monthCondition, month).Scan(&st)
+		WHERE a.deleted_at IS NULL AND c.status = 'SETTLED'`+monthCondition+productFilter, settledArgs...).Scan(&st)
 	out.SettledLoans, out.SettledAmount = st.N, roundMoney(st.Amount)
 
 	db.DB.Model(&LoanSettlementJob{}).Where("status IN ?", []string{SettlementQueued, SettlementProcessing}).Count(&out.QueuedLoans)
@@ -455,17 +476,39 @@ func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*
 	return out, nil
 }
 
-// QueueMonthSettlement queues every unsettled disbursed loan of the month; each is settled separately.
-func (s *LoanModuleService) QueueMonthSettlement(month string, userID uint64) (*SettleQueueResult, error) {
+// QueueMonthSettlement queues unsettled disbursed loans of the month for officer Confirm repayment.
+// productID is required: only that loan type is settled, and only if the product has
+// settles_on_confirm_repayment enabled. Payroll deductions never settle contracts.
+func (s *LoanModuleService) QueueMonthSettlement(month string, productID uint64, userID uint64) (*SettleQueueResult, error) {
+	ensureSettlementSchema()
 	month = normalizeMonth(month)
+	if productID == 0 {
+		return nil, fmt.Errorf("select a loan product before confirming repayment")
+	}
+	var product models.LoanProduct
+	if err := db.DB.Select("id, product_name, settles_on_confirm_repayment").First(&product, productID).Error; err != nil {
+		return nil, fmt.Errorf("loan product not found")
+	}
+	if !product.SettlesOnConfirmRepayment {
+		return nil, fmt.Errorf(
+			"%s is not set to settle on Confirm repayment — enable \"Settles on confirm repayment\" on the loan product",
+			product.ProductName,
+		)
+	}
 	var ids []uint64
-	if err := db.DB.Raw(`SELECT a.id `+unsettledDisbursedSQL+monthCondition+` ORDER BY a.id`, month).Scan(&ids).Error; err != nil {
+	if err := db.DB.Raw(
+		`SELECT a.id `+unsettledDisbursedSQL+monthCondition+` AND a.loan_product_id = ? ORDER BY a.id`,
+		month, productID,
+	).Scan(&ids).Error; err != nil {
 		return nil, err
 	}
 	if len(ids) == 0 {
 		return &SettleQueueResult{Skipped: map[uint64]string{}}, nil
 	}
-	appendAppLog("disbursement.log", fmt.Sprintf("settle month %s: %d loan(s) requested by user %d", month, len(ids), userID))
+	appendAppLog("disbursement.log", fmt.Sprintf(
+		"confirm repayment month %s product %d: %d loan(s) requested by user %d",
+		month, productID, len(ids), userID,
+	))
 	return s.QueueSettlements(ids, userID)
 }
 

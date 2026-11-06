@@ -39,6 +39,9 @@ type LoanProduct struct {
 	// IsDefaultMemberLoan marks the product used for mobile (member self-service) loan applications.
 	// At most one product carries this flag.
 	IsDefaultMemberLoan bool `gorm:"column:is_default_member_loan;not null;default:0;index" json:"is_default_member_loan"`
+	// SettlesOnConfirmRepayment: officer "Confirm repayment" / Settle All marks these loans SETTLED.
+	// Milk payroll deductions never settle the contract — only this confirm action does.
+	SettlesOnConfirmRepayment bool `gorm:"column:settles_on_confirm_repayment;not null;default:1;index" json:"settles_on_confirm_repayment"`
 	// ChargePerLitre (KES) is charged at payroll on every litre a member delivers in a pay period in which
 	// they took a cashout on this product (e.g. 2.00). 0 disables it.
 	ChargePerLitre float64 `gorm:"column:charge_per_litre;type:decimal(10,2);not null;default:0" json:"charge_per_litre"`
