@@ -63,10 +63,15 @@ func (s *MemberPayrollDeductionService) baseQuery() *gorm.DB {
 }
 
 func (s *MemberPayrollDeductionService) enrichDefaultLoanFlags(rows []dtos.MemberPayrollDeductionResponse) {
+	editableStatuses := map[string]bool{"draft": true, "incomplete": true, "rejected": true}
+
 	contractNos := make([]string, 0)
 	seen := map[string]struct{}{}
-	for _, row := range rows {
-		ref := strings.TrimSpace(row.Reference)
+	for i := range rows {
+		status := strings.ToLower(strings.TrimSpace(rows[i].PayrollStatus))
+		rows[i].AmountEditable = editableStatuses[status]
+
+		ref := strings.TrimSpace(rows[i].Reference)
 		if !strings.HasPrefix(strings.ToUpper(ref), "LOAN-") {
 			continue
 		}
@@ -110,7 +115,8 @@ func (s *MemberPayrollDeductionService) enrichDefaultLoanFlags(rows []dtos.Membe
 		contractNo = strings.TrimPrefix(contractNo, "loan-")
 		if byContract[contractNo] {
 			rows[i].IsDefaultMemberLoan = true
-			rows[i].CannotReduceAmount = true
+			// Default member-loan repayments are fixed — not editable in payroll review.
+			rows[i].AmountEditable = false
 		}
 	}
 }
@@ -197,7 +203,7 @@ func (s *MemberPayrollDeductionService) GetMemberPayrollDeduction(id string) (*d
 }
 
 // UpdateMemberPayrollDeductionAmount reviews/updates a deduction amount while payroll is still editable.
-// Default member loan deductions cannot be reduced.
+// Default member-loan repayments (default product) are never editable.
 func (s *MemberPayrollDeductionService) UpdateMemberPayrollDeductionAmount(id string, req dtos.UpdateMemberPayrollDeductionRequest, userID uint64) (*dtos.MemberPayrollDeductionResponse, error) {
 	newAmount, err := strconv.ParseFloat(strings.TrimSpace(req.Amount), 64)
 	if err != nil || newAmount < 0 {
@@ -220,10 +226,8 @@ func (s *MemberPayrollDeductionService) UpdateMemberPayrollDeductionAmount(id st
 		return nil, fmt.Errorf("payroll deductions can only be reviewed while payroll status is draft, incomplete, or rejected (current: %s)", payroll.Status)
 	}
 
-	oldAmount, _ := strconv.ParseFloat(strings.TrimSpace(deduction.Amount), 64)
-	isDefaultLoan := s.isDefaultMemberLoanReference(deduction.Reference)
-	if isDefaultLoan && newAmount+0.0001 < oldAmount {
-		return nil, fmt.Errorf("default member loan deductions cannot be reduced during payroll review")
+	if s.isDefaultMemberLoanReference(deduction.Reference) {
+		return nil, fmt.Errorf("loan repayments for the default member loan product are not editable")
 	}
 
 	amountStr := fmt.Sprintf("%.2f", newAmount)

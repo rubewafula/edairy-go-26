@@ -44,9 +44,9 @@ type MemberPayrollDeductionResponse struct {
 	FiscalPeriod         string     `json:"fiscal_period"`
 	Reference            string     `json:"reference"`
 	SettlementType       string     `json:"settlement_type"`
-	IsDefaultMemberLoan  bool       `json:"is_default_member_loan"`
-	CannotReduceAmount   bool       `json:"cannot_reduce_amount"`
-	PayrollStatus        string     `json:"payroll_status,omitempty"`
+	IsDefaultMemberLoan bool   `json:"is_default_member_loan"`
+	AmountEditable      bool   `json:"amount_editable"`
+	PayrollStatus       string `json:"payroll_status,omitempty"`
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 }

@@ -104,7 +104,7 @@ func (c *MemberPayrollDeductionController) GetMemberPayrollDeduction(ctx *gin.Co
 }
 
 // UpdateMemberPayrollDeduction reviews a deduction amount (draft/incomplete/rejected payroll only).
-// Default member loan deductions cannot be reduced.
+// Default member-loan repayments are not editable.
 func (c *MemberPayrollDeductionController) UpdateMemberPayrollDeduction(ctx *gin.Context) {
 	id := ctx.Param("id")
 	var req dtos.UpdateMemberPayrollDeductionRequest
