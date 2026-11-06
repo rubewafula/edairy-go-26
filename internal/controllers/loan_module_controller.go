@@ -693,13 +693,14 @@ func (h *LoanModuleController) DisbursementsReport(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": r})
 }
 
-// BorrowerSummaryReport serves GET /api/loan-module/reports/borrower-summary?date_from=&date_to=&product_id=
+// BorrowerSummaryReport serves GET /api/loan-module/reports/borrower-summary?date_from=&date_to=&product_id=&paid_status=
 // Period (date_from / date_to) is required. Rows are totals per member for loans borrowed in the period.
 func (h *LoanModuleController) BorrowerSummaryReport(c *gin.Context) {
 	dateFrom := strings.TrimSpace(c.Query("date_from"))
 	dateTo := strings.TrimSpace(c.Query("date_to"))
 	productID, _ := strconv.ParseUint(c.Query("product_id"), 10, 64)
-	r, err := h.svc.BorrowerSummaryReport(dateFrom, dateTo, productID, c.GetStringSlice("permissions"))
+	paidStatus := strings.TrimSpace(c.Query("paid_status"))
+	r, err := h.svc.BorrowerSummaryReport(dateFrom, dateTo, productID, paidStatus, c.GetStringSlice("permissions"))
 	if err != nil {
 		respondServiceError(c, err, nil)
 		return
