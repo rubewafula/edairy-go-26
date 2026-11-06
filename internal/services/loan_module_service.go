@@ -1470,7 +1470,14 @@ func (s *LoanModuleService) RecordRepayment(contractID uint64, req dtos.RecordLo
 		contract.LastPaymentDate = &payDate
 		contract.TotalPaid = roundMoney(contract.TotalPaid + req.Amount)
 		contract.UpdatedBy = userID
-		// Do not auto-mark SETTLED here — that only happens via Settle All / SettleContract.
+		if contract.OutstandingPrincipal <= 0 && contract.OutstandingInterest <= 0 &&
+			contract.OutstandingFees <= 0 && contract.OutstandingPenalties <= 0 {
+			contract.Status = models.LoanContractSettled
+			if contract.SettledAt == nil {
+				settled := payDate
+				contract.SettledAt = &settled
+			}
+		}
 		return tx.Save(&contract).Error
 	})
 	if err == nil {
@@ -1590,7 +1597,9 @@ func (s *LoanModuleService) syncRecurrentDeduction(tx *gorm.DB, contract *models
 	rd.PaidAmount = contract.TotalPaid
 	rd.PrincipalAmount = contract.OutstandingPrincipal
 	// recurrent_amount is left as it is: the full amount by default, or what was set by hand.
-	// Do not set rd.Settled here — milk deductions stop only when Settle All / SettleContract runs.
+	if contract.OutstandingPrincipal <= 0 && contract.OutstandingInterest <= 0 {
+		rd.Settled = 1
+	}
 	tx.Save(&rd)
 }
 
@@ -2459,11 +2468,15 @@ func enrichApplicationsWithRepayable(items []models.LoanApplication) {
 		repayable := 0.0
 		if a.LoanContractID != nil && *a.LoanContractID > 0 {
 			var cs struct {
-				Status    string
-				SettledAt *time.Time
+				Status       string
+				SettledAt    *time.Time
+				DBUSettled   bool
+				DBUSettledAt *time.Time
 			}
-			db.DB.Raw(`SELECT status, settled_at FROM loan_contracts WHERE id = ?`, *a.LoanContractID).Scan(&cs)
+			db.DB.Raw(`SELECT status, settled_at, COALESCE(dbu_settled, 0) AS dbu_settled, dbu_settled_at
+				FROM loan_contracts WHERE id = ?`, *a.LoanContractID).Scan(&cs)
 			a.ContractStatus, a.SettledAt = cs.Status, cs.SettledAt
+			a.DBUSettled, a.DBUSettledAt = cs.DBUSettled, cs.DBUSettledAt
 			db.DB.Raw(`SELECT status FROM loan_disbursements WHERE loan_contract_id = ? AND deleted_at IS NULL
 				ORDER BY id DESC LIMIT 1`, *a.LoanContractID).Scan(&a.DisbursementStatus)
 			db.DB.Raw(`SELECT COALESCE(SUM(principal_due + interest_due + fee_due + insurance_due), 0)

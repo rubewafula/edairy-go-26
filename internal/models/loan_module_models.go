@@ -39,8 +39,8 @@ type LoanProduct struct {
 	// IsDefaultMemberLoan marks the product used for mobile (member self-service) loan applications.
 	// At most one product carries this flag.
 	IsDefaultMemberLoan bool `gorm:"column:is_default_member_loan;not null;default:0;index" json:"is_default_member_loan"`
-	// SettlesOnConfirmRepayment: officer "Confirm repayment" / Settle All marks these loans SETTLED.
-	// Milk payroll deductions never settle the contract — only this confirm action does.
+	// SettlesOnConfirmRepayment: officer "Confirm repayment" marks DBU remittance settled for this product
+	// (loan_contracts.dbu_settled). Contract SETTLED status is separate (member repayments / milk).
 	SettlesOnConfirmRepayment bool `gorm:"column:settles_on_confirm_repayment;not null;default:1;index" json:"settles_on_confirm_repayment"`
 	// ChargePerLitre (KES) is charged at payroll on every litre a member delivers in a pay period in which
 	// they took a cashout on this product (e.g. 2.00). 0 disables it.
@@ -113,6 +113,9 @@ type LoanApplication struct {
 	// ContractStatus of the loan (e.g. SETTLED once a disbursed loan is settled).
 	ContractStatus string     `gorm:"-" json:"contract_status,omitempty"`
 	SettledAt      *time.Time `gorm:"-" json:"settled_at,omitempty"`
+	// DBUSettled / DBUSettledAt: DBU has confirmed remittance to the lending entity (default member loans).
+	DBUSettled   bool       `gorm:"-" json:"dbu_settled"`
+	DBUSettledAt *time.Time `gorm:"-" json:"dbu_settled_at,omitempty"`
 	// DisbursementStatus of the latest payout (e.g. MPESA_ERROR) — shown as-is on the desktop; the
 	// mobile app keeps showing "Processing" for anything not yet paid.
 	DisbursementStatus string `gorm:"-" json:"disbursement_status,omitempty"`
@@ -189,6 +192,10 @@ type LoanContract struct {
 	MaturityDate            *time.Time `gorm:"column:maturity_date;type:date" json:"maturity_date"`
 	// SettledAt is the date the loan was fully repaid / settled (set when status becomes SETTLED).
 	SettledAt *time.Time `gorm:"column:settled_at;type:date;index" json:"settled_at"`
+	// DBUSettled: DBU officer confirmed remittance to the lending entity (Confirm repayment).
+	// Independent of member repayment / contract SETTLED status.
+	DBUSettled   bool       `gorm:"column:dbu_settled;not null;default:0;index" json:"dbu_settled"`
+	DBUSettledAt *time.Time `gorm:"column:dbu_settled_at;type:date;index" json:"dbu_settled_at"`
 	LastPaymentDate         *time.Time `gorm:"column:last_payment_date;type:date" json:"last_payment_date"`
 	InstallmentAmount       *float64   `gorm:"column:installment_amount;type:decimal(15,2)" json:"installment_amount"`
 	MilkDeductionEnabled    bool       `gorm:"column:milk_deduction_enabled;default:1" json:"milk_deduction_enabled"`

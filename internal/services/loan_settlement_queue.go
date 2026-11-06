@@ -21,6 +21,11 @@ const (
 	SettlementProcessing = "PROCESSING"
 	SettlementDone       = "DONE"
 	SettlementFailed     = "FAILED"
+
+	// SettlementKindContract: bulk Settle — closes the loan contract (SETTLED).
+	SettlementKindContract = "CONTRACT"
+	// SettlementKindDBU: Confirm repayment — marks DBU remittance settled without changing loan status.
+	SettlementKindDBU = "DBU"
 )
 
 // LoanSettlementJob is one queued settlement (table loan_settlement_jobs).
@@ -29,6 +34,7 @@ type LoanSettlementJob struct {
 	LoanApplicationID uint64     `gorm:"column:loan_application_id;index;not null" json:"loan_application_id"`
 	LoanContractID    uint64     `gorm:"column:loan_contract_id;index;not null" json:"loan_contract_id"`
 	RequestedBy       uint64     `gorm:"column:requested_by;index" json:"requested_by"`
+	Kind              string     `gorm:"column:kind;size:16;index;not null;default:CONTRACT" json:"kind"`
 	Status            string     `gorm:"column:status;size:16;index;not null;default:QUEUED" json:"status"`
 	SettledAmount     float64    `gorm:"column:settled_amount;type:decimal(15,2)" json:"settled_amount"`
 	Error             string     `gorm:"column:error;type:text" json:"error"`
@@ -48,8 +54,8 @@ func ensureSettlementSchema() {
 		if err := db.DB.AutoMigrate(&LoanSettlementJob{}); err != nil {
 			log.Printf("[LoanSettlement] migrate: %v", err)
 		}
-		if err := db.DB.AutoMigrate(&models.LoanProduct{}); err != nil {
-			log.Printf("[LoanSettlement] migrate loan_products: %v", err)
+		if err := db.DB.AutoMigrate(&models.LoanProduct{}, &models.LoanContract{}); err != nil {
+			log.Printf("[LoanSettlement] migrate loan product/contract: %v", err)
 		}
 	})
 }
@@ -75,15 +81,6 @@ func (s *LoanModuleService) QueueSettlements(appIDs []uint64, userID uint64) (*S
 			res.Skipped[a.ID] = fmt.Sprintf("only disbursed loans can be settled (status %s)", a.Status)
 			continue
 		}
-		var product models.LoanProduct
-		if err := db.DB.Select("id, settles_on_confirm_repayment").First(&product, a.LoanProductID).Error; err != nil {
-			res.Skipped[a.ID] = "loan product not found"
-			continue
-		}
-		if !product.SettlesOnConfirmRepayment {
-			res.Skipped[a.ID] = "product is not set to settle on Confirm repayment"
-			continue
-		}
 		var c models.LoanContract
 		if err := db.DB.Select("id, status").First(&c, *a.LoanContractID).Error; err != nil {
 			res.Skipped[a.ID] = "loan contract not found"
@@ -98,13 +95,16 @@ func (s *LoanModuleService) QueueSettlements(appIDs []uint64, userID uint64) (*S
 			continue
 		}
 		var open int64
-		db.DB.Model(&LoanSettlementJob{}).Where("loan_contract_id = ? AND status IN ?", c.ID,
+		db.DB.Model(&LoanSettlementJob{}).Where("loan_contract_id = ? AND kind = ? AND status IN ?", c.ID, SettlementKindContract,
 			[]string{SettlementQueued, SettlementProcessing}).Count(&open)
 		if open > 0 {
 			res.Skipped[a.ID] = "already queued for settlement"
 			continue
 		}
-		job := LoanSettlementJob{LoanApplicationID: a.ID, LoanContractID: c.ID, RequestedBy: userID, Status: SettlementQueued}
+		job := LoanSettlementJob{
+			LoanApplicationID: a.ID, LoanContractID: c.ID, RequestedBy: userID,
+			Kind: SettlementKindContract, Status: SettlementQueued,
+		}
 		job.CreatedBy = userID
 		if err := db.DB.Create(&job).Error; err != nil {
 			return nil, err
@@ -192,6 +192,10 @@ func (s *LoanModuleService) processSettlementQueue() {
 }
 
 func (s *LoanModuleService) settleOne(job *LoanSettlementJob) {
+	if strings.EqualFold(strings.TrimSpace(job.Kind), SettlementKindDBU) {
+		s.settleDBUOne(job)
+		return
+	}
 	now := time.Now()
 	var contract models.LoanContract
 	db.DB.Select("id, contract_no, member_id").First(&contract, job.LoanContractID)
@@ -257,6 +261,73 @@ func (s *LoanModuleService) settleOne(job *LoanSettlementJob) {
 	notifySettlement(job, "Loan settled",
 		fmt.Sprintf("Loan %s (%s) has been settled on %s: KES %s.", contract.ContractNo, member, now.Format("02 Jan 2006"), formatKES(amount)), "SUCCESS")
 	appendAppLog("disbursement.log", fmt.Sprintf("settlement job %d contract %s settled KES %s", job.ID, contract.ContractNo, formatKES(amount)))
+}
+
+// settleDBUOne marks DBU remittance confirmed for the lending entity. Does not change loan SETTLED status.
+func (s *LoanModuleService) settleDBUOne(job *LoanSettlementJob) {
+	now := time.Now()
+	var contract models.LoanContract
+	db.DB.Select("id, contract_no, member_id, dbu_settled, principal_amount").First(&contract, job.LoanContractID)
+	member := memberFirstName(contract.MemberID)
+	if reason := dbuConfirmBlockedReason(job); reason != "" {
+		db.DB.Model(&LoanSettlementJob{}).Where("id = ?", job.ID).Updates(map[string]interface{}{
+			"status": SettlementFailed, "error": reason, "processed_at": now})
+		notifySettlement(job, "DBU repayment not confirmed",
+			fmt.Sprintf("Loan %s (%s) was not DBU-confirmed: %s", contract.ContractNo, member, reason), "WARNING")
+		appendAppLog("disbursement.log", fmt.Sprintf("dbu settle job %d contract %s skipped: %s", job.ID, contract.ContractNo, reason))
+		return
+	}
+	day := now.Format("2006-01-02")
+	res := db.DB.Exec(`UPDATE loan_contracts SET dbu_settled = 1, dbu_settled_at = COALESCE(dbu_settled_at, ?), updated_by = ?, updated_at = NOW()
+		WHERE id = ? AND deleted_at IS NULL AND COALESCE(dbu_settled, 0) = 0`, day, job.RequestedBy, contract.ID)
+	if res.Error != nil {
+		db.DB.Model(&LoanSettlementJob{}).Where("id = ?", job.ID).Updates(map[string]interface{}{
+			"status": SettlementFailed, "error": res.Error.Error(), "processed_at": now})
+		notifySettlement(job, "DBU repayment not confirmed",
+			fmt.Sprintf("Loan %s (%s) could not be DBU-confirmed: %s", contract.ContractNo, member, res.Error.Error()), "ERROR")
+		return
+	}
+	amount := roundMoney(contract.PrincipalAmount)
+	if rem := contractRemainingRepayable(db.DB, contract.ID); rem > 0 {
+		amount = rem
+	}
+	db.DB.Model(&LoanSettlementJob{}).Where("id = ?", job.ID).Updates(map[string]interface{}{
+		"status": SettlementDone, "settled_amount": amount, "processed_at": now, "error": ""})
+	notifySettlement(job, "DBU repayment confirmed",
+		fmt.Sprintf("DBU remittance for loan %s (%s) confirmed on %s (outstanding/repayable basis KES %s).",
+			contract.ContractNo, member, now.Format("02 Jan 2006"), formatKES(amount)), "SUCCESS")
+	appendAppLog("disbursement.log", fmt.Sprintf("dbu settle job %d contract %s dbu_settled KES %s", job.ID, contract.ContractNo, formatKES(amount)))
+}
+
+func dbuConfirmBlockedReason(job *LoanSettlementJob) string {
+	var a models.LoanApplication
+	if err := db.DB.Select("id, status, loan_product_id").First(&a, job.LoanApplicationID).Error; err != nil {
+		return "loan application not found"
+	}
+	if a.Status != models.LoanAppDisbursed {
+		return fmt.Sprintf("only disbursed loans can be DBU-confirmed (status %s)", a.Status)
+	}
+	var product models.LoanProduct
+	if err := db.DB.Select("id, settles_on_confirm_repayment").First(&product, a.LoanProductID).Error; err != nil {
+		return "loan product not found"
+	}
+	if !product.SettlesOnConfirmRepayment {
+		return "product is not set to settle on Confirm repayment"
+	}
+	var c models.LoanContract
+	if err := db.DB.Select("id, status, dbu_settled").First(&c, job.LoanContractID).Error; err != nil {
+		return "loan contract not found"
+	}
+	if c.Status == models.LoanContractClosed || c.Status == models.LoanContractWrittenOff {
+		return "loan is already " + strings.ToLower(c.Status)
+	}
+	if c.DBUSettled {
+		return "DBU remittance already confirmed"
+	}
+	if contractHasPayoutInFlight(c.ID) {
+		return "payout not completed yet"
+	}
+	return ""
 }
 
 func notifySettlement(job *LoanSettlementJob, title, message, kind string) {
@@ -396,6 +467,15 @@ const unsettledDisbursedSQL = `FROM loan_applications a
 	AND NOT EXISTS (SELECT 1 FROM loan_disbursements ld WHERE ld.loan_contract_id = c.id AND ld.deleted_at IS NULL
 		AND ld.status IN ('PENDING', 'PROCESSING', 'MPESA_ERROR', 'MPESA_FAILED'))`
 
+// dbuPendingSQL: disbursed loans whose DBU remittance to the lending entity is not yet confirmed.
+const dbuPendingSQL = `FROM loan_applications a
+	JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
+	WHERE a.deleted_at IS NULL AND a.status = 'DISBURSED'
+	AND COALESCE(c.dbu_settled, 0) = 0
+	AND c.status NOT IN ('CLOSED', 'WRITTEN_OFF')
+	AND NOT EXISTS (SELECT 1 FROM loan_disbursements ld WHERE ld.loan_contract_id = c.id AND ld.deleted_at IS NULL
+		AND ld.status IN ('PENDING', 'PROCESSING', 'MPESA_ERROR', 'MPESA_FAILED'))`
+
 const contractRepayableSQL = `(SELECT COALESCE(SUM(i.principal_due + i.interest_due + i.fee_due + i.insurance_due + i.penalty_due), 0)
 	FROM loan_schedule_installments i WHERE i.loan_contract_id = c.id AND i.deleted_at IS NULL)`
 
@@ -424,10 +504,15 @@ func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*
 		Repayable   float64
 		Outstanding float64
 	}
+	// When a product is selected, month figures are DBU-confirm pending (not contract SETTLED).
+	baseFrom := unsettledDisbursedSQL
+	if productID > 0 {
+		baseFrom = dbuPendingSQL
+	}
 	unsettledArgs := append([]interface{}{month}, productArgs...)
 	db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(c.principal_amount), 0) AS borrowed,
 		COALESCE(SUM(`+contractRepayableSQL+`), 0) AS repayable, COALESCE(SUM(`+contractOutstandingSQL+`), 0) AS outstanding
-		`+unsettledDisbursedSQL+monthCondition+productFilter, unsettledArgs...).Scan(&r)
+		`+baseFrom+monthCondition+productFilter, unsettledArgs...).Scan(&r)
 	out.UnsettledLoans, out.Borrowed, out.TotalRepayable, out.Outstanding = r.N, roundMoney(r.Borrowed), roundMoney(r.Repayable), roundMoney(r.Outstanding)
 
 	var st struct {
@@ -435,9 +520,15 @@ func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*
 		Amount float64
 	}
 	settledArgs := append([]interface{}{month}, productArgs...)
-	db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(`+contractRepayableSQL+`), 0) AS amount
-		FROM loan_applications a JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
-		WHERE a.deleted_at IS NULL AND c.status = 'SETTLED'`+monthCondition+productFilter, settledArgs...).Scan(&st)
+	if productID > 0 {
+		db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(`+contractRepayableSQL+`), 0) AS amount
+			FROM loan_applications a JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
+			WHERE a.deleted_at IS NULL AND a.status = 'DISBURSED' AND COALESCE(c.dbu_settled, 0) = 1`+monthCondition+productFilter, settledArgs...).Scan(&st)
+	} else {
+		db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(`+contractRepayableSQL+`), 0) AS amount
+			FROM loan_applications a JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
+			WHERE a.deleted_at IS NULL AND c.status = 'SETTLED'`+monthCondition+productFilter, settledArgs...).Scan(&st)
+	}
 	out.SettledLoans, out.SettledAmount = st.N, roundMoney(st.Amount)
 
 	db.DB.Model(&LoanSettlementJob{}).Where("status IN ?", []string{SettlementQueued, SettlementProcessing}).Count(&out.QueuedLoans)
@@ -460,7 +551,7 @@ func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*
 				Outstanding float64
 			}
 			db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(c.principal_amount), 0) AS borrowed,
-				COALESCE(SUM(`+contractOutstandingSQL+`), 0) AS outstanding `+unsettledDisbursedSQL+
+				COALESCE(SUM(`+contractOutstandingSQL+`), 0) AS outstanding `+dbuPendingSQL+
 				` AND a.loan_product_id = ?`, productID).Scan(&pr)
 			out.Product = &ProductDBUSummary{
 				ProductID:      p.ID,
@@ -476,9 +567,8 @@ func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*
 	return out, nil
 }
 
-// QueueMonthSettlement queues unsettled disbursed loans of the month for officer Confirm repayment.
-// productID is required: only that loan type is settled, and only if the product has
-// settles_on_confirm_repayment enabled. Payroll deductions never settle contracts.
+// QueueMonthSettlement queues DBU remittance confirmation for the selected product/month.
+// Marks loan_contracts.dbu_settled — does not change contract SETTLED status (member recovery flow stays as-is).
 func (s *LoanModuleService) QueueMonthSettlement(month string, productID uint64, userID uint64) (*SettleQueueResult, error) {
 	ensureSettlementSchema()
 	month = normalizeMonth(month)
@@ -491,25 +581,55 @@ func (s *LoanModuleService) QueueMonthSettlement(month string, productID uint64,
 	}
 	if !product.SettlesOnConfirmRepayment {
 		return nil, fmt.Errorf(
-			"%s is not set to settle on Confirm repayment — enable \"Settles on confirm repayment\" on the loan product",
+			"%s is not set for Confirm repayment (DBU settled) — enable \"Settles on confirm repayment\" on the loan product",
 			product.ProductName,
 		)
 	}
-	var ids []uint64
+	type appRow struct {
+		ID             uint64  `gorm:"column:id"`
+		LoanContractID *uint64 `gorm:"column:loan_contract_id"`
+	}
+	var apps []appRow
 	if err := db.DB.Raw(
-		`SELECT a.id `+unsettledDisbursedSQL+monthCondition+` AND a.loan_product_id = ? ORDER BY a.id`,
+		`SELECT a.id, a.loan_contract_id `+dbuPendingSQL+monthCondition+` AND a.loan_product_id = ? ORDER BY a.id`,
 		month, productID,
-	).Scan(&ids).Error; err != nil {
+	).Scan(&apps).Error; err != nil {
 		return nil, err
 	}
-	if len(ids) == 0 {
-		return &SettleQueueResult{Skipped: map[uint64]string{}}, nil
+	res := &SettleQueueResult{Skipped: map[uint64]string{}}
+	for _, a := range apps {
+		if a.LoanContractID == nil || *a.LoanContractID == 0 {
+			res.Skipped[a.ID] = "no loan contract"
+			continue
+		}
+		var open int64
+		db.DB.Model(&LoanSettlementJob{}).Where("loan_contract_id = ? AND kind = ? AND status IN ?",
+			*a.LoanContractID, SettlementKindDBU, []string{SettlementQueued, SettlementProcessing}).Count(&open)
+		if open > 0 {
+			res.Skipped[a.ID] = "already queued for DBU confirm"
+			continue
+		}
+		job := LoanSettlementJob{
+			LoanApplicationID: a.ID, LoanContractID: *a.LoanContractID, RequestedBy: userID,
+			Kind: SettlementKindDBU, Status: SettlementQueued,
+		}
+		job.CreatedBy = userID
+		if err := db.DB.Create(&job).Error; err != nil {
+			return nil, err
+		}
+		res.Queued++
+	}
+	if res.Queued > 0 {
+		select {
+		case settlementKick <- struct{}{}:
+		default:
+		}
 	}
 	appendAppLog("disbursement.log", fmt.Sprintf(
-		"confirm repayment month %s product %d: %d loan(s) requested by user %d",
-		month, productID, len(ids), userID,
+		"confirm DBU repayment month %s product %d: %d loan(s) requested by user %d",
+		month, productID, res.Queued, userID,
 	))
-	return s.QueueSettlements(ids, userID)
+	return res, nil
 }
 
 func normalizeMonth(month string) string {
