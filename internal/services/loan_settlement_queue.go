@@ -490,6 +490,7 @@ const unsettledDisbursedSQL = `FROM loan_applications a
 		AND ld.status IN ('PENDING', 'PROCESSING', 'MPESA_ERROR', 'MPESA_FAILED'))`
 
 // dbuPendingSQL: disbursed loans not yet marked repaid by DBU to the money owner (dbu_repaid = 0).
+// Includes still-open (ACTIVE/DISBURSED) and member-SETTLED contracts — Confirm repayment marks both.
 const dbuPendingSQL = `FROM loan_applications a
 	JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
 	WHERE a.deleted_at IS NULL AND a.status = 'DISBURSED'
@@ -507,6 +508,45 @@ const contractOutstandingSQL = `(SELECT COALESCE(SUM(GREATEST((i.principal_due +
 
 // monthCondition matches loans disbursed in month (disbursement date, else application date).
 const monthCondition = ` AND DATE_FORMAT(COALESCE(c.disbursement_date, a.date_applied), '%Y-%m') = ?`
+
+// monthConditionConfirm: Confirm repayment for a month covers loans disbursed that month
+// or member-settled that month (so SETTLED loans still free DBU quota when confirmed).
+const monthConditionConfirm = ` AND (
+	DATE_FORMAT(COALESCE(c.disbursement_date, a.date_applied), '%Y-%m') = ?
+	OR (c.settled_at IS NOT NULL AND DATE_FORMAT(c.settled_at, '%Y-%m') = ?)
+)`
+
+// productDBUOutstandingBorrowed is principal still counting against the product DBU quota
+// (disbursed, not yet dbu_repaid — SETTLED or still open).
+func productDBUOutstandingBorrowed(productID uint64) float64 {
+	var borrowed float64
+	db.DB.Raw(`SELECT COALESCE(SUM(c.principal_amount), 0) `+dbuPendingSQL+` AND a.loan_product_id = ?`, productID).Scan(&borrowed)
+	return roundMoney(borrowed)
+}
+
+// assertProductDBUHeadroom rejects when additional principal would exceed the product DBU max.
+// Confirm repayment (dbu_repaid) reinstates remaining quota.
+func assertProductDBUHeadroom(productID uint64, additional float64) error {
+	if additional <= 0 || productID == 0 {
+		return nil
+	}
+	var p models.LoanProduct
+	if err := db.DB.Select("id, product_name, dbu_max_amount").First(&p, productID).Error; err != nil {
+		return fmt.Errorf("loan product not found")
+	}
+	if p.DBUMaxAmount <= 0 {
+		return nil
+	}
+	used := productDBUOutstandingBorrowed(productID)
+	if used+additional <= p.DBUMaxAmount+0.005 {
+		return nil
+	}
+	remain := math.Max(0, p.DBUMaxAmount-used)
+	return fmt.Errorf(
+		"%s DBU quota exceeded: remaining KES %s, requested KES %s — confirm repayment to reinstate quota",
+		p.ProductName, formatKES(remain), formatKES(additional),
+	)
+}
 
 // SettlementSummary returns the month's figures (month "" = current month).
 // When productID > 0, month unsettled/settled counts are limited to that product.
@@ -527,26 +567,33 @@ func (s *LoanModuleService) SettlementSummary(month string, productID uint64) (*
 		Outstanding float64
 	}
 	// When a product is selected, month figures are DBU not-yet-repaid (dbu_repaid=0), not contract SETTLED.
+	// Confirm scope: disbursed in month OR member-settled in month (SETTLED and still-open both eligible).
 	baseFrom := unsettledDisbursedSQL
+	monthClause := monthCondition
+	unsettledArgs := append([]interface{}{}, productArgs...)
 	if productID > 0 {
 		baseFrom = dbuPendingSQL
+		monthClause = monthConditionConfirm
+		unsettledArgs = append([]interface{}{month, month}, productArgs...)
+	} else {
+		unsettledArgs = append([]interface{}{month}, productArgs...)
 	}
-	unsettledArgs := append([]interface{}{month}, productArgs...)
 	db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(c.principal_amount), 0) AS borrowed,
 		COALESCE(SUM(`+contractRepayableSQL+`), 0) AS repayable, COALESCE(SUM(`+contractOutstandingSQL+`), 0) AS outstanding
-		`+baseFrom+monthCondition+productFilter, unsettledArgs...).Scan(&r)
+		`+baseFrom+monthClause+productFilter, unsettledArgs...).Scan(&r)
 	out.UnsettledLoans, out.Borrowed, out.TotalRepayable, out.Outstanding = r.N, roundMoney(r.Borrowed), roundMoney(r.Repayable), roundMoney(r.Outstanding)
 
 	var st struct {
 		N      int64
 		Amount float64
 	}
-	settledArgs := append([]interface{}{month}, productArgs...)
 	if productID > 0 {
+		settledArgs := append([]interface{}{month, month}, productArgs...)
 		db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(`+contractRepayableSQL+`), 0) AS amount
 			FROM loan_applications a JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
-			WHERE a.deleted_at IS NULL AND a.status = 'DISBURSED' AND COALESCE(c.dbu_repaid, 0) = 1`+monthCondition+productFilter, settledArgs...).Scan(&st)
+			WHERE a.deleted_at IS NULL AND a.status = 'DISBURSED' AND COALESCE(c.dbu_repaid, 0) = 1`+monthConditionConfirm+productFilter, settledArgs...).Scan(&st)
 	} else {
+		settledArgs := append([]interface{}{month}, productArgs...)
 		db.DB.Raw(`SELECT COUNT(*) AS n, COALESCE(SUM(`+contractRepayableSQL+`), 0) AS amount
 			FROM loan_applications a JOIN loan_contracts c ON c.id = a.loan_contract_id AND c.deleted_at IS NULL
 			WHERE a.deleted_at IS NULL AND c.status = 'SETTLED'`+monthCondition+productFilter, settledArgs...).Scan(&st)
@@ -619,9 +666,10 @@ func (s *LoanModuleService) QueueMonthSettlement(month string, productID uint64,
 		LoanContractID *uint64 `gorm:"column:loan_contract_id"`
 	}
 	var apps []appRow
+	// Queue SETTLED and still-open DISBURSED loans for the month (by disbursement or settled_at).
 	if err := db.DB.Raw(
-		`SELECT a.id, a.loan_contract_id `+dbuPendingSQL+monthCondition+` AND a.loan_product_id = ? ORDER BY a.id`,
-		month, productID,
+		`SELECT a.id, a.loan_contract_id `+dbuPendingSQL+monthConditionConfirm+` AND a.loan_product_id = ? ORDER BY a.id`,
+		month, month, productID,
 	).Scan(&apps).Error; err != nil {
 		return nil, err
 	}

@@ -816,6 +816,9 @@ func (s *MobileLoanService) revalidateLoanRequest(tx *gorm.DB, app *models.LoanA
 		if cur.MaxAmount > 0 && app.RequestedAmount > cur.MaxAmount+0.005 {
 			return fmt.Sprintf("The maximum advance is KES %s", formatKES(cur.MaxAmount))
 		}
+		if err := assertProductDBUHeadroom(cur.ID, app.RequestedAmount); err != nil {
+			return err.Error()
+		}
 	} else {
 		return err.Error()
 	}

@@ -326,6 +326,9 @@ func (s *LoanModuleService) CreateApplication(req dtos.CreateLoanApplicationRequ
 	if req.RequestedAmount < product.MinAmount || req.RequestedAmount > product.MaxAmount {
 		return nil, fmt.Errorf("requested amount outside product limits (%.2f - %.2f)", product.MinAmount, product.MaxAmount)
 	}
+	if err := assertProductDBUHeadroom(product.ID, req.RequestedAmount); err != nil {
+		return nil, err
+	}
 
 	appNo := fmt.Sprintf("LN-APP-%d", time.Now().UnixNano())
 	var expected *time.Time
@@ -409,6 +412,11 @@ func (s *LoanModuleService) ApproveApplication(id uint64, req dtos.ApproveLoanAp
 	approvedTerm := req.ApprovedTermMonths
 	if approvedTerm <= 0 {
 		approvedTerm = app.RequestedTermMonths
+	}
+	if req.FinalApproval {
+		if err := assertProductDBUHeadroom(app.LoanProductID, approvedAmt); err != nil {
+			return nil, err
+		}
 	}
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
@@ -754,6 +762,16 @@ func (s *LoanModuleService) DisburseContract(id uint64, req dtos.DisburseLoanReq
 		}
 		if contract.Status != models.LoanContractPending && contract.Status != models.LoanContractActive {
 			return fmt.Errorf("contract cannot be disbursed in status %s", contract.Status)
+		}
+		// First disbursement adds principal against DBU quota until Confirm repayment marks dbu_repaid.
+		if contract.LoanApplicationID != nil {
+			var appStatus string
+			_ = tx.Raw(`SELECT status FROM loan_applications WHERE id = ?`, *contract.LoanApplicationID).Scan(&appStatus).Error
+			if appStatus != models.LoanAppDisbursed {
+				if err := assertProductDBUHeadroom(contract.LoanProductID, contract.PrincipalAmount); err != nil {
+					return err
+				}
+			}
 		}
 
 		procFee, insFee := computeProductFees(&product, contract.ApprovedAmount)
