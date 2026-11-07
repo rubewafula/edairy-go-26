@@ -47,6 +47,7 @@ func (s *MemberPayrollService) Create(req dtos.CreateMemberPayrollRequest, userI
 		"incomplete": true,
 		"rejected":   true,
 		"processing": true, // allow retry when generation got stuck
+		"approving":  true, // allow retry when approval got stuck
 	}
 
 	if err == nil && !allowedStatuses[strings.ToLower(existing.Status)] {
@@ -948,6 +949,61 @@ func (s *MemberPayrollService) generatePayslipPDF(results []dtos.MemberPayslipRe
 	return buf.Bytes(), err
 }
 
+// Cancel stops a stuck processing/approving payroll so it can be regenerated or re-approved.
+// Sets status to incomplete; does not delete already-approved payslips.
+func (s *MemberPayrollService) Cancel(payrollID uint64, userID uint64) (*models.MemberPayroll, error) {
+	var payroll models.MemberPayroll
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND deleted_at IS NULL", payrollID).First(&payroll).Error; err != nil {
+			return err
+		}
+		status := strings.ToLower(strings.TrimSpace(payroll.Status))
+		if status != "processing" && status != "approving" {
+			return fmt.Errorf("only processing or approving payrolls can be cancelled (current: %s)", payroll.Status)
+		}
+		now := time.Now()
+		if err := tx.Model(&payroll).Updates(map[string]interface{}{
+			"status":     "incomplete",
+			"updated_by": userID,
+			"updated_at": now,
+		}).Error; err != nil {
+			return err
+		}
+		// Payslips still mid-approval become incomplete so the run can be restarted.
+		if status == "approving" {
+			if err := tx.Model(&models.MemberPayslip{}).
+				Where("payroll_id = ? AND status NOT IN ?", payrollID, []string{"approved", "rejected"}).
+				Updates(map[string]interface{}{
+					"status":     "incomplete",
+					"updated_by": userID,
+					"updated_at": now,
+				}).Error; err != nil {
+				return err
+			}
+		}
+		payroll.Status = "incomplete"
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("[MemberPayrollService.Cancel] Payroll %d cancelled by user %d (now incomplete)", payrollID, userID)
+	if s.notificationService != nil {
+		refType := "MEMBER_PAYROLL"
+		if _, nErr := s.notificationService.CreateNotification(userID, dtos.CreateUINotificationRequest{
+			Title:            "Member payroll cancelled",
+			Message:          fmt.Sprintf("Payroll #%d was cancelled and set to incomplete. You can submit again to restart.", payrollID),
+			NotificationType: "WARNING",
+			ReferenceID:      &payrollID,
+			ReferenceType:    &refType,
+		}); nErr != nil {
+			log.Printf("[MemberPayrollService.Cancel] notification: %v", nErr)
+		}
+	}
+	return &payroll, nil
+}
+
 func (s *MemberPayrollService) Approve(payrollID uint64, userID uint64, isApproved bool) (*models.MemberPayroll, error) {
 	var payroll models.MemberPayroll
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
@@ -1021,6 +1077,23 @@ func (s *MemberPayrollService) Approve(payrollID uint64, userID uint64, isApprov
 }
 
 func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, userID uint64) {
+	// If approval panics or aborts while still "approving", move to incomplete so Cancel/Submit can restart.
+	defer func() {
+		if r := recover(); r != nil {
+			s.handleProcessingError(payrollID, userID, "Member Payroll Approval Failed",
+				"Unexpected error while approving payroll", fmt.Errorf("panic: %v", r), "incomplete")
+			return
+		}
+		var status string
+		if err := db.DB.Model(&models.MemberPayroll{}).Select("status").Where("id = ?", payrollID).Scan(&status).Error; err == nil {
+			if strings.EqualFold(strings.TrimSpace(status), "approving") {
+				s.handleProcessingError(payrollID, userID, "Member Payroll Approval Failed",
+					"Approval ended without completing; status moved to incomplete so you can cancel/retry",
+					fmt.Errorf("stuck in approving"), "incomplete")
+			}
+		}
+	}()
+
 	var payroll models.MemberPayroll
 	if err := db.DB.Where("id = ? AND deleted_at IS NULL", payrollID).First(&payroll).Error; err != nil {
 		log.Printf("[MemberPayrollService] Background approval failed to find payroll %d: %v", payrollID, err)

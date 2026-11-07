@@ -101,6 +101,29 @@ func (c *MemberPayrollController) Approve(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": message, "payroll": payroll})
 }
 
+func (c *MemberPayrollController) Cancel(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payroll ID"})
+		return
+	}
+	userID := ctx.GetUint64("user_id")
+	payroll, err := c.service.Cancel(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Member payroll not found"})
+			return
+		}
+		log.Printf("[MemberPayrollController.Cancel] Service Error: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Member payroll cancelled. Status is incomplete — submit again to restart.",
+		"payroll": payroll,
+	})
+}
+
 func (c *MemberPayrollController) Confirm(ctx *gin.Context) {
 
 	idStr := ctx.Param("id")

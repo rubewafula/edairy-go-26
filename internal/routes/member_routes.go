@@ -76,6 +76,7 @@ func registerMemberRoutes(api *gin.RouterGroup) {
 	api.GET("/member-payrolls/:id", memberPayrollController.Get)
 	api.PUT("/member-payrolls/:id/confirm", memberPayrollController.Confirm)
 	api.PUT("/member-payrolls/:id/approve", memberPayrollController.Approve)
+	api.PUT("/member-payrolls/:id/cancel", memberPayrollController.Cancel)
 	api.GET("/member-payrolls/generation-errors/:payrollID", memberPayrollController.GetGenerationErrors)
 	api.GET("/member-payrolls/approval-errors/:payrollID", memberPayrollController.GetApprovalErrors)
 
