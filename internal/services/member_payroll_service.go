@@ -963,6 +963,27 @@ func (s *MemberPayrollService) Cancel(payrollID uint64, userID uint64) (*models.
 			return fmt.Errorf("only processing or approving payrolls can be cancelled (current: %s)", payroll.Status)
 		}
 		now := time.Now()
+		// Unique key uk_payroll_period includes status=incomplete — clear siblings first.
+		if payroll.PayDateRangeID != nil {
+			var siblings []models.MemberPayroll
+			if err := tx.Where(
+				"pay_date_range_id = ? AND id <> ? AND deleted_at IS NULL AND LOWER(status) IN ?",
+				*payroll.PayDateRangeID, payroll.ID, []string{"incomplete", "rejected", "draft"},
+			).Find(&siblings).Error; err != nil {
+				return err
+			}
+			for _, sib := range siblings {
+				if err := tx.Where("payroll_id = ?", sib.ID).Delete(&models.MemberPayslip{}).Error; err != nil {
+					return err
+				}
+				if err := tx.Where("payroll_id = ?", sib.ID).Delete(&models.MemberPayrollDeduction{}).Error; err != nil {
+					return err
+				}
+				if err := tx.Delete(&sib).Error; err != nil {
+					return err
+				}
+			}
+		}
 		if err := tx.Model(&payroll).Updates(map[string]interface{}{
 			"status":     "incomplete",
 			"updated_by": userID,
