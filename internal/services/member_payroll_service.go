@@ -1133,6 +1133,7 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 									Debit:           ps.GrossPay,
 									TransactionDate: now,
 									Description:     fmt.Sprintf("Gross Pay: Member %d", ps.MemberID),
+									PostedAt:        now,
 								},
 								{
 									BaseModel:       models.BaseModel{CreatedBy: userID},
@@ -1141,6 +1142,7 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 									Credit:          ps.GrossPay,
 									TransactionDate: now,
 									Description:     fmt.Sprintf("Gross Pay Payable: Member %d", ps.MemberID),
+									PostedAt:        now,
 								},
 							}
 							if err := tx.Create(&glGross).Error; err != nil {
@@ -1183,6 +1185,7 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 										Debit:           parsedDeductionAmount,
 										TransactionDate: now,
 										Description:     fmt.Sprintf("Deduction DR: Member %d - %s", ps.MemberID, d.Reference),
+										PostedAt:        now,
 									},
 									{
 										BaseModel:       models.BaseModel{CreatedBy: userID},
@@ -1191,6 +1194,7 @@ func (s *MemberPayrollService) approvePayrollInBackground(payrollID uint64, user
 										Credit:          parsedDeductionAmount,
 										TransactionDate: now,
 										Description:     fmt.Sprintf("Deduction CR: Member %d - %s", ps.MemberID, d.Reference),
+										PostedAt:        now,
 									},
 								}
 								if err := tx.Create(&glDeduct).Error; err != nil {

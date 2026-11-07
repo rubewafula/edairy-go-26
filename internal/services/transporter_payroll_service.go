@@ -579,6 +579,7 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 									Debit:           ps.GrossPay,
 									TransactionDate: now,
 									Description:     fmt.Sprintf("Gross Pay: Transporter %d", ps.TransporterID),
+									PostedAt:        now,
 								},
 								{
 									BaseModel:       models.BaseModel{CreatedBy: userID},
@@ -587,6 +588,7 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 									Credit:          ps.GrossPay,
 									TransactionDate: now,
 									Description:     fmt.Sprintf("Gross Pay Payable: Transporter %d", ps.TransporterID),
+									PostedAt:        now,
 								},
 							}
 							if err := tx.Create(&glGross).Error; err != nil {
@@ -603,6 +605,7 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 										Debit:           ps.TotalBenefits,
 										TransactionDate: now,
 										Description:     fmt.Sprintf("Benefit Expense: Transporter %d", ps.TransporterID),
+										PostedAt:        now,
 									},
 									{
 										BaseModel:       models.BaseModel{CreatedBy: userID},
@@ -611,6 +614,7 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 										Credit:          ps.TotalBenefits,
 										TransactionDate: now,
 										Description:     fmt.Sprintf("Benefit Payable: Transporter %d", ps.TransporterID),
+										PostedAt:        now,
 									},
 								}
 								if err := tx.Create(&glBenefit).Error; err != nil {
@@ -647,6 +651,7 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 										Debit:           d.Amount,
 										TransactionDate: now,
 										Description:     fmt.Sprintf("Deduction DR: Transporter %d - %s", ps.TransporterID, d.Reference),
+										PostedAt:        now,
 									},
 									{
 										BaseModel:       models.BaseModel{CreatedBy: userID},
@@ -655,6 +660,7 @@ func (s *TransporterPayrollService) approvePayrollInBackground(payrollID uint64,
 										Credit:          d.Amount,
 										TransactionDate: now,
 										Description:     fmt.Sprintf("Deduction CR: Transporter %d - %s", ps.TransporterID, d.Reference),
+										PostedAt:        now,
 									},
 								}
 								if err := tx.Create(&glDeduct).Error; err != nil {
